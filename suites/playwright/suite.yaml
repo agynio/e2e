@@ -16,11 +16,35 @@ run: |
   set -euo pipefail
   cd /opt/app/data
 
-  export E2E_BASE_URL="${E2E_BASE_URL:-http://console-app.platform.svc.cluster.local:3000}"
-  export METERING_GRPC_URL="${METERING_GRPC_URL:-http://metering.platform.svc.cluster.local:50051}"
+  export MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-5000}"
+  export MOCK_METERING_PORT="${MOCK_METERING_PORT:-50051}"
+  export MOCK_PROXY_TARGET="${MOCK_PROXY_TARGET:-http://console-app.platform.svc.cluster.local:3000}"
+  export MOCK_OIDC_AUTHORITY="${MOCK_OIDC_AUTHORITY:-http://127.0.0.1:${MOCK_SERVER_PORT}}"
+  export MOCK_OIDC_CLIENT_ID="${MOCK_OIDC_CLIENT_ID:-console-app-e2e}"
+  export MOCK_OIDC_SCOPE="${MOCK_OIDC_SCOPE:-openid profile email}"
+  export E2E_BASE_URL="${E2E_BASE_URL:-http://127.0.0.1:${MOCK_SERVER_PORT}}"
+  export METERING_GRPC_URL="${METERING_GRPC_URL:-http://127.0.0.1:${MOCK_METERING_PORT}}"
 
   npm ci --no-fund --no-audit
   npx buf generate
+
+  node test/e2e/mock-server.mjs > /tmp/e2e-mock-server.log 2>&1 &
+  mock_pid=$!
+  trap 'kill $mock_pid' EXIT
+
+  ready=""
+  for _ in $(seq 1 30); do
+    if curl -sf "http://127.0.0.1:${MOCK_SERVER_PORT}/healthz" >/dev/null; then
+      ready="yes"
+      break
+    fi
+    sleep 1
+  done
+
+  if [ -z "$ready" ]; then
+    echo "ERROR: mock server failed to start" >&2
+    exit 1
+  fi
 
   grep_tags=""
   if [ -n "${TAGS:-}" ]; then

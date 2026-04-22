@@ -6,7 +6,7 @@ const BASE_URL = process.env.E2E_BASE_URL;
 if (!BASE_URL) {
   throw new Error(
     'E2E_BASE_URL is required. Run tests via: devspace run test-e2e\n' +
-      'Or set E2E_BASE_URL manually to the app URL (e.g., http://console-app.platform.svc.cluster.local:3000).',
+      'Or set E2E_BASE_URL manually to the app URL (e.g., http://127.0.0.1:5000).',
   );
 }
 

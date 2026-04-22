@@ -6,6 +6,14 @@ import { BinaryReader, WireType } from '@bufbuild/protobuf/wire';
 const port = Number(process.env.MOCK_SERVER_PORT ?? 5000);
 const meteringPort = Number(process.env.MOCK_METERING_PORT ?? 50051);
 const proxyTarget = new URL(process.env.MOCK_PROXY_TARGET ?? 'http://127.0.0.1:4173');
+const oidcAuthority = process.env.MOCK_OIDC_AUTHORITY ?? `http://127.0.0.1:${port}`;
+const oidcClientId = process.env.MOCK_OIDC_CLIENT_ID ?? 'console-app-e2e';
+const oidcScope = process.env.MOCK_OIDC_SCOPE ?? 'openid profile email';
+const envScript = `window.__ENV__ = {\n` +
+  `  OIDC_AUTHORITY: ${JSON.stringify(oidcAuthority)},\n` +
+  `  OIDC_CLIENT_ID: ${JSON.stringify(oidcClientId)},\n` +
+  `  OIDC_SCOPE: ${JSON.stringify(oidcScope)}\n` +
+  `};\n`;
 const defaultUserId = 'user-1';
 const defaultEmail = 'e2e-tester@agyn.test';
 
@@ -1269,6 +1277,13 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/healthz') {
     return sendText(res, 200, 'ok');
+  }
+
+  if (pathname === '/env.js') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/javascript');
+    res.end(envScript);
+    return;
   }
 
   if (pathname === '/authorize') {
