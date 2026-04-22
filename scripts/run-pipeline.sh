@@ -104,13 +104,13 @@ for suite_file in "${suite_files[@]}"; do
   kubectl cp "$suite_dir/." "$namespace/$pod_name:$workdir"
 
   provider_binary_host="$suite_dir/.provider/terraform-provider-agyn"
-  provider_env=()
+  exec_env=(env TAGS="$tags")
   if [ -f "$provider_binary_host" ]; then
-    provider_env=(env PROVIDER_BINARY="$workdir/.provider/terraform-provider-agyn")
+    exec_env+=(PROVIDER_BINARY="$workdir/.provider/terraform-provider-agyn")
   fi
 
   set +e
-  kubectl exec -i -n "$namespace" "$pod_name" -- "${provider_env[@]}" bash -s < "$run_file"
+  kubectl exec -i -n "$namespace" "$pod_name" -- "${exec_env[@]}" bash -s < "$run_file"
   run_status=$?
   set -e
 
