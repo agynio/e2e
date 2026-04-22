@@ -1,0 +1,14 @@
+name: Setup DevSpace
+description: Install a pinned DevSpace CLI version.
+runs:
+  using: composite
+  steps:
+    - name: Install DevSpace
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="v6.3.20"
+        curl -fsSL --retry 3 --retry-delay 5 -o /tmp/devspace \
+          "https://github.com/loft-sh/devspace/releases/download/${version}/devspace-linux-amd64"
+        sudo install -c -m 0755 /tmp/devspace /usr/local/bin/devspace
+        devspace version

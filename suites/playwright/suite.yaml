@@ -1,0 +1,47 @@
+image: mcr.microsoft.com/playwright:v1.59.1-noble
+workdir: /opt/app/data
+select: |
+  if [ -z "${TAGS:-}" ]; then
+    echo "smoke"
+    exit 0
+  fi
+
+  for tag in ${TAGS}; do
+    if [ "$tag" = "smoke" ]; then
+      echo "smoke"
+      exit 0
+    fi
+  done
+run: |
+  set -euo pipefail
+  cd /opt/app/data
+
+  npm install --no-fund --no-audit
+
+  grep_tags=""
+  if [ -n "${TAGS:-}" ]; then
+    for tag in ${TAGS}; do
+      if [ -n "$grep_tags" ]; then
+        grep_tags="${grep_tags}|"
+      fi
+      grep_tags="${grep_tags}@${tag}"
+    done
+  fi
+
+  set +e
+  if [ -n "$grep_tags" ]; then
+    PLAYWRIGHT_JUNIT_OUTPUT_DIR=. PLAYWRIGHT_JUNIT_OUTPUT_NAME=junit.xml \
+      npx playwright test --reporter=junit --grep "$grep_tags"
+  else
+    PLAYWRIGHT_JUNIT_OUTPUT_DIR=. PLAYWRIGHT_JUNIT_OUTPUT_NAME=junit.xml \
+      npx playwright test --reporter=junit
+  fi
+  status=$?
+  set -e
+
+  if [ ! -f junit.xml ]; then
+    echo "ERROR: junit.xml not created" >&2
+    exit 1
+  fi
+
+  exit "$status"

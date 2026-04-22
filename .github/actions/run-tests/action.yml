@@ -1,0 +1,134 @@
+name: Run E2E tests
+description: Run the DevSpace E2E pipeline with tag selection.
+inputs:
+  service:
+    description: Service name to translate into svc_<service> tag.
+    required: false
+  tag:
+    description: Additional tags (comma-separated or repeated by callers).
+    required: false
+  provider-binary:
+    description: Optional path to a Terraform provider binary in the caller workspace.
+    required: false
+  ref:
+    description: agynio/e2e ref to check out.
+    required: false
+    default: main
+runs:
+  using: composite
+  steps:
+    - name: Checkout e2e repository
+      uses: actions/checkout@v4
+      with:
+        repository: agynio/e2e
+        ref: ${{ inputs.ref }}
+        path: e2e
+
+    - name: Stage provider binary
+      if: ${{ inputs.provider-binary != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        source_path="$GITHUB_WORKSPACE/${{ inputs.provider-binary }}"
+        if [ ! -f "$source_path" ]; then
+          echo "Provider binary not found at $source_path" >&2
+          exit 1
+        fi
+        dest_dir="$GITHUB_WORKSPACE/e2e/suites/go-terraform/.provider"
+        mkdir -p "$dest_dir"
+        cp "$source_path" "$dest_dir/terraform-provider-agyn"
+        chmod +x "$dest_dir/terraform-provider-agyn"
+
+    - name: Setup DevSpace
+      uses: ./.github/actions/setup-devspace
+
+    - name: Run DevSpace E2E pipeline
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+        tags=()
+        if [ -n "${{ inputs.service }}" ]; then
+          tags+=("svc_${{ inputs.service }}")
+        fi
+        if [ -n "${{ inputs.tag }}" ]; then
+          IFS=',' read -r -a extra_tags <<< "${{ inputs.tag }}"
+          for tag in "${extra_tags[@]}"; do
+            trimmed=$(echo "$tag" | xargs)
+            if [ -n "$trimmed" ]; then
+              tags+=("$trimmed")
+            fi
+          done
+        fi
+
+        unique_tags=()
+        declare -A seen=()
+        for tag in "${tags[@]}"; do
+          if [ -z "${seen[$tag]+x}" ]; then
+            unique_tags+=("$tag")
+            seen[$tag]=1
+          fi
+        done
+
+        namespace="${DEVSPACE_NAMESPACE:-platform}"
+        cd "$GITHUB_WORKSPACE/e2e"
+
+        export DEVSPACE_NAMESPACE="$namespace"
+
+        if [ -n "${{ inputs.provider-binary }}" ]; then
+          export PROVIDER_BINARY="$GITHUB_WORKSPACE/e2e/suites/go-terraform/.provider/terraform-provider-agyn"
+        fi
+
+        set +e
+        if [ "${#unique_tags[@]}" -eq 0 ]; then
+          devspace run test-e2e
+          exit_code=$?
+        else
+          unique_tags+=("smoke")
+          declare -A seen_run=()
+          tag_args=()
+          for tag in "${unique_tags[@]}"; do
+            if [ -z "${seen_run[$tag]+x}" ]; then
+              tag_args+=("--tag" "$tag")
+              seen_run[$tag]=1
+            fi
+          done
+          devspace run test-e2e "${tag_args[@]}"
+          exit_code=$?
+        fi
+        set -e
+
+        echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Capture diagnostics
+      if: ${{ steps.run.outputs.exit_code != '0' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        namespace="${DEVSPACE_NAMESPACE:-platform}"
+        diagnostics_dir="$GITHUB_WORKSPACE/e2e/.diagnostics"
+        mkdir -p "$diagnostics_dir/logs"
+        kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o wide > "$diagnostics_dir/pods.txt"
+        kubectl describe pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e > "$diagnostics_dir/describe-pods.txt"
+        kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp > "$diagnostics_dir/events.txt"
+        pods=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o name)
+        for pod in $pods; do
+          pod_name=$(echo "$pod" | sed 's|pod/||')
+          kubectl logs -n "$namespace" --all-containers --prefix "$pod" > "$diagnostics_dir/logs/${pod_name}.log" 2>&1
+        done
+
+    - name: Upload test artifacts
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.service != '' && format('e2e-artifacts-{0}', inputs.service) || 'e2e-artifacts' }}
+        path: |
+          e2e/.artifacts/
+          e2e/.diagnostics/
+        if-no-files-found: warn
+
+    - name: Fail if tests failed
+      if: ${{ steps.run.outputs.exit_code != '0' }}
+      shell: bash
+      run: exit 1

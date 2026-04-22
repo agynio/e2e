@@ -1,0 +1,7 @@
+{
+  "name": "@agynio/e2e-playwright",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "1.59.1"
+  }
+}
