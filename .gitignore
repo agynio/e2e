@@ -1,0 +1,12 @@
+.artifacts/
+.diagnostics/
+.devspace/
+.env
+.env.*
+bin/
+coverage/
+dist/
+node_modules/
+suites/**/.gen/
+suites/**/src/gen/
+tmp/
