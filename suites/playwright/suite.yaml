@@ -16,7 +16,8 @@ run: |
   set -euo pipefail
   cd /opt/app/data
 
-  export E2E_BASE_URL="${E2E_BASE_URL:-http://console-app:3000}"
+  export E2E_BASE_URL="${E2E_BASE_URL:-http://console-app.platform.svc.cluster.local:3000}"
+  export METERING_GRPC_URL="${METERING_GRPC_URL:-http://metering.platform.svc.cluster.local:50051}"
 
   npm ci --no-fund --no-audit
   npx buf generate
