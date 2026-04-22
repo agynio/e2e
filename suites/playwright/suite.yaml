@@ -2,13 +2,13 @@ image: mcr.microsoft.com/playwright:v1.59.1-noble
 workdir: /opt/app/data
 select: |
   if [ -z "${TAGS:-}" ]; then
-    echo "smoke"
+    echo "playwright"
     exit 0
   fi
 
   for tag in ${TAGS}; do
-    if [ "$tag" = "smoke" ]; then
-      echo "smoke"
+    if [ "$tag" = "svc_console" ] || [ "$tag" = "smoke" ]; then
+      echo "$tag"
       exit 0
     fi
   done
@@ -16,7 +16,10 @@ run: |
   set -euo pipefail
   cd /opt/app/data
 
+  export E2E_BASE_URL="${E2E_BASE_URL:-http://console-app:3000}"
+
   npm install --no-fund --no-audit
+  npx buf generate
 
   grep_tags=""
   if [ -n "${TAGS:-}" ]; then
@@ -30,11 +33,9 @@ run: |
 
   set +e
   if [ -n "$grep_tags" ]; then
-    PLAYWRIGHT_JUNIT_OUTPUT_DIR=. PLAYWRIGHT_JUNIT_OUTPUT_NAME=junit.xml \
-      npx playwright test --reporter=junit --grep "$grep_tags"
+    CI=true npx playwright test --grep "$grep_tags"
   else
-    PLAYWRIGHT_JUNIT_OUTPUT_DIR=. PLAYWRIGHT_JUNIT_OUTPUT_NAME=junit.xml \
-      npx playwright test --reporter=junit
+    CI=true npx playwright test
   fi
   status=$?
   set -e
