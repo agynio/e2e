@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
-import { User } from 'oidc-client-ts';
+import { User, type IdTokenClaims } from 'oidc-client-ts';
 import { createHash, randomBytes } from 'node:crypto';
 import { ensureClusterAdmin } from './console-api';
 import { readOidcSession } from './oidc-helpers';
@@ -59,7 +59,7 @@ function randomState(length = 16): string {
   return base64UrlEncode(randomBytes(length));
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> {
+function decodeJwtPayload(token: string): IdTokenClaims {
   const parts = token.split('.');
   if (parts.length < 2) {
     throw new Error('MockAuth id token is malformed.');
@@ -72,7 +72,14 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('MockAuth id token payload is invalid.');
   }
-  return parsed as Record<string, unknown>;
+  const claims = parsed as Record<string, unknown>;
+  const required: Array<keyof IdTokenClaims> = ['sub', 'iss', 'aud', 'exp', 'iat'];
+  for (const key of required) {
+    if (typeof claims[key] === 'undefined') {
+      throw new Error(`MockAuth id token missing ${key}.`);
+    }
+  }
+  return claims as IdTokenClaims;
 }
 
 async function clearAuthState(page: Page): Promise<void> {

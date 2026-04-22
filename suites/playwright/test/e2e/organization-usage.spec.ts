@@ -14,7 +14,7 @@ import {
 const TEST_LLM_ENDPOINT = 'https://testllm.dev/v1/org/agynio/suite/agn/responses';
 const USAGE_POLL_TIMEOUT_MS = 180_000;
 const USAGE_TEST_TIMEOUT_MS = 240_000;
-const USAGE_POLL_INTERVALS_MS = [1000, 2000, 5000] as const;
+const USAGE_POLL_INTERVALS_MS = [1000, 2000, 5000];
 const USAGE_QUERY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 const MICRO_UNITS = 1_000_000n;
 

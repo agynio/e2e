@@ -4,7 +4,9 @@ import { ensureMockAuthEmailStrategy, signInViaMockAuth } from './sign-in-helper
 
 export { expect };
 
-type Fixtures = {
+type TestFixtures = {};
+
+type WorkerFixtures = {
   mockAuthReady: void;
 };
 
@@ -12,7 +14,7 @@ async function signInAndLoad(page: Page) {
   await signInViaMockAuth(page);
 }
 
-export const test = base.extend<Fixtures>({
+export const test = base.extend<TestFixtures, WorkerFixtures>({
   mockAuthReady: [
     async ({ playwright }, use) => {
       const request = await playwright.request.newContext();

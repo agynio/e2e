@@ -1302,8 +1302,13 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/token') {
     const token = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
     const idToken = createJwt({
       sub: defaultUserId,
+      iss: oidcAuthority,
+      aud: oidcClientId,
+      exp: now + 3600,
+      iat: now,
       name: defaultUser.name,
       email: defaultUser.email,
     });
