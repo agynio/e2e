@@ -1,0 +1,28 @@
+name: E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Provision cluster
+        uses: agynio/bootstrap/.github/actions/provision@0382a86ed54c603a30cceb91e2fe4eba8c2fd924
+
+      - name: Run E2E tests
+        uses: ./.github/actions/run-tests
+        with:
+          ref: ${{ github.sha }}

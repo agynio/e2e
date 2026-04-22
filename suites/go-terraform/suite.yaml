@@ -1,0 +1,55 @@
+image: ghcr.io/agynio/devcontainer-go:1
+workdir: /opt/app/data
+select: |
+  if [ -z "${TAGS:-}" ]; then
+    echo "smoke"
+    exit 0
+  fi
+
+  for tag in ${TAGS}; do
+    if [ "$tag" = "smoke" ]; then
+      echo "smoke"
+      exit 0
+    fi
+  done
+run: |
+  set -euo pipefail
+  cd /opt/app/data
+
+  if [ -n "${PROVIDER_BINARY:-}" ] && [ -f "${PROVIDER_BINARY}" ]; then
+    echo "Using provider binary override at ${PROVIDER_BINARY}"
+  fi
+
+  tag_args="e2e"
+  if [ -n "${TAGS:-}" ]; then
+    for tag in ${TAGS}; do
+      tag_args="${tag_args} ${tag}"
+    done
+  else
+    tag_args="${tag_args} smoke"
+  fi
+
+  set +e
+  go test -count=1 -tags "${tag_args}" ./tests/...
+  status=$?
+  set -e
+
+  if [ "$status" -eq 0 ]; then
+    printf '%s\n' \
+      '<?xml version="1.0" encoding="UTF-8"?>' \
+      '<testsuite name="go-terraform" tests="1" failures="0">' \
+      '  <testcase classname="smoke" name="smoke"/>' \
+      '</testsuite>' \
+      > junit.xml
+  else
+    printf '%s\n' \
+      '<?xml version="1.0" encoding="UTF-8"?>' \
+      '<testsuite name="go-terraform" tests="1" failures="1">' \
+      '  <testcase classname="smoke" name="smoke">' \
+      '    <failure message="go test failed">go test failed</failure>' \
+      '  </testcase>' \
+      '</testsuite>' \
+      > junit.xml
+  fi
+
+  exit "$status"

@@ -1,0 +1,47 @@
+version: v2beta1
+
+vars:
+  E2E_NAMESPACE:
+    source: env
+    default: platform
+
+commands:
+  test-e2e: |-
+    set -euo pipefail
+    tags=()
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --tag)
+          shift
+          if [ "$#" -eq 0 ]; then
+            echo "ERROR: --tag requires a value" >&2
+            exit 1
+          fi
+          tags+=("$1")
+          ;;
+        --tag=*)
+          tags+=("${1#--tag=}")
+          ;;
+        *)
+          echo "ERROR: Unknown argument: $1" >&2
+          exit 1
+          ;;
+      esac
+      shift
+    done
+
+    if [ "${#tags[@]}" -gt 0 ]; then
+      tag_string=$(printf '%s\n' "${tags[@]}" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | sed '/^$/d' | paste -sd ' ' -)
+      export TAGS="$tag_string"
+    else
+      export TAGS=""
+    fi
+
+    export DEVSPACE_NAMESPACE="${DEVSPACE_NAMESPACE:-${E2E_NAMESPACE}}"
+    export E2E_NAMESPACE="${E2E_NAMESPACE}"
+    devspace run-pipeline test-e2e
+
+pipelines:
+  test-e2e:
+    run: |-
+      ./scripts/run-pipeline.sh
