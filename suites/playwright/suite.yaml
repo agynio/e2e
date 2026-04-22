@@ -18,7 +18,7 @@ run: |
 
   export E2E_BASE_URL="${E2E_BASE_URL:-http://console-app:3000}"
 
-  npm install --no-fund --no-audit
+  npm ci --no-fund --no-audit
   npx buf generate
 
   grep_tags=""
