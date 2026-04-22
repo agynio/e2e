@@ -39,8 +39,14 @@ runs:
         cp "$source_path" "$dest_dir/terraform-provider-agyn"
         chmod +x "$dest_dir/terraform-provider-agyn"
 
+    - name: Install PyYAML
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 -m pip install --user pyyaml
+
     - name: Setup DevSpace
-      uses: ./.github/actions/setup-devspace
+      uses: ./e2e/.github/actions/setup-devspace
 
     - name: Run DevSpace E2E pipeline
       id: run
@@ -109,13 +115,14 @@ runs:
         namespace="${DEVSPACE_NAMESPACE:-platform}"
         diagnostics_dir="$GITHUB_WORKSPACE/e2e/.diagnostics"
         mkdir -p "$diagnostics_dir/logs"
-        kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o wide > "$diagnostics_dir/pods.txt"
-        kubectl describe pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e > "$diagnostics_dir/describe-pods.txt"
-        kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp > "$diagnostics_dir/events.txt"
-        pods=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o name)
+        kubectl get pods -n "$namespace" -o wide > "$diagnostics_dir/pods-all.txt" || true
+        kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o wide > "$diagnostics_dir/pods.txt" || true
+        kubectl describe pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e > "$diagnostics_dir/describe-pods.txt" || true
+        kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp > "$diagnostics_dir/events.txt" || true
+        pods=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o name 2>/dev/null || true)
         for pod in $pods; do
           pod_name=$(echo "$pod" | sed 's|pod/||')
-          kubectl logs -n "$namespace" --all-containers --prefix "$pod" > "$diagnostics_dir/logs/${pod_name}.log" 2>&1
+          kubectl logs -n "$namespace" --all-containers --prefix "$pod" > "$diagnostics_dir/logs/${pod_name}.log" 2>&1 || true
         done
 
     - name: Upload test artifacts

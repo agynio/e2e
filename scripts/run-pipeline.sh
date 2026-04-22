@@ -6,6 +6,7 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 parse_script="$repo_root/scripts/parse_suite.py"
 suites_dir="$repo_root/suites"
 artifacts_dir="$repo_root/.artifacts/junit"
+diagnostics_root="$repo_root/.diagnostics/suites"
 
 tags="${TAGS:-}"
 namespace="${DEVSPACE_NAMESPACE:-${E2E_NAMESPACE:-platform}}"
@@ -25,8 +26,8 @@ if [ ! -d "$suites_dir" ]; then
   exit 1
 fi
 
-rm -rf "$artifacts_dir"
-mkdir -p "$artifacts_dir"
+rm -rf "$artifacts_dir" "$diagnostics_root"
+mkdir -p "$artifacts_dir" "$diagnostics_root"
 
 if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
   kubectl create namespace "$namespace"
@@ -120,6 +121,17 @@ for suite_file in "${suite_files[@]}"; do
   else
     echo "ERROR: junit.xml missing for suite $suite_name" >&2
     run_status=1
+  fi
+
+  if [ "$run_status" -ne 0 ]; then
+    suite_diagnostics_dir="$diagnostics_root/$suite_name"
+    mkdir -p "$suite_diagnostics_dir/logs"
+    kubectl get pod "$pod_name" -n "$namespace" -o wide > "$suite_diagnostics_dir/pod.txt" 2>&1 || true
+    kubectl describe pod "$pod_name" -n "$namespace" > "$suite_diagnostics_dir/describe.txt" 2>&1 || true
+    kubectl logs -n "$namespace" --all-containers --prefix "$pod_name" \
+      > "$suite_diagnostics_dir/logs/${pod_name}.log" 2>&1 || true
+    kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp \
+      > "$suite_diagnostics_dir/events.txt" 2>&1 || true
   fi
 
   if ! kubectl delete pod "$pod_name" -n "$namespace" --wait=true; then

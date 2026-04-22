@@ -5,58 +5,51 @@ from __future__ import annotations
 import os
 import sys
 
+try:
+    import yaml
+except ImportError:  # pragma: no cover - execution environment dependency
+    yaml = None
+
 
 def parse_suite(path: str) -> dict[str, str]:
-    data: dict[str, str] = {}
-    current_key: str | None = None
-    block_lines: list[str] = []
-    block_indent: int | None = None
-
-    def finalize_block() -> None:
-        nonlocal current_key, block_lines, block_indent
-        if current_key is not None:
-            data[current_key] = "\n".join(block_lines).rstrip()
-        current_key = None
-        block_lines = []
-        block_indent = None
-
-    def process_line(line: str) -> None:
-        nonlocal current_key, block_indent
-        if ":" not in line:
-            return
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
-        if value == "|":
-            current_key = key
-            block_indent = None
-            return
-        data[key] = value.strip("\"'")
+    if yaml is None:
+        raise RuntimeError(
+            "PyYAML is required for suite parsing. Install with: python3 -m pip install pyyaml"
+        )
 
     with open(path, encoding="utf-8") as handle:
-        for raw_line in handle:
-            line = raw_line.rstrip("\n")
-            stripped = line.strip()
-            if current_key is not None:
-                if stripped == "":
-                    block_lines.append("")
-                    continue
-                if block_indent is None:
-                    block_indent = len(line) - len(line.lstrip(" "))
-                if len(line) - len(line.lstrip(" ")) >= block_indent:
-                    block_lines.append(line[block_indent:])
-                    continue
-                finalize_block()
-                if stripped and not stripped.startswith("#"):
-                    process_line(line)
-                continue
+        try:
+            data = yaml.safe_load(handle)
+        except yaml.YAMLError as exc:  # type: ignore[attr-defined]
+            raise ValueError(f"Invalid YAML in {path}: {exc}") from exc
 
-            if not stripped or stripped.startswith("#"):
-                continue
-            process_line(line)
+    if not isinstance(data, dict):
+        raise ValueError(f"Suite file {path} must define a YAML mapping at the top level.")
 
-    finalize_block()
-    return data
+    allowed_keys = {"image", "workdir", "select", "run"}
+    required_keys = {"image", "select", "run"}
+    unknown_keys = set(data.keys()) - allowed_keys
+    if unknown_keys:
+        unknown_list = ", ".join(sorted(unknown_keys))
+        raise ValueError(f"Unsupported keys in {path}: {unknown_list}")
+
+    missing_keys = required_keys - set(data.keys())
+    if missing_keys:
+        missing_list = ", ".join(sorted(missing_keys))
+        raise ValueError(f"Missing required keys in {path}: {missing_list}")
+
+    parsed: dict[str, str] = {}
+    for key in allowed_keys:
+        value = data.get(key, "")
+        if value is None:
+            value = ""
+        if not isinstance(value, str):
+            raise ValueError(f"Value for '{key}' in {path} must be a string.")
+        if key in required_keys and not value.strip():
+            raise ValueError(f"Value for '{key}' in {path} cannot be empty.")
+        parsed[key] = value
+
+    return parsed
 
 
 def main() -> int:
@@ -66,7 +59,11 @@ def main() -> int:
 
     suite_path = sys.argv[1]
     output_dir = sys.argv[2]
-    data = parse_suite(suite_path)
+    try:
+        data = parse_suite(suite_path)
+    except (RuntimeError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     os.makedirs(output_dir, exist_ok=True)
 
     for key in ("image", "workdir", "select", "run"):
