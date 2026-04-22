@@ -1317,7 +1317,7 @@ const server = http.createServer(async (req, res) => {
       id_token: idToken,
       refresh_token: `refresh-${token}`,
       token_type: 'Bearer',
-      scope: 'openid profile email',
+      scope: oidcScope,
       expires_in: 3600,
       session_state: randomUUID(),
     });

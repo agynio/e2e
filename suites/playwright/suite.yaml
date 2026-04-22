@@ -30,7 +30,7 @@ run: |
 
   node test/e2e/mock-server.mjs > /tmp/e2e-mock-server.log 2>&1 &
   mock_pid=$!
-  trap 'kill $mock_pid' EXIT
+  trap 'kill "$mock_pid" 2>/dev/null || true' EXIT
 
   ready=""
   for _ in $(seq 1 30); do
@@ -43,6 +43,9 @@ run: |
 
   if [ -z "$ready" ]; then
     echo "ERROR: mock server failed to start" >&2
+    if [ -f /tmp/e2e-mock-server.log ]; then
+      cat /tmp/e2e-mock-server.log >&2
+    fi
     exit 1
   fi
 
