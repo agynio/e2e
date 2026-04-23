@@ -53,6 +53,31 @@ for suite_file in "${suite_files[@]}"; do
     pod_name=""
     applied_manifest_paths=()
 
+    manifest_namespace() {
+      local manifest_file=$1
+      python3 - "$manifest_file" <<'PY'
+import sys
+
+import yaml
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as handle:
+        docs = list(yaml.safe_load_all(handle))
+except Exception as exc:
+    print(f"{exc}", file=sys.stderr)
+    sys.exit(1)
+
+for doc in docs:
+    if isinstance(doc, dict):
+        meta = doc.get("metadata") or {}
+        namespace = meta.get("namespace")
+        if isinstance(namespace, str) and namespace.strip():
+            print(namespace.strip())
+            break
+PY
+    }
+
     cleanup() {
       local exit_code=$?
       set +e
@@ -61,7 +86,15 @@ for suite_file in "${suite_files[@]}"; do
       fi
       if [ "${#applied_manifest_paths[@]}" -gt 0 ]; then
         for manifest_path in "${applied_manifest_paths[@]}"; do
-          kubectl delete -n "$namespace" -f "$manifest_path" --ignore-not-found
+          if manifest_ns=$(manifest_namespace "$manifest_path"); then
+            if [ -n "$manifest_ns" ]; then
+              kubectl delete -f "$manifest_path" --ignore-not-found
+            else
+              kubectl delete -n "$namespace" -f "$manifest_path" --ignore-not-found
+            fi
+          else
+            echo "ERROR: failed to parse manifest $manifest_path during cleanup" >&2
+          fi
         done
       fi
       if [ -n "${tmp_dir:-}" ]; then
@@ -146,7 +179,15 @@ for suite_file in "${suite_files[@]}"; do
         fi
       done
       for manifest_file in "${manifest_files[@]}"; do
-        if ! kubectl apply -n "$namespace" -f "$manifest_file"; then
+        if ! manifest_ns=$(manifest_namespace "$manifest_file"); then
+          echo "ERROR: suite $suite_name failed to parse manifest $manifest_file" >&2
+          exit 1
+        fi
+        apply_args=()
+        if [ -z "$manifest_ns" ]; then
+          apply_args=(-n "$namespace")
+        fi
+        if ! kubectl apply "${apply_args[@]}" -f "$manifest_file"; then
           echo "ERROR: suite $suite_name failed to apply manifest $manifest_file" >&2
           exit 1
         fi
