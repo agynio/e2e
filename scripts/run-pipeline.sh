@@ -142,6 +142,21 @@ for suite_file in "${suite_files[@]}"; do
       done
     fi
 
+    if [ -n "$service_account" ]; then
+      service_account_ready=0
+      for attempt in $(seq 1 30); do
+        if kubectl get serviceaccount "$service_account" -n "$namespace" >/dev/null 2>&1; then
+          service_account_ready=1
+          break
+        fi
+        sleep 2
+      done
+      if [ "$service_account_ready" -ne 1 ]; then
+        echo "ERROR: suite $suite_name service account $service_account not found in namespace $namespace" >&2
+        exit 1
+      fi
+    fi
+
     pod_name="e2e-${suite_slug}-$(date +%s)"
     service_account_line=""
     if [ -n "$service_account" ]; then
