@@ -1,4 +1,4 @@
-//go:build e2e && (svc_agents_orchestrator || svc_runners || smoke)
+//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || smoke)
 
 package tests
 
@@ -50,6 +50,7 @@ var (
 	agentsAddr     = envOrDefault("AGENTS_ADDRESS", "agents:50051")
 	threadsAddr    = envOrDefault("THREADS_ADDRESS", "threads:50051")
 	llmAddr        = envOrDefault("LLM_ADDRESS", "llm:50051")
+	meteringAddr   = envOrDefault("METERING_ADDRESS", "metering:50051")
 	usersAddr      = envOrDefault("USERS_ADDRESS", "users:50051")
 	orgsAddr       = envOrDefault("ORGANIZATIONS_ADDRESS", "organizations:50051")
 	runnerAddr     = envOrDefault("RUNNER_ADDRESS", "k8s-runner:50051")
