@@ -90,12 +90,17 @@ runs:
           gateway_url="https://gateway.${domain}:${ingress_port}"
         fi
 
+        export_base_url="true"
         if [ -z "${AGYN_BASE_URL:-}" ]; then
+          export_base_url="false"
           if [ -z "${gateway_url:-}" ]; then
             echo "AGYN_BASE_URL not set and bootstrap outputs unavailable." >&2
             exit 1
           fi
           AGYN_BASE_URL="$gateway_url"
+        fi
+
+        if [ "$export_base_url" = "true" ]; then
           echo "AGYN_BASE_URL=$AGYN_BASE_URL" >> "$GITHUB_ENV"
         fi
 
