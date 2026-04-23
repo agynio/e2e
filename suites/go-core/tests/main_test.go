@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	pollInterval          = 2 * time.Second
-	testTimeout           = 120 * time.Second
-	unackedPageSize int32 = 100
+	pollInterval    = 2 * time.Second
+	testTimeout     = 120 * time.Second
+	unackedPageSize = 100
 
 	tracingDiscoverTimeout = 2 * time.Minute
 	tracingSummaryTimeout  = 2 * time.Minute

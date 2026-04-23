@@ -32,7 +32,6 @@ run: |
     tags=("smoke")
   fi
 
-  buf dep update
   buf generate
 
   tag_args="e2e"
