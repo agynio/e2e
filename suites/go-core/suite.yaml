@@ -4,7 +4,7 @@ manifests:
   - manifests/agents-orchestrator
 service_account: agents-orchestrator-e2e
 select: |
-  suite_tags=("svc_agents_orchestrator" "svc_runners" "svc_metering" "smoke")
+  suite_tags=("svc_agents_orchestrator" "svc_runners" "svc_metering" "svc_k8s_runner" "smoke")
 
   if [ -z "${TAGS:-}" ]; then
     echo "smoke"
