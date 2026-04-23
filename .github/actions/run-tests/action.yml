@@ -122,7 +122,7 @@ runs:
         {"organizationId":"${AGYN_ORGANIZATION_ID}","llmProviderId":"","pageSize":200,"pageToken":""}
         EOF
         )
-          model_response=$(curl -sk \
+          model_response=$(curl -fsS -k \
             -H 'Content-Type: application/json' \
             -H 'Connect-Protocol-Version: 1' \
             -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
@@ -148,7 +148,7 @@ runs:
         {"organizationId":"${AGYN_ORGANIZATION_ID}","pageSize":200,"pageToken":""}
         EOF
         )
-            providers_response=$(curl -sk \
+            providers_response=$(curl -fsS -k \
               -H 'Content-Type: application/json' \
               -H 'Connect-Protocol-Version: 1' \
               -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
@@ -175,7 +175,7 @@ runs:
         {"endpoint":"https://llm.e2e.agyn.dev/${now}","authMethod":"AUTH_METHOD_BEARER","token":"e2e-token-${now}","organizationId":"${AGYN_ORGANIZATION_ID}"}
         EOF
         )
-              provider_response=$(curl -sk \
+              provider_response=$(curl -fsS -k \
                 -H 'Content-Type: application/json' \
                 -H 'Connect-Protocol-Version: 1' \
                 -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
@@ -193,6 +193,9 @@ runs:
             print(provider_id)
         PY
         <<<"$provider_response")
+              if [ -n "$provider_id" ]; then
+                echo "Created LLM provider ${provider_id}"
+              fi
             fi
 
             if [ -z "$provider_id" ]; then
@@ -205,7 +208,7 @@ runs:
         {"name":"E2E Model ${now}","llmProviderId":"${provider_id}","remoteName":"gpt-4o-mini","organizationId":"${AGYN_ORGANIZATION_ID}"}
         EOF
         )
-            model_response=$(curl -sk \
+            model_response=$(curl -fsS -k \
               -H 'Content-Type: application/json' \
               -H 'Connect-Protocol-Version: 1' \
               -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
@@ -223,6 +226,9 @@ runs:
             print(model_id)
         PY
         <<<"$model_response")
+            if [ -n "$model_id" ]; then
+              echo "Created LLM model ${model_id}"
+            fi
           fi
 
           if [ -z "$model_id" ]; then

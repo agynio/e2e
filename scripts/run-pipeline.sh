@@ -113,7 +113,7 @@ for suite_file in "${suite_files[@]}"; do
   fi
 
   gateway_internal_url="http://gateway-gateway.${namespace}.svc.cluster.local:8080"
-  if [ -n "${AGYN_BASE_URL_PASSTHROUGH:-}" ] && [ -n "${AGYN_BASE_URL:-}" ]; then
+  if [ -n "${AGYN_BASE_URL:-}" ]; then
     exec_env+=("AGYN_BASE_URL=${AGYN_BASE_URL}")
   else
     exec_env+=("AGYN_BASE_URL=${gateway_internal_url}")
