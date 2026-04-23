@@ -143,16 +143,29 @@ for suite_file in "${suite_files[@]}"; do
     fi
 
     pod_name="e2e-${suite_slug}-$(date +%s)"
-    service_account_args=()
+    service_account_line=""
     if [ -n "$service_account" ]; then
-      service_account_args=("--serviceaccount=$service_account")
+      service_account_line="  serviceAccountName: $service_account"
     fi
-    kubectl run "$pod_name" -n "$namespace" \
-      --image="$image" \
-      --restart=Never \
-      --labels="app.kubernetes.io/managed-by=e2e,app.kubernetes.io/name=${suite_slug}" \
-      "${service_account_args[@]}" \
-      --command -- sleep infinity
+    cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${pod_name}
+  namespace: ${namespace}
+  labels:
+    app.kubernetes.io/managed-by: e2e
+    app.kubernetes.io/name: ${suite_slug}
+spec:
+${service_account_line}
+  restartPolicy: Never
+  containers:
+    - name: runner
+      image: ${image}
+      command:
+        - sleep
+        - infinity
+EOF
 
     kubectl wait --for=condition=Ready "pod/${pod_name}" -n "$namespace" --timeout=300s
     kubectl exec -n "$namespace" "$pod_name" -- mkdir -p "$workdir"
