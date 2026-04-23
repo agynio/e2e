@@ -123,7 +123,7 @@ for suite_file in "${suite_files[@]}"; do
       exit 0
     fi
 
-    manifest_paths=()
+    manifest_files=()
     if [ "${#manifests[@]}" -gt 0 ]; then
       for manifest in "${manifests[@]}"; do
         manifest_path="$suite_dir/$manifest"
@@ -131,14 +131,26 @@ for suite_file in "${suite_files[@]}"; do
           echo "ERROR: suite $suite_name manifest not found at $manifest_path" >&2
           exit 1
         fi
-        manifest_paths+=("$manifest_path")
+        if [ -d "$manifest_path" ]; then
+          mapfile -t manifest_dir_files < <(find "$manifest_path" -maxdepth 1 -type f \
+            \( -name '*.yml' -o -name '*.yaml' -o -name '*.json' \) | sort)
+          if [ "${#manifest_dir_files[@]}" -eq 0 ]; then
+            echo "ERROR: suite $suite_name manifest directory empty at $manifest_path" >&2
+            exit 1
+          fi
+          for manifest_file in "${manifest_dir_files[@]}"; do
+            manifest_files+=("$manifest_file")
+          done
+        else
+          manifest_files+=("$manifest_path")
+        fi
       done
-      for manifest_path in "${manifest_paths[@]}"; do
-        if ! kubectl apply -n "$namespace" -f "$manifest_path"; then
-          echo "ERROR: suite $suite_name failed to apply manifest $manifest_path" >&2
+      for manifest_file in "${manifest_files[@]}"; do
+        if ! kubectl apply -n "$namespace" -f "$manifest_file"; then
+          echo "ERROR: suite $suite_name failed to apply manifest $manifest_file" >&2
           exit 1
         fi
-        applied_manifest_paths+=("$manifest_path")
+        applied_manifest_paths+=("$manifest_file")
       done
     fi
 
