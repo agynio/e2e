@@ -24,7 +24,7 @@ func TestRunnerLifecycle(t *testing.T) {
 		"tier":   "e2e",
 	}
 	registerResp, err := runnerClient.RegisterRunner(adminCtx, &runnersv1.RegisterRunnerRequest{
-		Name:   "e2e-runner",
+		Name:   "e2e-runner-" + uuid.NewString(),
 		Labels: registerLabels,
 	})
 	if err != nil {
@@ -77,15 +77,7 @@ func TestRunnerLifecycle(t *testing.T) {
 		AgentId:        agentID,
 		OrganizationId: organizationID,
 		Status:         runnersv1.WorkloadStatus_WORKLOAD_STATUS_STARTING,
-		Containers: []*runnersv1.Container{
-			{
-				ContainerId: "main",
-				Name:        "main",
-				Role:        runnersv1.ContainerRole_CONTAINER_ROLE_MAIN,
-				Image:       "alpine:latest",
-				Status:      runnersv1.ContainerStatus_CONTAINER_STATUS_RUNNING,
-			},
-		},
+		Containers:     runnerDefaultContainers(),
 		ZitiIdentityId: "ziti-test",
 	})
 	if err != nil {
@@ -104,17 +96,9 @@ func TestRunnerLifecycle(t *testing.T) {
 	}
 
 	updateResp, err := runnerClient.UpdateWorkloadStatus(adminCtx, &runnersv1.UpdateWorkloadStatusRequest{
-		Id:     workloadID,
-		Status: runnersv1.WorkloadStatus_WORKLOAD_STATUS_RUNNING,
-		Containers: []*runnersv1.Container{
-			{
-				ContainerId: "main",
-				Name:        "main",
-				Role:        runnersv1.ContainerRole_CONTAINER_ROLE_MAIN,
-				Image:       "alpine:latest",
-				Status:      runnersv1.ContainerStatus_CONTAINER_STATUS_RUNNING,
-			},
-		},
+		Id:         workloadID,
+		Status:     runnersv1.WorkloadStatus_WORKLOAD_STATUS_RUNNING,
+		Containers: runnerDefaultContainers(),
 	})
 	if err != nil {
 		t.Fatalf("UpdateWorkloadStatus failed: %v", err)

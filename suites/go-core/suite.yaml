@@ -7,7 +7,7 @@ select: |
   suite_tags=("svc_agents_orchestrator" "svc_runners" "smoke")
 
   if [ -z "${TAGS:-}" ]; then
-    echo "${suite_tags[1]}"
+    echo "smoke"
     exit 0
   fi
 

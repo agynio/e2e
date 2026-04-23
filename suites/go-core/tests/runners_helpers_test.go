@@ -22,6 +22,8 @@ const (
 	identityTypeAgent       = "agent"
 
 	clusterAdminIdentityID = "a3c1e9d2-7f4b-5e1a-9c3d-2b8f6a4e7d10"
+
+	runnerContainerImage = "alpine:3.21"
 )
 
 var authorizationAddr = envOrDefault("AUTHORIZATION_ADDRESS", "authorization:50051")
@@ -66,6 +68,21 @@ func ensureOrganizationMember(t *testing.T, ctx context.Context, authzClient aut
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cleanupCancel()
-		_, _ = authzClient.Write(cleanupCtx, &authorizationv1.WriteRequest{Deletes: []*authorizationv1.TupleKey{tuple}})
+		cleanupCtx = adminContext(cleanupCtx)
+		if _, err := authzClient.Write(cleanupCtx, &authorizationv1.WriteRequest{Deletes: []*authorizationv1.TupleKey{tuple}}); err != nil {
+			t.Logf("cleanup: authorization delete failed for identity %s org %s: %v", identityID, organizationID, err)
+		}
 	})
+}
+
+func runnerDefaultContainers() []*runnersv1.Container {
+	return []*runnersv1.Container{
+		{
+			ContainerId: "main",
+			Name:        "main",
+			Role:        runnersv1.ContainerRole_CONTAINER_ROLE_MAIN,
+			Image:       runnerContainerImage,
+			Status:      runnersv1.ContainerStatus_CONTAINER_STATUS_RUNNING,
+		},
+	}
 }

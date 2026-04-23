@@ -364,15 +364,3 @@ func createRunnerVolume(t *testing.T, ctx context.Context, runnerClient runnersv
 		t.Fatalf("CreateVolume returned unexpected ID")
 	}
 }
-
-func runnerDefaultContainers() []*runnersv1.Container {
-	return []*runnersv1.Container{
-		{
-			ContainerId: "main",
-			Name:        "main",
-			Role:        runnersv1.ContainerRole_CONTAINER_ROLE_MAIN,
-			Image:       "alpine:latest",
-			Status:      runnersv1.ContainerStatus_CONTAINER_STATUS_RUNNING,
-		},
-	}
-}
