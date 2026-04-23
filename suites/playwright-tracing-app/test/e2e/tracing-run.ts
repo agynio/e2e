@@ -33,9 +33,9 @@ const FILESYSTEM_MCP_COMMAND =
   `mkdir -p /test-data && printf 'hello' > /test-data/hello.txt && npx -y supergateway@3.4.3 --stdio "npx -y @modelcontextprotocol/server-filesystem@2026.1.14 /test-data" --outputTransport streamableHttp --port $MCP_PORT --streamableHttpPath /mcp`;
 
 export const MCP_TOOLS_PROMPT =
-  'Create an entity called test_project, then list the files in the project directory.';
+  "Create an entity called test_project of type project with observation 'A test project', then list files in /test-data";
 export const MCP_TOOLS_EXPECTED_RESPONSE =
-  "I've created the entity 'test_project' and confirmed the directory is empty.";
+  "I've created the entity 'test_project' (type: project) with the observation 'A test project'. The /test-data directory contains one file: hello.txt.";
 
 type TraceCounts = {
   messageCount: number;
@@ -170,7 +170,7 @@ export async function createFullChainRun(page: Page): Promise<FullChainRun> {
 
   const modelId = await createModel(page, {
     organizationId,
-    providerId,
+    llmProviderId: providerId,
     name: `e2e-model-${randomUUID()}`,
     remoteName: TEST_LLM_MODEL,
   });

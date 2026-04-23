@@ -172,13 +172,13 @@ export async function createLlmProvider(page: Page, params: {
 
 export async function createModel(page: Page, params: {
   organizationId: string;
-  providerId: string;
+  llmProviderId: string;
   name: string;
   remoteName: string;
 }): Promise<string> {
   const response = await postConnect<CreateModelResponseWire>(page, LLM_GATEWAY_PATH, 'CreateModel', {
     organizationId: params.organizationId,
-    providerId: params.providerId,
+    llmProviderId: params.llmProviderId,
     name: params.name,
     remoteName: params.remoteName,
   });
@@ -197,17 +197,24 @@ export async function createAgent(page: Page, params: {
   initImage: string;
   description?: string;
   role?: string;
-  configuration?: Record<string, unknown>;
+  configuration?: string;
 }): Promise<string> {
-  const response = await postConnect<CreateAgentResponseWire>(page, AGENTS_GATEWAY_PATH, 'CreateAgent', {
+  const payload: Record<string, unknown> = {
     organizationId: params.organizationId,
     name: params.name,
     model: params.model,
     image: params.image,
     initImage: params.initImage,
-    description: params.description ?? '',
-    role: params.role ?? 'agent',
-    configuration: params.configuration ?? {},
+    role: params.role ?? 'assistant',
+  };
+  if (params.description !== undefined) {
+    payload.description = params.description;
+  }
+  if (params.configuration !== undefined) {
+    payload.configuration = params.configuration;
+  }
+  const response = await postConnect<CreateAgentResponseWire>(page, AGENTS_GATEWAY_PATH, 'CreateAgent', {
+    ...payload,
   });
   const agentId = response.agent?.meta?.id;
   if (!agentId) {
