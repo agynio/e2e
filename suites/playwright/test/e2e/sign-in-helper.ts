@@ -13,6 +13,11 @@ type SignInOptions = {
   force?: boolean;
 };
 
+type SeedOidcOptions = SignInOptions & {
+  email?: string;
+  landingPath?: string;
+};
+
 type OidcRuntimeConfig = {
   authority: string;
   clientId: string;
@@ -242,12 +247,36 @@ function buildUserStorage(config: OidcRuntimeConfig, tokens: TokenResponse): { s
   };
 }
 
-export async function signInViaMockAuth(
+async function seedOidcSession(
   page: Page,
-  email?: string,
-  options: SignInOptions = {},
-): Promise<boolean> {
-  const expectedEmail = email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+  tokens: TokenResponse,
+  config: OidcRuntimeConfig,
+  options: SeedOidcOptions,
+): Promise<void> {
+  const { storageKey, storageValue } = buildUserStorage(config, tokens);
+  const expectedOrigin = new URL(resolveBaseUrl()).origin;
+
+  await page.addInitScript(
+    ({ key, value, origin }) => {
+      if (window.location.origin !== origin) return;
+      const seededKey = 'e2e:oidc-seeded';
+      if (window.sessionStorage.getItem(seededKey)) return;
+      window.sessionStorage.setItem(key, value);
+      window.sessionStorage.setItem(seededKey, 'true');
+    },
+    { key: storageKey, value: storageValue, origin: expectedOrigin },
+  );
+
+  const landingPath = options.landingPath ?? '/';
+  await page.goto(landingPath);
+  const session = await readOidcSession(page);
+  if (!session?.accessToken) {
+    throw new Error('MockAuth session storage was not initialized.');
+  }
+}
+
+export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOptions = {}): Promise<void> {
+  const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
   const config = await resolveOidcConfig(page.context().request);
   const redirectUri = await resolveRedirectUri(config);
   const { codeVerifier, codeChallenge } = createPkcePair();
@@ -318,31 +347,24 @@ export async function signInViaMockAuth(
   }
 
   const tokens = await exchangeAuthCode(config, { code, codeVerifier, redirectUri });
-  const { storageKey, storageValue } = buildUserStorage(config, tokens);
-  const expectedOrigin = new URL(resolveBaseUrl()).origin;
+  await seedOidcSession(page, tokens, config, options);
+}
 
-  await page.addInitScript(
-    ({ key, value, origin }) => {
-      if (window.location.origin !== origin) return;
-      const seededKey = 'e2e:oidc-seeded';
-      if (window.sessionStorage.getItem(seededKey)) return;
-      window.sessionStorage.setItem(key, value);
-      window.sessionStorage.setItem(seededKey, 'true');
-    },
-    { key: storageKey, value: storageValue, origin: expectedOrigin },
-  );
-
+export async function signInViaMockAuth(
+  page: Page,
+  email?: string,
+  options: SignInOptions = {},
+): Promise<boolean> {
+  await seedOidcSessionViaMockAuth(page, {
+    email,
+    onLoginPage: options.onLoginPage,
+    force: options.force,
+  });
+  await ensureClusterAdmin(page);
   const pageTitle = page.getByTestId('page-title');
   const sidebarNav = page.getByTestId('console-sidebar');
   const noAccessState = page.getByTestId('console-no-access');
   const appReady = pageTitle.or(sidebarNav).or(noAccessState);
-
-  await page.goto('/');
-  const session = await readOidcSession(page);
-  if (!session?.accessToken) {
-    throw new Error('MockAuth session storage was not initialized.');
-  }
-  await ensureClusterAdmin(page);
   await page.goto('/');
   await expect(appReady.first()).toBeVisible({ timeout: 30000 });
   return true;

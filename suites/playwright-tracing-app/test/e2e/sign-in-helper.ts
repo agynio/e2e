@@ -1,18 +1,17 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
-import { User } from 'oidc-client-ts';
+import { User, type IdTokenClaims } from 'oidc-client-ts';
 import { createHash, randomBytes } from 'node:crypto';
-import { isIP } from 'node:net';
 import { readOidcSession } from './oidc-helpers';
 
 const defaultEmail = 'e2e-tester@agyn.test';
-const hardcodedChatRedirectUri = 'https://chat.agyn.dev/callback';
-const defaultScope = 'openid profile email';
-const defaultMockClientId = 'tracing-app-e2e';
+const fallbackRedirectUri = 'https://console.agyn.dev/callback';
 
-type SignInOptions = {
+type SeedOidcOptions = {
   onLoginPage?: (page: Page) => Promise<void>;
   force?: boolean;
+  email?: string;
+  landingPath?: string;
 };
 
 type OidcRuntimeConfig = {
@@ -39,10 +38,6 @@ function resolveBaseUrl(): string {
   return baseUrl;
 }
 
-function isMockAuthEnabled(): boolean {
-  return process.env.E2E_MOCK_AUTH === 'true';
-}
-
 function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }
@@ -61,17 +56,11 @@ function createPkcePair(): { codeVerifier: string; codeChallenge: string } {
   return { codeVerifier, codeChallenge };
 }
 
-function createJwt(payload: Record<string, unknown>): string {
-  const header = base64UrlEncode(Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })));
-  const body = base64UrlEncode(Buffer.from(JSON.stringify(payload)));
-  return `${header}.${body}.`;
-}
-
 function randomState(length = 16): string {
   return base64UrlEncode(randomBytes(length));
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> {
+function decodeJwtPayload(token: string): IdTokenClaims {
   const parts = token.split('.');
   if (parts.length < 2) {
     throw new Error('MockAuth id token is malformed.');
@@ -84,7 +73,14 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('MockAuth id token payload is invalid.');
   }
-  return parsed as Record<string, unknown>;
+  const claims = parsed as Record<string, unknown>;
+  const required: Array<keyof IdTokenClaims> = ['sub', 'iss', 'aud', 'exp', 'iat'];
+  for (const key of required) {
+    if (typeof claims[key] === 'undefined') {
+      throw new Error(`MockAuth id token missing ${key}.`);
+    }
+  }
+  return claims as IdTokenClaims;
 }
 
 async function clearAuthState(page: Page): Promise<void> {
@@ -101,24 +97,6 @@ function readEnvValue(body: string, key: string): string | undefined {
   return match ? match[1] : undefined;
 }
 
-function deriveChatRedirectUri(baseUrl: string): string | undefined {
-  const parsed = new URL(baseUrl);
-  const hostname = parsed.hostname;
-  if (!hostname || isIP(hostname)) {
-    return undefined;
-  }
-  const labels = hostname.split('.');
-  if (labels.length < 2 || labels[0] === 'chat') {
-    return undefined;
-  }
-  labels[0] = 'chat';
-  parsed.hostname = labels.join('.');
-  parsed.pathname = '/callback';
-  parsed.search = '';
-  parsed.hash = '';
-  return parsed.toString();
-}
-
 async function resolveRuntimeEnv(request: APIRequestContext): Promise<Record<string, string | undefined>> {
   const response = await request.get(new URL('/env.js', resolveBaseUrl()).toString());
   if (!response.ok()) {
@@ -133,32 +111,10 @@ async function resolveRuntimeEnv(request: APIRequestContext): Promise<Record<str
 }
 
 async function resolveOidcConfig(request: APIRequestContext): Promise<OidcRuntimeConfig> {
-  const overrideAuthority = process.env.E2E_OIDC_AUTHORITY;
-  const overrideClientId = process.env.E2E_OIDC_CLIENT_ID;
-  const overrideScope = process.env.E2E_OIDC_SCOPE;
-  if (overrideAuthority && overrideClientId && overrideScope) {
-    return {
-      authority: stripTrailingSlash(overrideAuthority),
-      clientId: overrideClientId,
-      scope: overrideScope,
-    };
-  }
-
-  if (isMockAuthEnabled()) {
-    const authority = stripTrailingSlash(
-      overrideAuthority ?? new URL('/mock-oidc', resolveBaseUrl()).toString(),
-    );
-    return {
-      authority,
-      clientId: overrideClientId ?? defaultMockClientId,
-      scope: overrideScope ?? defaultScope,
-    };
-  }
-
   const env = await resolveRuntimeEnv(request);
-  const authority = stripTrailingSlash(overrideAuthority ?? env.OIDC_AUTHORITY ?? '');
-  const clientId = overrideClientId ?? env.OIDC_CLIENT_ID ?? '';
-  const scope = overrideScope ?? env.OIDC_SCOPE ?? '';
+  const authority = stripTrailingSlash(process.env.E2E_OIDC_AUTHORITY ?? env.OIDC_AUTHORITY ?? '');
+  const clientId = process.env.E2E_OIDC_CLIENT_ID ?? env.OIDC_CLIENT_ID ?? '';
+  const scope = process.env.E2E_OIDC_SCOPE ?? env.OIDC_SCOPE ?? '';
 
   if (!authority || !clientId || !scope) {
     throw new Error('OIDC config is missing (authority, client ID, or scope).');
@@ -167,9 +123,6 @@ async function resolveOidcConfig(request: APIRequestContext): Promise<OidcRuntim
 }
 
 export async function ensureMockAuthEmailStrategy(request: APIRequestContext): Promise<void> {
-  if (isMockAuthEnabled()) {
-    return;
-  }
   const config = await resolveOidcConfig(request);
   const mockAuthOrigin = new URL(config.authority).origin;
   const response = await request.post(new URL('/api/test/client-auth-strategies', mockAuthOrigin).toString(), {
@@ -220,15 +173,10 @@ async function resolveRedirectUri(config: OidcRuntimeConfig): Promise<string> {
   if (override) {
     return override;
   }
-  const baseUrl = resolveBaseUrl();
-  const defaultRedirectUri = new URL('/callback', baseUrl).toString();
+  const defaultRedirectUri = new URL('/callback', resolveBaseUrl()).toString();
   const candidates = [defaultRedirectUri];
-  const derivedFallback = deriveChatRedirectUri(baseUrl);
-  if (derivedFallback && !candidates.includes(derivedFallback)) {
-    candidates.push(derivedFallback);
-  }
-  if (!candidates.includes(hardcodedChatRedirectUri)) {
-    candidates.push(hardcodedChatRedirectUri);
+  if (fallbackRedirectUri !== defaultRedirectUri) {
+    candidates.push(fallbackRedirectUri);
   }
 
   for (const candidate of candidates) {
@@ -266,7 +214,7 @@ async function exchangeAuthCode(
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
   });
-  if (!response.ok()) {
+  if (!response.ok) {
     const text = await response.text();
     throw new Error(`MockAuth token exchange failed (${response.status}): ${text}`);
   }
@@ -295,52 +243,37 @@ function buildUserStorage(config: OidcRuntimeConfig, tokens: TokenResponse): { s
   };
 }
 
-export async function signInViaMockAuth(
+async function seedOidcSession(
   page: Page,
-  email?: string,
-  options: SignInOptions = {},
-): Promise<boolean> {
-  const expectedEmail = email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
-  const config = await resolveOidcConfig(page.context().request);
+  tokens: TokenResponse,
+  config: OidcRuntimeConfig,
+  options: SeedOidcOptions,
+): Promise<void> {
+  const { storageKey, storageValue } = buildUserStorage(config, tokens);
+  const expectedOrigin = new URL(resolveBaseUrl()).origin;
 
-  if (isMockAuthEnabled()) {
-    if (options.force) {
-      await clearAuthState(page);
-    }
+  await page.addInitScript(
+    ({ key, value, origin }) => {
+      if (window.location.origin !== origin) return;
+      const seededKey = 'e2e:oidc-seeded';
+      if (window.sessionStorage.getItem(seededKey)) return;
+      window.sessionStorage.setItem(key, value);
+      window.sessionStorage.setItem(seededKey, 'true');
+    },
+    { key: storageKey, value: storageValue, origin: expectedOrigin },
+  );
 
-    const tokens: TokenResponse = {
-      access_token: `mock-access-${randomState(8)}`,
-      id_token: createJwt({ sub: expectedEmail, email: expectedEmail, name: expectedEmail }),
-      refresh_token: `mock-refresh-${randomState(8)}`,
-      token_type: 'Bearer',
-      scope: config.scope,
-      expires_in: 3600,
-      session_state: randomState(12),
-    };
-    const { storageKey, storageValue } = buildUserStorage(config, tokens);
-    const expectedOrigin = new URL(resolveBaseUrl()).origin;
-
-    await page.addInitScript(
-      ({ key, value, origin }) => {
-        if (window.location.origin !== origin) return;
-        const seededKey = 'e2e:oidc-seeded';
-        if (window.sessionStorage.getItem(seededKey)) return;
-        window.sessionStorage.setItem(key, value);
-        window.sessionStorage.setItem(seededKey, 'true');
-      },
-      { key: storageKey, value: storageValue, origin: expectedOrigin },
-    );
-
-    const appReady = page.getByRole('link', { name: 'Agyn Tracing home' });
-
-    await page.goto('/');
-    const session = await readOidcSession(page);
-    if (!session?.accessToken) {
-      throw new Error('MockAuth session storage was not initialized.');
-    }
-    await expect(appReady).toBeVisible({ timeout: 30000 });
-    return true;
+  const landingPath = options.landingPath ?? '/';
+  await page.goto(landingPath);
+  const session = await readOidcSession(page);
+  if (!session?.accessToken) {
+    throw new Error('MockAuth session storage was not initialized.');
   }
+}
+
+export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOptions = {}): Promise<void> {
+  const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+  const config = await resolveOidcConfig(page.context().request);
   const redirectUri = await resolveRedirectUri(config);
   const { codeVerifier, codeChallenge } = createPkcePair();
   const state = randomState();
@@ -410,27 +343,5 @@ export async function signInViaMockAuth(
   }
 
   const tokens = await exchangeAuthCode(config, { code, codeVerifier, redirectUri });
-  const { storageKey, storageValue } = buildUserStorage(config, tokens);
-  const expectedOrigin = new URL(resolveBaseUrl()).origin;
-
-  await page.addInitScript(
-    ({ key, value, origin }) => {
-      if (window.location.origin !== origin) return;
-      const seededKey = 'e2e:oidc-seeded';
-      if (window.sessionStorage.getItem(seededKey)) return;
-      window.sessionStorage.setItem(key, value);
-      window.sessionStorage.setItem(seededKey, 'true');
-    },
-    { key: storageKey, value: storageValue, origin: expectedOrigin },
-  );
-
-  const appReady = page.getByRole('link', { name: 'Agyn Tracing home' });
-
-  await page.goto('/');
-  const session = await readOidcSession(page);
-  if (!session?.accessToken) {
-    throw new Error('MockAuth session storage was not initialized.');
-  }
-  await expect(appReady).toBeVisible({ timeout: 30000 });
-  return true;
+  await seedOidcSession(page, tokens, config, options);
 }
