@@ -75,8 +75,18 @@ runs:
         apps_stack="$bootstrap_dir/stacks/apps"
 
         if [ -d "$k8s_stack" ]; then
-          domain=$(terraform -chdir="$k8s_stack" output -raw domain)
-          ingress_port=$(terraform -chdir="$k8s_stack" output -raw ingress_port)
+          if ! domain=$(terraform -chdir="$k8s_stack" output -raw domain); then
+            echo "Failed to read domain output from ${k8s_stack}." >&2
+            exit 1
+          fi
+          if ! ingress_port=$(terraform -chdir="$k8s_stack" output -raw ingress_port); then
+            echo "Failed to read ingress_port output from ${k8s_stack}." >&2
+            exit 1
+          fi
+          if [ -z "$domain" ] || [ -z "$ingress_port" ]; then
+            echo "Bootstrap outputs missing domain or ingress_port." >&2
+            exit 1
+          fi
           gateway_url="https://gateway.${domain}:${ingress_port}"
         fi
 
@@ -89,12 +99,28 @@ runs:
           echo "AGYN_BASE_URL=$AGYN_BASE_URL" >> "$GITHUB_ENV"
         fi
 
+        if ! gateway_status=$(curl -sS -k -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "${AGYN_BASE_URL}"); then
+          echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
+          exit 1
+        fi
+        if [ "$gateway_status" = "000" ]; then
+          echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
+          exit 1
+        fi
+
         if [ -z "${AGYN_API_TOKEN:-}" ]; then
           if [ ! -d "$platform_stack" ]; then
             echo "AGYN_API_TOKEN not set and platform stack missing." >&2
             exit 1
           fi
-          AGYN_API_TOKEN=$(terraform -chdir="$platform_stack" output -raw cluster_admin_api_token)
+          if ! AGYN_API_TOKEN=$(terraform -chdir="$platform_stack" output -raw cluster_admin_api_token); then
+            echo "Failed to read cluster_admin_api_token output from ${platform_stack}." >&2
+            exit 1
+          fi
+          if [ -z "$AGYN_API_TOKEN" ]; then
+            echo "AGYN_API_TOKEN output was empty." >&2
+            exit 1
+          fi
           echo "AGYN_API_TOKEN=$AGYN_API_TOKEN" >> "$GITHUB_ENV"
         fi
 
@@ -103,7 +129,14 @@ runs:
             echo "AGYN_ORGANIZATION_ID not set and apps stack missing." >&2
             exit 1
           fi
-          AGYN_ORGANIZATION_ID=$(terraform -chdir="$apps_stack" output -raw bootstrap_organization_id)
+          if ! AGYN_ORGANIZATION_ID=$(terraform -chdir="$apps_stack" output -raw bootstrap_organization_id); then
+            echo "Failed to read bootstrap_organization_id output from ${apps_stack}." >&2
+            exit 1
+          fi
+          if [ -z "$AGYN_ORGANIZATION_ID" ]; then
+            echo "AGYN_ORGANIZATION_ID output was empty." >&2
+            exit 1
+          fi
           echo "AGYN_ORGANIZATION_ID=$AGYN_ORGANIZATION_ID" >> "$GITHUB_ENV"
         fi
 
@@ -122,17 +155,22 @@ runs:
         {"organizationId":"${AGYN_ORGANIZATION_ID}","llmProviderId":"","pageSize":200,"pageToken":""}
         EOF
         )
-          model_response=$(curl -fsS -k \
+          if ! model_id=$(curl -fsS -k \
             -H 'Content-Type: application/json' \
             -H 'Connect-Protocol-Version: 1' \
             -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
             -d "$list_models_payload" \
-            "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListModels")
-          model_id=$(python3 - <<'PY'
+            "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListModels" \
+            | python3 -c "$(cat <<'PY'
         import json
         import sys
 
-        payload = json.load(sys.stdin)
+        try:
+            payload = json.load(sys.stdin)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid JSON in ListModels response: {exc}", file=sys.stderr)
+            sys.exit(1)
+
         models = payload.get("models") or []
         for model in models:
             meta = model.get("meta") or {}
@@ -141,24 +179,32 @@ runs:
                 print(model_id)
                 break
         PY
-        <<<"$model_response")
+        )"); then
+            echo "Failed to parse ListModels response." >&2
+            exit 1
+          fi
 
           if [ -z "$model_id" ]; then
             providers_payload=$(cat <<EOF
         {"organizationId":"${AGYN_ORGANIZATION_ID}","pageSize":200,"pageToken":""}
         EOF
         )
-            providers_response=$(curl -fsS -k \
+            if ! provider_id=$(curl -fsS -k \
               -H 'Content-Type: application/json' \
               -H 'Connect-Protocol-Version: 1' \
               -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
               -d "$providers_payload" \
-              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListLLMProviders")
-            provider_id=$(python3 - <<'PY'
+              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListLLMProviders" \
+              | python3 -c "$(cat <<'PY'
         import json
         import sys
 
-        payload = json.load(sys.stdin)
+        try:
+            payload = json.load(sys.stdin)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid JSON in ListLLMProviders response: {exc}", file=sys.stderr)
+            sys.exit(1)
+
         providers = payload.get("providers") or []
         for provider in providers:
             meta = provider.get("meta") or {}
@@ -167,7 +213,10 @@ runs:
                 print(provider_id)
                 break
         PY
-        <<<"$providers_response")
+        )"); then
+              echo "Failed to parse ListLLMProviders response." >&2
+              exit 1
+            fi
 
             if [ -z "$provider_id" ]; then
               now=$(date +%s)
@@ -175,24 +224,32 @@ runs:
         {"endpoint":"https://llm.e2e.agyn.dev/${now}","authMethod":"AUTH_METHOD_BEARER","token":"e2e-token-${now}","organizationId":"${AGYN_ORGANIZATION_ID}"}
         EOF
         )
-              provider_response=$(curl -fsS -k \
+              if ! provider_id=$(curl -fsS -k \
                 -H 'Content-Type: application/json' \
                 -H 'Connect-Protocol-Version: 1' \
                 -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
                 -d "$create_provider_payload" \
-                "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider")
-              provider_id=$(python3 - <<'PY'
+                "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider" \
+                | python3 -c "$(cat <<'PY'
         import json
         import sys
 
-        payload = json.load(sys.stdin)
+        try:
+            payload = json.load(sys.stdin)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid JSON in CreateLLMProvider response: {exc}", file=sys.stderr)
+            sys.exit(1)
+
         provider = payload.get("provider") or {}
         meta = provider.get("meta") or {}
         provider_id = meta.get("id") or provider.get("id") or ""
         if provider_id:
             print(provider_id)
         PY
-        <<<"$provider_response")
+        )"); then
+                echo "Failed to parse CreateLLMProvider response." >&2
+                exit 1
+              fi
               if [ -n "$provider_id" ]; then
                 echo "Created LLM provider ${provider_id}"
               fi
@@ -208,24 +265,32 @@ runs:
         {"name":"E2E Model ${now}","llmProviderId":"${provider_id}","remoteName":"gpt-4o-mini","organizationId":"${AGYN_ORGANIZATION_ID}"}
         EOF
         )
-            model_response=$(curl -fsS -k \
+            if ! model_id=$(curl -fsS -k \
               -H 'Content-Type: application/json' \
               -H 'Connect-Protocol-Version: 1' \
               -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
               -d "$create_model_payload" \
-              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateModel")
-            model_id=$(python3 - <<'PY'
+              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateModel" \
+              | python3 -c "$(cat <<'PY'
         import json
         import sys
 
-        payload = json.load(sys.stdin)
+        try:
+            payload = json.load(sys.stdin)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid JSON in CreateModel response: {exc}", file=sys.stderr)
+            sys.exit(1)
+
         model = payload.get("model") or {}
         meta = model.get("meta") or {}
         model_id = meta.get("id") or model.get("id") or ""
         if model_id:
             print(model_id)
         PY
-        <<<"$model_response")
+        )"); then
+              echo "Failed to parse CreateModel response." >&2
+              exit 1
+            fi
             if [ -n "$model_id" ]; then
               echo "Created LLM model ${model_id}"
             fi
