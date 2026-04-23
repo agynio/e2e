@@ -1,0 +1,36 @@
+version: v2
+
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/agynio/e2e/suites/go-core/.gen/go
+
+inputs:
+  - module: buf.build/agynio/api
+    paths:
+      - agynio/api/agents/v1
+      - agynio/api/llm/v1
+      - agynio/api/organizations/v1
+      - agynio/api/runner/v1
+      - agynio/api/runners/v1
+      - agynio/api/secrets/v1
+      - agynio/api/threads/v1
+      - agynio/api/tracing/v1
+      - agynio/api/users/v1
+  - module: buf.build/opentelemetry/opentelemetry
+    paths:
+      - opentelemetry/proto/common/v1
+      - opentelemetry/proto/resource/v1
+      - opentelemetry/proto/trace/v1
+
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: .gen/go
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go
+    out: .gen/go
+    opt:
+      - paths=source_relative
+      - require_unimplemented_servers=false

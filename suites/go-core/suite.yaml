@@ -1,51 +1,52 @@
 image: ghcr.io/agynio/devcontainer-go:1
 workdir: /opt/app/data
+manifests:
+  - manifests/agents-orchestrator
+service_account: agents-orchestrator-e2e
 select: |
+  suite_tags=("svc_agents_orchestrator" "smoke")
+
   if [ -z "${TAGS:-}" ]; then
-    echo "smoke"
+    echo "${suite_tags[1]}"
     exit 0
   fi
 
   for tag in ${TAGS}; do
-    if [ "$tag" = "smoke" ]; then
-      echo "smoke"
-      exit 0
-    fi
+    for suite_tag in "${suite_tags[@]}"; do
+      if [ "$tag" = "$suite_tag" ]; then
+        echo "$tag"
+        exit 0
+      fi
+    done
   done
 run: |
   set -euo pipefail
   cd /opt/app/data
 
-  tag_args="e2e"
+  tags=()
   if [ -n "${TAGS:-}" ]; then
     for tag in ${TAGS}; do
-      tag_args="${tag_args} ${tag}"
+      tags+=("${tag}")
     done
   else
-    tag_args="${tag_args} smoke"
+    tags=("smoke")
   fi
 
+  buf dep update
+  buf generate
+
+  tag_args="e2e"
+  for tag in "${tags[@]}"; do
+    tag_args="${tag_args} ${tag}"
+  done
+
+  tmp_json=$(mktemp)
   set +e
-  go test -count=1 -tags "${tag_args}" ./tests/...
-  status=$?
+  go test -count=1 -tags "${tag_args}" -json ./tests/... 2>&1 | tee "${tmp_json}"
+  status=${PIPESTATUS[0]}
   set -e
 
-  if [ "$status" -eq 0 ]; then
-    printf '%s\n' \
-      '<?xml version="1.0" encoding="UTF-8"?>' \
-      '<testsuite name="go-core" tests="1" failures="0">' \
-      '  <testcase classname="smoke" name="smoke"/>' \
-      '</testsuite>' \
-      > junit.xml
-  else
-    printf '%s\n' \
-      '<?xml version="1.0" encoding="UTF-8"?>' \
-      '<testsuite name="go-core" tests="1" failures="1">' \
-      '  <testcase classname="smoke" name="smoke">' \
-      '    <failure message="go test failed">go test failed</failure>' \
-      '  </testcase>' \
-      '</testsuite>' \
-      > junit.xml
-  fi
+  go run github.com/jstemmer/go-junit-report/v2@v2.1.0 -parser gojson < "${tmp_json}" > junit.xml
+  rm -f "${tmp_json}"
 
   exit "$status"

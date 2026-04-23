@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package agynio.e2e.go_core.v1;
+
+import "agynio/api/agents/v1/agents.proto";
+import "opentelemetry/proto/trace/v1/trace.proto";
+
+message Placeholder {
+	agynio.api.agents.v1.Agent agent = 1;
+	opentelemetry.proto.trace.v1.Span span = 2;
+}

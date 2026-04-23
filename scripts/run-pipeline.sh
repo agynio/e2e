@@ -53,6 +53,23 @@ for suite_file in "${suite_files[@]}"; do
   workdir=$(cat "$tmp_dir/workdir")
   select_file="$tmp_dir/select"
   run_file="$tmp_dir/run"
+  manifests_file="$tmp_dir/manifests"
+  service_account_file="$tmp_dir/service_account"
+
+  service_account=""
+  if [ -s "$service_account_file" ]; then
+    service_account=$(cat "$service_account_file" | xargs)
+  fi
+
+  manifests=()
+  if [ -s "$manifests_file" ]; then
+    while IFS= read -r manifest; do
+      trimmed=$(echo "$manifest" | xargs)
+      if [ -n "$trimmed" ]; then
+        manifests+=("$trimmed")
+      fi
+    done < "$manifests_file"
+  fi
 
   if [ -z "$image" ]; then
     echo "ERROR: suite $suite_name missing image" >&2
@@ -92,11 +109,45 @@ for suite_file in "${suite_files[@]}"; do
     continue
   fi
 
+  manifest_paths=()
+  manifest_failed=0
+  if [ "${#manifests[@]}" -gt 0 ]; then
+    for manifest in "${manifests[@]}"; do
+      manifest_path="$suite_dir/$manifest"
+      if [ ! -e "$manifest_path" ]; then
+        echo "ERROR: suite $suite_name manifest not found at $manifest_path" >&2
+        manifest_failed=1
+        break
+      fi
+      manifest_paths+=("$manifest_path")
+    done
+    if [ "$manifest_failed" -eq 0 ]; then
+      for manifest_path in "${manifest_paths[@]}"; do
+        if ! kubectl apply -n "$namespace" -f "$manifest_path"; then
+          echo "ERROR: suite $suite_name failed to apply manifest $manifest_path" >&2
+          manifest_failed=1
+          break
+        fi
+      done
+    fi
+  fi
+
+  if [ "$manifest_failed" -ne 0 ]; then
+    overall_exit=1
+    rm -rf "$tmp_dir"
+    continue
+  fi
+
   pod_name="e2e-${suite_slug}-$(date +%s)"
+  service_account_args=()
+  if [ -n "$service_account" ]; then
+    service_account_args=("--serviceaccount=$service_account")
+  fi
   kubectl run "$pod_name" -n "$namespace" \
     --image="$image" \
     --restart=Never \
     --labels="app.kubernetes.io/managed-by=e2e,app.kubernetes.io/name=${suite_slug}" \
+    "${service_account_args[@]}" \
     --command -- sleep infinity
 
   kubectl wait --for=condition=Ready "pod/${pod_name}" -n "$namespace" --timeout=300s
@@ -120,6 +171,13 @@ for suite_file in "${suite_files[@]}"; do
   fi
 
   for env_name in AGYN_MODEL_ID AGYN_AGENT_IMAGE AGYN_AGENT_INIT_IMAGE AGYN_API_TOKEN AGYN_ORGANIZATION_ID; do
+    env_value=${!env_name:-}
+    if [ -n "$env_value" ]; then
+      exec_env+=("${env_name}=${env_value}")
+    fi
+  done
+
+  for env_name in CODEX_INIT_IMAGE AGN_INIT_IMAGE AGN_EXPOSE_INIT_IMAGE; do
     env_value=${!env_name:-}
     if [ -n "$env_value" ]; then
       exec_env+=("${env_name}=${env_value}")
@@ -159,6 +217,12 @@ for suite_file in "${suite_files[@]}"; do
   if ! kubectl delete pod "$pod_name" -n "$namespace" --wait=true; then
     echo "ERROR: Failed to delete pod $pod_name" >&2
     run_status=1
+  fi
+
+  if [ "${#manifest_paths[@]}" -gt 0 ]; then
+    for manifest_path in "${manifest_paths[@]}"; do
+      kubectl delete -n "$namespace" -f "$manifest_path" --ignore-not-found
+    done
   fi
 
   if [ "$run_status" -ne 0 ]; then
