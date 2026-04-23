@@ -86,7 +86,7 @@ for suite_file in "${suite_files[@]}"; do
 
     manifests=()
     if [ -s "$manifests_file" ]; then
-      while IFS= read -r manifest; do
+      while IFS= read -r manifest || [ -n "$manifest" ]; do
         trimmed=$(echo "$manifest" | xargs)
         if [ -n "$trimmed" ]; then
           manifests+=("$trimmed")
