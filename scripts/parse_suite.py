@@ -26,7 +26,7 @@ def parse_suite(path: str) -> dict[str, str]:
     if not isinstance(data, dict):
         raise ValueError(f"Suite file {path} must define a YAML mapping at the top level.")
 
-    allowed_keys = {"image", "workdir", "select", "run"}
+    allowed_keys = {"image", "workdir", "select", "run", "manifests", "service_account"}
     required_keys = {"image", "select", "run"}
     unknown_keys = set(data.keys()) - allowed_keys
     if unknown_keys:
@@ -41,12 +41,27 @@ def parse_suite(path: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for key in allowed_keys:
         value = data.get(key, "")
-        if value is None:
-            value = ""
-        if not isinstance(value, str):
-            raise ValueError(f"Value for '{key}' in {path} must be a string.")
-        if key in required_keys and not value.strip():
-            raise ValueError(f"Value for '{key}' in {path} cannot be empty.")
+        if key == "manifests":
+            if value is None:
+                value = ""
+            if isinstance(value, list):
+                entries: list[str] = []
+                for entry in value:
+                    if not isinstance(entry, str):
+                        raise ValueError(f"Manifest entries in {path} must be strings.")
+                    trimmed = entry.strip()
+                    if trimmed:
+                        entries.append(trimmed)
+                value = "\n".join(entries)
+            elif not isinstance(value, str):
+                raise ValueError(f"Value for '{key}' in {path} must be a string or list of strings.")
+        else:
+            if value is None:
+                value = ""
+            if not isinstance(value, str):
+                raise ValueError(f"Value for '{key}' in {path} must be a string.")
+            if key in required_keys and not value.strip():
+                raise ValueError(f"Value for '{key}' in {path} cannot be empty.")
         parsed[key] = value
 
     return parsed
@@ -66,7 +81,7 @@ def main() -> int:
         return 1
     os.makedirs(output_dir, exist_ok=True)
 
-    for key in ("image", "workdir", "select", "run"):
+    for key in ("image", "workdir", "select", "run", "manifests", "service_account"):
         value = data.get(key, "")
         output_path = os.path.join(output_dir, key)
         with open(output_path, "w", encoding="utf-8") as handle:
