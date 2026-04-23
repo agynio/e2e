@@ -9,7 +9,7 @@ artifacts_dir="$repo_root/.artifacts/junit"
 diagnostics_root="$repo_root/.diagnostics/suites"
 
 tags="${TAGS:-}"
-namespace="${DEVSPACE_NAMESPACE:-${E2E_NAMESPACE:-platform}}"
+namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "ERROR: kubectl not found in PATH" >&2
@@ -104,13 +104,35 @@ for suite_file in "${suite_files[@]}"; do
   kubectl cp "$suite_dir/." "$namespace/$pod_name:$workdir"
 
   provider_binary_host="$suite_dir/.provider/terraform-provider-agyn"
-  exec_env=(env TAGS="$tags")
+  exec_env=()
+  if [ -n "$tags" ]; then
+    exec_env+=("TAGS=$tags")
+  fi
   if [ -f "$provider_binary_host" ]; then
-    exec_env+=(PROVIDER_BINARY="$workdir/.provider/terraform-provider-agyn")
+    exec_env+=("PROVIDER_BINARY=$workdir/.provider/terraform-provider-agyn")
+  fi
+
+  gateway_internal_url="http://gateway-gateway.${namespace}.svc.cluster.local:8080"
+  if [ -n "${AGYN_BASE_URL_PASSTHROUGH:-}" ] && [ -n "${AGYN_BASE_URL:-}" ]; then
+    exec_env+=("AGYN_BASE_URL=${AGYN_BASE_URL}")
+  else
+    exec_env+=("AGYN_BASE_URL=${gateway_internal_url}")
+  fi
+
+  for env_name in AGYN_MODEL_ID AGYN_AGENT_IMAGE AGYN_AGENT_INIT_IMAGE AGYN_API_TOKEN AGYN_ORGANIZATION_ID; do
+    env_value=${!env_name:-}
+    if [ -n "$env_value" ]; then
+      exec_env+=("${env_name}=${env_value}")
+    fi
+  done
+
+  exec_cmd=()
+  if [ "${#exec_env[@]}" -gt 0 ]; then
+    exec_cmd=(env "${exec_env[@]}")
   fi
 
   set +e
-  kubectl exec -i -n "$namespace" "$pod_name" -- "${exec_env[@]}" bash -s < "$run_file"
+  kubectl exec -i -n "$namespace" "$pod_name" -- "${exec_cmd[@]}" bash -s < "$run_file"
   run_status=$?
   set -e
 

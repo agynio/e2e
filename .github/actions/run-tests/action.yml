@@ -64,6 +64,175 @@ runs:
     - name: Setup DevSpace
       uses: ./e2e/.github/actions/setup-devspace
 
+    - name: Export Agyn test env
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        bootstrap_dir="$GITHUB_WORKSPACE/bootstrap"
+        k8s_stack="$bootstrap_dir/stacks/k8s"
+        platform_stack="$bootstrap_dir/stacks/platform"
+        apps_stack="$bootstrap_dir/stacks/apps"
+
+        if [ -d "$k8s_stack" ]; then
+          domain=$(terraform -chdir="$k8s_stack" output -raw domain)
+          ingress_port=$(terraform -chdir="$k8s_stack" output -raw ingress_port)
+          gateway_url="https://gateway.${domain}:${ingress_port}"
+        fi
+
+        if [ -z "${AGYN_BASE_URL:-}" ]; then
+          if [ -z "${gateway_url:-}" ]; then
+            echo "AGYN_BASE_URL not set and bootstrap outputs unavailable." >&2
+            exit 1
+          fi
+          AGYN_BASE_URL="$gateway_url"
+          echo "AGYN_BASE_URL=$AGYN_BASE_URL" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${AGYN_API_TOKEN:-}" ]; then
+          if [ ! -d "$platform_stack" ]; then
+            echo "AGYN_API_TOKEN not set and platform stack missing." >&2
+            exit 1
+          fi
+          AGYN_API_TOKEN=$(terraform -chdir="$platform_stack" output -raw cluster_admin_api_token)
+          echo "AGYN_API_TOKEN=$AGYN_API_TOKEN" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${AGYN_ORGANIZATION_ID:-}" ]; then
+          if [ ! -d "$apps_stack" ]; then
+            echo "AGYN_ORGANIZATION_ID not set and apps stack missing." >&2
+            exit 1
+          fi
+          AGYN_ORGANIZATION_ID=$(terraform -chdir="$apps_stack" output -raw bootstrap_organization_id)
+          echo "AGYN_ORGANIZATION_ID=$AGYN_ORGANIZATION_ID" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${AGYN_AGENT_IMAGE:-}" ]; then
+          AGYN_AGENT_IMAGE="ghcr.io/agynio/agent-runtime:v1.0.0"
+          echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${AGYN_AGENT_INIT_IMAGE:-}" ]; then
+          AGYN_AGENT_INIT_IMAGE="ghcr.io/agynio/agent-init:v1.0.0"
+          echo "AGYN_AGENT_INIT_IMAGE=$AGYN_AGENT_INIT_IMAGE" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${AGYN_MODEL_ID:-}" ]; then
+          list_models_payload=$(cat <<EOF
+        {"organizationId":"${AGYN_ORGANIZATION_ID}","llmProviderId":"","pageSize":200,"pageToken":""}
+        EOF
+        )
+          model_response=$(curl -sk \
+            -H 'Content-Type: application/json' \
+            -H 'Connect-Protocol-Version: 1' \
+            -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
+            -d "$list_models_payload" \
+            "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListModels")
+          model_id=$(python3 - <<'PY'
+        import json
+        import sys
+
+        payload = json.load(sys.stdin)
+        models = payload.get("models") or []
+        for model in models:
+            meta = model.get("meta") or {}
+            model_id = meta.get("id") or model.get("id") or ""
+            if model_id:
+                print(model_id)
+                break
+        PY
+        <<<"$model_response")
+
+          if [ -z "$model_id" ]; then
+            providers_payload=$(cat <<EOF
+        {"organizationId":"${AGYN_ORGANIZATION_ID}","pageSize":200,"pageToken":""}
+        EOF
+        )
+            providers_response=$(curl -sk \
+              -H 'Content-Type: application/json' \
+              -H 'Connect-Protocol-Version: 1' \
+              -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
+              -d "$providers_payload" \
+              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListLLMProviders")
+            provider_id=$(python3 - <<'PY'
+        import json
+        import sys
+
+        payload = json.load(sys.stdin)
+        providers = payload.get("providers") or []
+        for provider in providers:
+            meta = provider.get("meta") or {}
+            provider_id = meta.get("id") or provider.get("id") or ""
+            if provider_id:
+                print(provider_id)
+                break
+        PY
+        <<<"$providers_response")
+
+            if [ -z "$provider_id" ]; then
+              now=$(date +%s)
+              create_provider_payload=$(cat <<EOF
+        {"endpoint":"https://llm.e2e.agyn.dev/${now}","authMethod":"AUTH_METHOD_BEARER","token":"e2e-token-${now}","organizationId":"${AGYN_ORGANIZATION_ID}"}
+        EOF
+        )
+              provider_response=$(curl -sk \
+                -H 'Content-Type: application/json' \
+                -H 'Connect-Protocol-Version: 1' \
+                -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
+                -d "$create_provider_payload" \
+                "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider")
+              provider_id=$(python3 - <<'PY'
+        import json
+        import sys
+
+        payload = json.load(sys.stdin)
+        provider = payload.get("provider") or {}
+        meta = provider.get("meta") or {}
+        provider_id = meta.get("id") or provider.get("id") or ""
+        if provider_id:
+            print(provider_id)
+        PY
+        <<<"$provider_response")
+            fi
+
+            if [ -z "$provider_id" ]; then
+              echo "Unable to determine LLM provider ID." >&2
+              exit 1
+            fi
+
+            now=$(date +%s)
+            create_model_payload=$(cat <<EOF
+        {"name":"E2E Model ${now}","llmProviderId":"${provider_id}","remoteName":"gpt-4o-mini","organizationId":"${AGYN_ORGANIZATION_ID}"}
+        EOF
+        )
+            model_response=$(curl -sk \
+              -H 'Content-Type: application/json' \
+              -H 'Connect-Protocol-Version: 1' \
+              -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
+              -d "$create_model_payload" \
+              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateModel")
+            model_id=$(python3 - <<'PY'
+        import json
+        import sys
+
+        payload = json.load(sys.stdin)
+        model = payload.get("model") or {}
+        meta = model.get("meta") or {}
+        model_id = meta.get("id") or model.get("id") or ""
+        if model_id:
+            print(model_id)
+        PY
+        <<<"$model_response")
+          fi
+
+          if [ -z "$model_id" ]; then
+            echo "Unable to determine LLM model ID." >&2
+            exit 1
+          fi
+
+          echo "AGYN_MODEL_ID=$model_id" >> "$GITHUB_ENV"
+        fi
+
     - name: Run DevSpace E2E pipeline
       id: run
       shell: bash
