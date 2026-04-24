@@ -5,7 +5,7 @@ import { readOidcSession } from './oidc-helpers';
 
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
-const IDENTITY_SERVICE_PATH = '/api/agynio.api.identity.v1.IdentityService';
+const THREADS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ThreadsGateway';
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
@@ -55,6 +55,19 @@ type MembershipWire = {
 type MembershipResponseWire = {
   id?: string;
   status?: string | number;
+};
+
+type ThreadParticipantWire = {
+  id?: string;
+};
+
+type ThreadWire = {
+  id?: string;
+  participants?: ThreadParticipantWire[];
+};
+
+type CreateThreadResponseWire = {
+  thread?: ThreadWire;
 };
 
 const CLUSTER_ROLE_ADMIN = 1;
@@ -201,27 +214,30 @@ async function updateUsername(
   );
 }
 
-async function resolveOrgNickname(
+async function getMe(request: APIRequestContext, token: string): Promise<GetMeResponseWire> {
+  return postConnect<GetMeResponseWire>(request, USERS_GATEWAY_PATH, 'GetMe', {}, token);
+}
+
+async function createThreadByNickname(
   request: APIRequestContext,
   token: string,
   opts: { organizationId: string; nickname: string },
-): Promise<string> {
-  const response = await postConnect<{ identityId?: string }>(
+): Promise<ThreadWire> {
+  const response = await postConnect<CreateThreadResponseWire>(
     request,
-    IDENTITY_SERVICE_PATH,
-    'ResolveNickname',
-    { organizationId: opts.organizationId, nickname: opts.nickname },
+    THREADS_GATEWAY_PATH,
+    'CreateThread',
+    {
+      organizationId: opts.organizationId,
+      participants: [{ participantNickname: opts.nickname }],
+    },
     token,
   );
-  const identityId = response.identityId;
-  if (!identityId) {
-    throw new Error('ResolveNickname response missing identity id.');
+  const thread = response.thread;
+  if (!thread?.id) {
+    throw new Error('CreateThread response missing thread id.');
   }
-  return identityId;
-}
-
-async function getMe(request: APIRequestContext, token: string): Promise<GetMeResponseWire> {
-  return postConnect<GetMeResponseWire>(request, USERS_GATEWAY_PATH, 'GetMe', {}, token);
+  return thread;
 }
 
 test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
@@ -256,8 +272,8 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
     const entry = results[0];
     expect(entry.identityId).toBe(targetId);
     expect(entry.username).toBe(targetUsername);
-    expect(entry.name ?? '').toBe('');
-    expect(entry.photoUrl ?? '').toBe('');
+    expect(entry.name ?? '').toBe('Redacted User');
+    expect(entry.photoUrl ?? '').toBe('https://example.com/photo.png');
   });
 
   test('invite by username seeds org nickname on accept', async ({ request, page }) => {
@@ -298,11 +314,11 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
     const inviteeToken = await getOidcAccessToken(page, inviteeEmail);
     await acceptMembership(request, inviteeToken, { membershipId: membership.id });
 
-    const resolvedId = await resolveOrgNickname(request, inviterToken, {
+    const thread = await createThreadByNickname(request, inviterToken, {
       organizationId,
       nickname: inviteeUsername,
     });
-    expect(resolvedId).toBe(inviteeId);
+    expect(thread.participants?.some((participant) => participant.id === inviteeId) ?? false).toBe(true);
     expect(inviterId).not.toBe(inviteeId);
   });
 
@@ -338,11 +354,11 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
 
     await updateUsername(request, inviteeToken, { username: newUsername });
 
-    const resolvedId = await resolveOrgNickname(request, inviterToken, {
+    const thread = await createThreadByNickname(request, inviterToken, {
       organizationId,
       nickname: originalUsername,
     });
-    expect(resolvedId).toBe(inviteeId);
+    expect(thread.participants?.some((participant) => participant.id === inviteeId) ?? false).toBe(true);
     expect(inviterId).not.toBe(inviteeId);
   });
 });
