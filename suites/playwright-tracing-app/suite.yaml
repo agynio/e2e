@@ -17,10 +17,12 @@ run: |
 
   namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
   export E2E_BASE_URL="${E2E_BASE_URL:-http://tracing-app.${namespace}.svc.cluster.local:3000}"
+  export E2E_MOCK_DATA="${E2E_MOCK_DATA:-true}"
+  export E2E_MOCK_AUTH="${E2E_MOCK_AUTH:-true}"
 
   corepack enable
   corepack prepare pnpm@10.33.0 --activate
-  pnpm install
+  pnpm install --frozen-lockfile
   pnpm exec buf generate
 
   grep_tags=""

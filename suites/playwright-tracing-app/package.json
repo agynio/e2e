@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@argos-ci/playwright": "^6.5.0",
-    "@bufbuild/buf": "latest",
+    "@bufbuild/buf": "1.68.4",
     "@bufbuild/protoc-gen-es": "^2.0.0",
     "@connectrpc/connect-node": "^2.1.1",
     "@eslint/js": "^9.35.0",
