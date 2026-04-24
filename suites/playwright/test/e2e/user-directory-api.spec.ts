@@ -41,6 +41,37 @@ type UserDirectoryEntry = {
   photoUrl?: string;
 };
 
+type ClusterRoleWire = string | number | undefined;
+
+type GetMeResponseWire = {
+  clusterRole?: string | number;
+};
+
+type MembershipWire = {
+  id: string;
+  status?: string | number;
+};
+
+type MembershipResponseWire = {
+  id?: string;
+  status?: string | number;
+};
+
+const CLUSTER_ROLE_ADMIN = 1;
+const MEMBERSHIP_STATUS_PENDING = 1;
+
+function isClusterAdminRole(role: ClusterRoleWire): boolean {
+  if (role === undefined || role === null) return false;
+  if (typeof role === 'number') return role === CLUSTER_ROLE_ADMIN;
+  return role === 'CLUSTER_ROLE_ADMIN';
+}
+
+function isPendingMembershipStatus(status: MembershipWire['status']): boolean {
+  if (status === undefined || status === null) return false;
+  if (typeof status === 'number') return status === MEMBERSHIP_STATUS_PENDING;
+  return status === 'MEMBERSHIP_STATUS_PENDING';
+}
+
 async function postConnect<T>(
   request: APIRequestContext,
   path: string,
@@ -73,12 +104,12 @@ async function createUser(
     USERS_GATEWAY_PATH,
     'CreateUser',
     {
-      email: opts.email,
       username: opts.username,
       oidcSubject: opts.email,
       name: opts.name ?? opts.username,
       nickname: opts.nickname ?? opts.username,
       photoUrl: opts.photoUrl ?? '',
+      clusterRole: 'CLUSTER_ROLE_UNSPECIFIED',
     },
     token,
   );
@@ -123,8 +154,8 @@ async function createMembership(
   request: APIRequestContext,
   token: string,
   opts: { organizationId: string; identityId: string },
-): Promise<string> {
-  const response = await postConnect<{ membership?: { id?: string } }>(
+): Promise<MembershipWire> {
+  const response = await postConnect<{ membership?: MembershipResponseWire }>(
     request,
     ORGS_GATEWAY_PATH,
     'CreateMembership',
@@ -135,11 +166,11 @@ async function createMembership(
     },
     token,
   );
-  const membershipId = response.membership?.id;
-  if (!membershipId) {
+  const membership = response.membership;
+  if (!membership?.id) {
     throw new Error('CreateMembership response missing membership id.');
   }
-  return membershipId;
+  return { id: membership.id, status: membership.status };
 }
 
 async function acceptMembership(
@@ -189,6 +220,10 @@ async function resolveOrgNickname(
   return identityId;
 }
 
+async function getMe(request: APIRequestContext, token: string): Promise<GetMeResponseWire> {
+  return postConnect<GetMeResponseWire>(request, USERS_GATEWAY_PATH, 'GetMe', {}, token);
+}
+
 test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
   test.beforeEach(async ({ request }) => {
     await ensureMockAuthEmailStrategy(request);
@@ -214,6 +249,8 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
     });
 
     const callerToken = await getOidcAccessToken(page, callerEmail);
+    const me = await getMe(request, callerToken);
+    expect(isClusterAdminRole(me.clusterRole)).toBe(false);
     const results = await searchUsers(request, callerToken, { prefix: targetUsername });
     expect(results).toHaveLength(1);
     const entry = results[0];
@@ -226,17 +263,25 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
   test('invite by username seeds org nickname on accept', async ({ request, page }) => {
     const adminToken = requireAdminToken();
     const suffix = randomSuffix();
-    const organizationId = await createOrganization(request, adminToken, `e2e-org-${suffix}`);
+    const inviterUsername = `e2e-inviter-${suffix}`;
     const inviteeUsername = `e2e-invite-${suffix}`;
+    const inviterEmail = `${inviterUsername}@agyn.test`;
     const inviteeEmail = `${inviteeUsername}@agyn.test`;
 
+    const inviterId = await createUser(request, adminToken, {
+      email: inviterEmail,
+      username: inviterUsername,
+      name: 'Inviter User',
+    });
     const inviteeId = await createUser(request, adminToken, {
       email: inviteeEmail,
       username: inviteeUsername,
       name: 'Invitee User',
     });
 
-    const results = await searchUsers(request, adminToken, { prefix: inviteeUsername });
+    const inviterToken = await getOidcAccessToken(page, inviterEmail);
+    const organizationId = await createOrganization(request, inviterToken, `e2e-org-${suffix}`);
+    const results = await searchUsers(request, inviterToken, { prefix: inviteeUsername });
     expect(results).toHaveLength(1);
     const inviteeEntry = results[0];
     const entryIdentityId = inviteeEntry?.identityId;
@@ -244,48 +289,60 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
       throw new Error('SearchUsers response missing identity id.');
     }
     expect(entryIdentityId).toBe(inviteeId);
-    const membershipId = await createMembership(request, adminToken, {
+    const membership = await createMembership(request, inviterToken, {
       organizationId,
       identityId: entryIdentityId,
     });
+    expect(isPendingMembershipStatus(membership.status)).toBe(true);
 
     const inviteeToken = await getOidcAccessToken(page, inviteeEmail);
-    await acceptMembership(request, inviteeToken, { membershipId });
+    await acceptMembership(request, inviteeToken, { membershipId: membership.id });
 
-    const resolvedId = await resolveOrgNickname(request, adminToken, {
+    const resolvedId = await resolveOrgNickname(request, inviterToken, {
       organizationId,
       nickname: inviteeUsername,
     });
     expect(resolvedId).toBe(inviteeId);
+    expect(inviterId).not.toBe(inviteeId);
   });
 
   test('renaming username does not change existing org nickname', async ({ request, page }) => {
     const adminToken = requireAdminToken();
     const suffix = randomSuffix();
-    const organizationId = await createOrganization(request, adminToken, `e2e-org-rename-${suffix}`);
+    const inviterUsername = `e2e-inviter-rename-${suffix}`;
     const originalUsername = `e2e-user-${suffix}`;
     const newUsername = `e2e-user-new-${suffix}`;
+    const inviterEmail = `${inviterUsername}@agyn.test`;
     const inviteeEmail = `${originalUsername}@agyn.test`;
 
+    const inviterId = await createUser(request, adminToken, {
+      email: inviterEmail,
+      username: inviterUsername,
+      name: 'Inviter User',
+    });
     const inviteeId = await createUser(request, adminToken, {
       email: inviteeEmail,
       username: originalUsername,
       name: 'Rename User',
     });
 
-    const membershipId = await createMembership(request, adminToken, {
+    const inviterToken = await getOidcAccessToken(page, inviterEmail);
+    const organizationId = await createOrganization(request, inviterToken, `e2e-org-rename-${suffix}`);
+    const membership = await createMembership(request, inviterToken, {
       organizationId,
       identityId: inviteeId,
     });
+    expect(isPendingMembershipStatus(membership.status)).toBe(true);
     const inviteeToken = await getOidcAccessToken(page, inviteeEmail);
-    await acceptMembership(request, inviteeToken, { membershipId });
+    await acceptMembership(request, inviteeToken, { membershipId: membership.id });
 
     await updateUsername(request, inviteeToken, { username: newUsername });
 
-    const resolvedId = await resolveOrgNickname(request, adminToken, {
+    const resolvedId = await resolveOrgNickname(request, inviterToken, {
       organizationId,
       nickname: originalUsername,
     });
     expect(resolvedId).toBe(inviteeId);
+    expect(inviterId).not.toBe(inviteeId);
   });
 });
