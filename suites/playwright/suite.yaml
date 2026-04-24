@@ -16,75 +16,11 @@ run: |
   set -euo pipefail
   cd /opt/app/data
 
-  export MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-5000}"
-  export MOCK_METERING_PORT="${MOCK_METERING_PORT:-50051}"
-  export MOCK_PROXY_TARGET="${MOCK_PROXY_TARGET:-http://console-app.platform.svc.cluster.local:3000}"
-  export MOCK_OIDC_AUTHORITY="${MOCK_OIDC_AUTHORITY:-http://127.0.0.1:${MOCK_SERVER_PORT}}"
-  export MOCK_OIDC_CLIENT_ID="${MOCK_OIDC_CLIENT_ID:-console-app-e2e}"
-  export MOCK_OIDC_SCOPE="${MOCK_OIDC_SCOPE:-openid profile email}"
-  export E2E_BASE_URL="${E2E_BASE_URL:-http://127.0.0.1:${MOCK_SERVER_PORT}}"
-  export METERING_GRPC_URL="${METERING_GRPC_URL:-http://127.0.0.1:${MOCK_METERING_PORT}}"
+  export E2E_DOMAIN="${E2E_DOMAIN:-agyn.dev}"
+  export E2E_BASE_URL="${E2E_BASE_URL:-https://console.${E2E_DOMAIN}}"
 
   npm ci --no-fund --no-audit
   npx buf generate
-
-  node test/e2e/mock-server.mjs > /tmp/e2e-mock-server.log 2>&1 &
-  mock_pid=$!
-  cleanup() {
-    if [ -n "${callback_pid:-}" ]; then
-      kill "$callback_pid" 2>/dev/null || true
-    fi
-    if [ -n "${mock_pid:-}" ]; then
-      kill "$mock_pid" 2>/dev/null || true
-    fi
-  }
-  trap cleanup EXIT
-
-  ready=""
-  for _ in $(seq 1 30); do
-    if curl -sf "http://127.0.0.1:${MOCK_SERVER_PORT}/healthz" >/dev/null; then
-      ready="yes"
-      break
-    fi
-    sleep 1
-  done
-
-  if [ -z "$ready" ]; then
-    echo "ERROR: mock server failed to start" >&2
-    if [ -f /tmp/e2e-mock-server.log ]; then
-      cat /tmp/e2e-mock-server.log >&2
-    fi
-    exit 1
-  fi
-
-  base_host=$(node -e "console.log(new URL(process.env.E2E_BASE_URL).hostname)")
-  local_base=""
-  if [ "$base_host" = "localhost" ] || [ "$base_host" = "127.0.0.1" ]; then
-    local_base="yes"
-  fi
-
-  if [ -n "${E2E_OIDC_REDIRECT_URI:-}" ] && [ -n "$local_base" ]; then
-    callback_port=$(node -e "const url = new URL(process.env.E2E_OIDC_REDIRECT_URI); if (url.protocol !== 'https:') { throw new Error('E2E_OIDC_REDIRECT_URI must use https'); } if (!url.port) { throw new Error('E2E_OIDC_REDIRECT_URI must include a non-privileged port for the callback server.'); } const port = Number(url.port); if (!Number.isInteger(port) || port < 1024) { throw new Error('E2E_OIDC_REDIRECT_URI must use a non-privileged port (>=1024).'); } console.log(port);")
-    node test/e2e/oidc-callback-server.mjs > /tmp/e2e-oidc-callback.log 2>&1 &
-    callback_pid=$!
-
-    ready=""
-    for _ in $(seq 1 30); do
-      if curl -sk "https://127.0.0.1:${callback_port}/healthz" >/dev/null; then
-        ready="yes"
-        break
-      fi
-      sleep 1
-    done
-
-    if [ -z "$ready" ]; then
-      echo "ERROR: OIDC callback server failed to start" >&2
-      if [ -f /tmp/e2e-oidc-callback.log ]; then
-        cat /tmp/e2e-oidc-callback.log >&2
-      fi
-      exit 1
-    fi
-  fi
 
   grep_tags=""
   if [ -n "${TAGS:-}" ]; then

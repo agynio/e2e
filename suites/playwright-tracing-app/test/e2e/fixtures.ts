@@ -4,7 +4,7 @@ import { ensureMockAuthEmailStrategy, seedOidcSessionViaMockAuth } from './sign-
 
 export { expect };
 
-type TestFixtures = {};
+type TestFixtures = object;
 
 type WorkerFixtures = {
   mockAuthReady: void;
@@ -16,11 +16,11 @@ async function signInAndLoad(page: Page) {
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   mockAuthReady: [
-    async ({ playwright }, use) => {
+    async ({ playwright }, run) => {
       const request = await playwright.request.newContext();
       try {
         await ensureMockAuthEmailStrategy(request);
-        await use();
+        await run();
       } finally {
         await request.dispose();
       }

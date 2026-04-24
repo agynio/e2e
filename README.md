@@ -7,13 +7,17 @@ End-to-end test suites for the Agyn platform.
 ### tracing-app
 
 Located in `suites/playwright-tracing-app` with tags `svc_tracing_app`, `svc_agents_orchestrator`, and `smoke`
-(default when `TAGS` is empty). Provide a tracing-app URL that serves `/env.js` via `E2E_BASE_URL`.
+(default when `TAGS` is empty). Provide a tracing-app URL that serves `/env.js` via `E2E_BASE_URL`
+(defaults to `https://tracing.${E2E_DOMAIN:-agyn.dev}` in-cluster).
 Optional OIDC overrides:
 
 - `E2E_OIDC_AUTHORITY`
 - `E2E_OIDC_CLIENT_ID`
 - `E2E_OIDC_SCOPE`
-- `E2E_OIDC_REDIRECT_URI`
+
+Optional domain override:
+
+- `E2E_DOMAIN`
 
 Full-chain tests use `AGN_INIT_IMAGE` for the agent init image (falls back to the default used by go-core).
 

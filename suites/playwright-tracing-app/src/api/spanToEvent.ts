@@ -109,7 +109,8 @@ function parseToolCalls(raw: string | null): Array<{ callId: string; name: strin
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new Error(`Invalid tool calls JSON: ${(error as Error).message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid tool calls JSON: ${message}`, { cause: error });
   }
   if (!Array.isArray(parsed)) {
     throw new Error('Invalid tool calls payload: expected an array');

@@ -5,7 +5,6 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readOidcSession } from './oidc-helpers';
 
 const defaultEmail = 'e2e-tester@agyn.test';
-const fallbackRedirectUri = 'https://console.agyn.dev/callback';
 
 type SeedOidcOptions = {
   onLoginPage?: (page: Page) => Promise<void>;
@@ -146,47 +145,8 @@ export async function ensureMockAuthEmailStrategy(request: APIRequestContext): P
   }
 }
 
-async function isRedirectUriAllowed(config: OidcRuntimeConfig, redirectUri: string): Promise<boolean> {
-  const { codeChallenge } = createPkcePair();
-  const authorizeUrl = new URL(`${config.authority}/authorize`);
-  authorizeUrl.searchParams.set('client_id', config.clientId);
-  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
-  authorizeUrl.searchParams.set('response_type', 'code');
-  authorizeUrl.searchParams.set('scope', config.scope);
-  authorizeUrl.searchParams.set('state', randomState());
-  authorizeUrl.searchParams.set('code_challenge', codeChallenge);
-  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-
-  const response = await fetch(authorizeUrl.toString(), { redirect: 'manual' });
-  if (response.status >= 300 && response.status < 400) {
-    return true;
-  }
-  const body = await response.text();
-  if (response.status === 400 && body.includes('invalid_redirect_uri')) {
-    return false;
-  }
-  return response.ok;
-}
-
-async function resolveRedirectUri(config: OidcRuntimeConfig): Promise<string> {
-  const override = process.env.E2E_OIDC_REDIRECT_URI;
-  if (override) {
-    return override;
-  }
-  const defaultRedirectUri = new URL('/callback', resolveBaseUrl()).toString();
-  const candidates = [defaultRedirectUri];
-  if (fallbackRedirectUri !== defaultRedirectUri) {
-    candidates.push(fallbackRedirectUri);
-  }
-
-  for (const candidate of candidates) {
-    if (await isRedirectUriAllowed(config, candidate)) {
-      return candidate;
-    }
-  }
-
-  console.warn('No valid MockAuth redirect URI found for E2E tests; using default redirect URI.');
-  return defaultRedirectUri;
+function resolveRedirectUri(): string {
+  return new URL('/callback', resolveBaseUrl()).toString();
 }
 
 async function waitForRedirectResponse(page: Page, redirectUri: string) {
@@ -274,7 +234,7 @@ async function seedOidcSession(
 export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOptions = {}): Promise<void> {
   const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
   const config = await resolveOidcConfig(page.context().request);
-  const redirectUri = await resolveRedirectUri(config);
+  const redirectUri = resolveRedirectUri();
   const { codeVerifier, codeChallenge } = createPkcePair();
   const state = randomState();
   const nonce = randomState();

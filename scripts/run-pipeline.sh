@@ -262,13 +262,6 @@ EOF
       fi
     done
 
-    for env_name in E2E_OIDC_REDIRECT_URI; do
-      env_value=${!env_name:-}
-      if [ -n "$env_value" ]; then
-        exec_env+=("${env_name}=${env_value}")
-      fi
-    done
-
     for env_name in CODEX_INIT_IMAGE AGN_INIT_IMAGE AGN_EXPOSE_INIT_IMAGE; do
       env_value=${!env_name:-}
       if [ -n "$env_value" ]; then
