@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
@@ -9,6 +9,10 @@ const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
   'Connect-Protocol-Version': '1',
 };
+
+function randomSuffix(): string {
+  return randomBytes(4).toString('hex');
+}
 
 type UserDirectoryEntry = {
   identityId?: string;
@@ -153,7 +157,7 @@ async function resolveOrgNickname(
 
 test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
   test('non-admin SearchUsers redacts profile fields', async ({ request }) => {
-    const suffix = randomUUID();
+    const suffix = randomSuffix();
     const targetUsername = `e2e-search-${suffix}`;
     const callerUsername = `e2e-caller-${suffix}`;
 
@@ -178,7 +182,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
   });
 
   test('invite by username seeds org nickname on accept', async ({ request }) => {
-    const suffix = randomUUID();
+    const suffix = randomSuffix();
     const organizationId = await createOrganization(request, `e2e-org-${suffix}`);
     const inviteeUsername = `e2e-invite-${suffix}`;
 
@@ -210,7 +214,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
   });
 
   test('renaming username does not change existing org nickname', async ({ request }) => {
-    const suffix = randomUUID();
+    const suffix = randomSuffix();
     const organizationId = await createOrganization(request, `e2e-org-rename-${suffix}`);
     const originalUsername = `e2e-user-${suffix}`;
     const newUsername = `e2e-user-new-${suffix}`;

@@ -1,6 +1,6 @@
 import http from 'node:http';
 import http2 from 'node:http2';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { BinaryReader, WireType } from '@bufbuild/protobuf/wire';
 
 const port = Number(process.env.MOCK_SERVER_PORT ?? 5000);
@@ -16,6 +16,8 @@ const envScript = `window.__ENV__ = {\n` +
   `};\n`;
 const defaultUserId = 'user-1';
 const defaultEmail = 'e2e-tester@agyn.test';
+const USERNAME_MAX_LENGTH = 32;
+const USERNAME_PATTERN = /^[a-z0-9_-]+$/;
 
 const users = new Map();
 const organizations = new Map();
@@ -237,10 +239,55 @@ function isClusterAdmin(identityId) {
   return users.get(identityId)?.clusterRole === 'CLUSTER_ROLE_ADMIN';
 }
 
-function deriveUsername(input, fallbackId) {
-  const candidate =
-    input.username ?? input.nickname ?? input.email?.split('@')[0] ?? input.name ?? `user-${fallbackId}`;
-  return String(candidate).trim() || `user-${fallbackId}`;
+function normalizeUsernameCandidate(value) {
+  if (!value) return '';
+  const lower = String(value).toLowerCase();
+  let normalized = '';
+  let lastDash = false;
+  for (const char of lower) {
+    const isAllowed =
+      (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char === '_' || char === '-';
+    if (!isAllowed) {
+      if (!lastDash) {
+        normalized += '-';
+        lastDash = true;
+      }
+      continue;
+    }
+    if (char === '-') {
+      if (lastDash) {
+        continue;
+      }
+      lastDash = true;
+      normalized += char;
+      continue;
+    }
+    lastDash = false;
+    normalized += char;
+  }
+  normalized = normalized.replace(/^-+|-+$/g, '');
+  if (normalized.length > USERNAME_MAX_LENGTH) {
+    normalized = normalized.slice(0, USERNAME_MAX_LENGTH);
+  }
+  return normalized;
+}
+
+function fallbackUsername(seed) {
+  const hash = createHash('sha256').update(String(seed ?? '')).digest('hex');
+  return `user-${hash.slice(0, 8)}`;
+}
+
+function validateUsername(value) {
+  if (!value) return 'value is required';
+  if (value.length > USERNAME_MAX_LENGTH) return `max length ${USERNAME_MAX_LENGTH}`;
+  if (!USERNAME_PATTERN.test(value)) return `must match ${USERNAME_PATTERN}`;
+  return '';
+}
+
+function deriveUsernameBase(name, oidcSubject) {
+  const normalized = normalizeUsernameCandidate(name);
+  if (normalized) return normalized;
+  return fallbackUsername(oidcSubject);
 }
 
 function resolveNicknameMap(organizationId) {
@@ -585,7 +632,18 @@ function handleUsersGateway(req, method, body, res) {
     }
     case 'CreateUser': {
       const id = randomUUID();
-      const username = deriveUsername(body, id);
+      const explicitUsername = body.username;
+      let username = '';
+      if (explicitUsername !== undefined && explicitUsername !== null) {
+        const value = String(explicitUsername);
+        const error = validateUsername(value);
+        if (error) {
+          return sendText(res, 400, `username: ${error}`);
+        }
+        username = value;
+      } else {
+        username = deriveUsernameBase(body.name ?? '', body.oidcSubject ?? id);
+      }
       const user = {
         id,
         oidcSubject: body.oidcSubject ?? `mock-${id}`,
@@ -611,7 +669,12 @@ function handleUsersGateway(req, method, body, res) {
       user.nickname = body.nickname ?? user.nickname;
       user.photoUrl = body.photoUrl ?? user.photoUrl;
       if (body.username !== undefined) {
-        user.username = body.username;
+        const value = String(body.username);
+        const error = validateUsername(value);
+        if (error) {
+          return sendText(res, 400, `username: ${error}`);
+        }
+        user.username = value;
       }
       if (body.clusterRole !== undefined) {
         user.clusterRole = normalizeClusterRole(body.clusterRole);
@@ -625,7 +688,14 @@ function handleUsersGateway(req, method, body, res) {
       if (body.name !== undefined) user.name = body.name;
       if (body.nickname !== undefined) user.nickname = body.nickname;
       if (body.photoUrl !== undefined) user.photoUrl = body.photoUrl;
-      if (body.username !== undefined) user.username = body.username;
+      if (body.username !== undefined) {
+        const value = String(body.username);
+        const error = validateUsername(value);
+        if (error) {
+          return sendText(res, 400, `username: ${error}`);
+        }
+        user.username = value;
+      }
       return sendJson(res, 200, { user: mapUser(user) });
     }
     case 'GetUser': {
@@ -642,7 +712,8 @@ function handleUsersGateway(req, method, body, res) {
     }
     case 'SearchUsers': {
       const prefix = String(body.prefix ?? '').toLowerCase();
-      const limit = Number.isFinite(body.limit) && body.limit > 0 ? body.limit : 25;
+      const requestedLimit = Number(body.limit);
+      const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 20) : 10;
       const callerId = resolveRequestIdentity(req);
       const includePrivate = isClusterAdmin(callerId);
       const results = Array.from(users.values())
