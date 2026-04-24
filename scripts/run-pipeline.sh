@@ -269,6 +269,12 @@ EOF
       fi
     done
 
+    while IFS='=' read -r env_name env_value; do
+      if [[ "$env_name" == E2E_* || "$env_name" == ARGOS_* ]]; then
+        exec_env+=("${env_name}=${env_value}")
+      fi
+    done < <(env)
+
     exec_cmd=()
     if [ "${#exec_env[@]}" -gt 0 ]; then
       exec_cmd=(env "${exec_env[@]}")
