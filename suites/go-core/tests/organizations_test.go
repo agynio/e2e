@@ -27,6 +27,7 @@ func TestOrganizationsServiceE2E(t *testing.T) {
 	testID := uuid.NewString()
 	identityID := uuid.NewString()
 	identityCtx := identityContext(ctx, identityID)
+	adminCtx := identityContext(ctx, clusterAdminIdentityID)
 
 	organizationResp1, err := client.CreateOrganization(identityCtx, &organizationsv1.CreateOrganizationRequest{Name: "Organization Alpha " + testID})
 	require.NoError(t, err)
@@ -56,12 +57,12 @@ func TestOrganizationsServiceE2E(t *testing.T) {
 	require.NotNil(t, updatedOrg)
 	require.Equal(t, "Organization Alpha Updated "+testID, updatedOrg.GetName())
 
-	listResp, err := client.ListOrganizations(ctx, &organizationsv1.ListOrganizationsRequest{PageSize: 1})
+	listResp, err := client.ListOrganizations(adminCtx, &organizationsv1.ListOrganizationsRequest{PageSize: 1})
 	require.NoError(t, err)
 	require.NotEmpty(t, listResp.GetOrganizations())
 	require.NotEmpty(t, listResp.GetNextPageToken())
 
-	organizations := listOrganizations(ctx, t, client)
+	organizations := listOrganizations(adminCtx, t, client)
 	require.True(t, hasID(organizations, organizationID1))
 	require.True(t, hasID(organizations, organizationID2))
 
