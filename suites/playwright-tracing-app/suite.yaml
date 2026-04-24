@@ -23,6 +23,16 @@ run: |
   npm ci --no-fund --no-audit
   npx buf generate
 
+  cleanup() {
+    if [ -n "${proxy_pid:-}" ]; then
+      kill "$proxy_pid" 2>/dev/null || true
+    fi
+    if [ -n "${callback_pid:-}" ]; then
+      kill "$callback_pid" 2>/dev/null || true
+    fi
+  }
+  trap cleanup EXIT
+
   if [ -z "${E2E_BASE_URL:-}" ]; then
     export TRACING_PROXY_PORT="${TRACING_PROXY_PORT:-5100}"
     export TRACING_APP_TARGET="${TRACING_APP_TARGET:-http://tracing-app.platform.svc.cluster.local:3000}"
@@ -31,7 +41,6 @@ run: |
 
     node test/e2e/tracing-proxy.mjs > /tmp/e2e-tracing-proxy.log 2>&1 &
     proxy_pid=$!
-    trap 'kill "$proxy_pid" 2>/dev/null || true' EXIT
 
     ready=""
     for _ in $(seq 1 30); do
@@ -46,6 +55,29 @@ run: |
       echo "ERROR: tracing app proxy failed to start" >&2
       if [ -f /tmp/e2e-tracing-proxy.log ]; then
         cat /tmp/e2e-tracing-proxy.log >&2
+      fi
+      exit 1
+    fi
+  fi
+
+  if [ -n "${E2E_OIDC_REDIRECT_URI:-}" ]; then
+    callback_port=$(node -e "const url = new URL(process.env.E2E_OIDC_REDIRECT_URI); if (url.protocol !== 'https:') { throw new Error('E2E_OIDC_REDIRECT_URI must use https'); } console.log(url.port || '443');")
+    node test/e2e/oidc-callback-server.mjs > /tmp/e2e-oidc-callback.log 2>&1 &
+    callback_pid=$!
+
+    ready=""
+    for _ in $(seq 1 30); do
+      if curl -sk "https://127.0.0.1:${callback_port}/healthz" >/dev/null; then
+        ready="yes"
+        break
+      fi
+      sleep 1
+    done
+
+    if [ -z "$ready" ]; then
+      echo "ERROR: OIDC callback server failed to start" >&2
+      if [ -f /tmp/e2e-oidc-callback.log ]; then
+        cat /tmp/e2e-oidc-callback.log >&2
       fi
       exit 1
     fi
