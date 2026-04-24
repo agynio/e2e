@@ -20,8 +20,35 @@ run: |
   set -euo pipefail
   cd /opt/app/data
 
+  export TRACING_PROXY_PORT="${TRACING_PROXY_PORT:-5100}"
+  export TRACING_APP_TARGET="${TRACING_APP_TARGET:-http://tracing-app.platform.svc.cluster.local:3000}"
+  export TRACING_GATEWAY_TARGET="${TRACING_GATEWAY_TARGET:-http://gateway-gateway.platform.svc.cluster.local:8080}"
+  export E2E_BASE_URL="${E2E_BASE_URL:-http://127.0.0.1:${TRACING_PROXY_PORT}}"
+  export E2E_OIDC_REDIRECT_URI="${E2E_OIDC_REDIRECT_URI:-https://tracing.agyn.dev:2496/callback}"
+
   npm ci --no-fund --no-audit
   npx buf generate
+
+  node test/e2e/tracing-proxy.mjs > /tmp/e2e-tracing-proxy.log 2>&1 &
+  proxy_pid=$!
+  trap 'kill "$proxy_pid" 2>/dev/null || true' EXIT
+
+  ready=""
+  for _ in $(seq 1 30); do
+    if curl -sf "http://127.0.0.1:${TRACING_PROXY_PORT}/env.js" >/dev/null; then
+      ready="yes"
+      break
+    fi
+    sleep 1
+  done
+
+  if [ -z "$ready" ]; then
+    echo "ERROR: tracing app proxy failed to start" >&2
+    if [ -f /tmp/e2e-tracing-proxy.log ]; then
+      cat /tmp/e2e-tracing-proxy.log >&2
+    fi
+    exit 1
+  fi
 
   grep_tags=""
   if [ -n "${TAGS:-}" ]; then
