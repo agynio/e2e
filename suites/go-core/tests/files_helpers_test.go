@@ -1,4 +1,4 @@
-//go:build e2e && (svc_files || smoke)
+//go:build e2e && (svc_files || svc_media_proxy || smoke)
 
 package tests
 
