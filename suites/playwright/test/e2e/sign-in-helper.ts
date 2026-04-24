@@ -6,11 +6,15 @@ import { ensureClusterAdmin } from './console-api';
 import { readOidcSession } from './oidc-helpers';
 
 const defaultEmail = 'e2e-tester@agyn.test';
-const fallbackRedirectUri = 'https://console.agyn.dev/callback';
 
 type SignInOptions = {
   onLoginPage?: (page: Page) => Promise<void>;
   force?: boolean;
+};
+
+type SeedOidcOptions = SignInOptions & {
+  email?: string;
+  landingPath?: string;
 };
 
 type OidcRuntimeConfig = {
@@ -145,47 +149,8 @@ export async function ensureMockAuthEmailStrategy(request: APIRequestContext): P
   }
 }
 
-async function isRedirectUriAllowed(config: OidcRuntimeConfig, redirectUri: string): Promise<boolean> {
-  const { codeChallenge } = createPkcePair();
-  const authorizeUrl = new URL(`${config.authority}/authorize`);
-  authorizeUrl.searchParams.set('client_id', config.clientId);
-  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
-  authorizeUrl.searchParams.set('response_type', 'code');
-  authorizeUrl.searchParams.set('scope', config.scope);
-  authorizeUrl.searchParams.set('state', randomState());
-  authorizeUrl.searchParams.set('code_challenge', codeChallenge);
-  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-
-  const response = await fetch(authorizeUrl.toString(), { redirect: 'manual' });
-  if (response.status >= 300 && response.status < 400) {
-    return true;
-  }
-  const body = await response.text();
-  if (response.status === 400 && body.includes('invalid_redirect_uri')) {
-    return false;
-  }
-  return response.ok;
-}
-
-async function resolveRedirectUri(config: OidcRuntimeConfig): Promise<string> {
-  const override = process.env.E2E_OIDC_REDIRECT_URI;
-  if (override) {
-    return override;
-  }
-  const defaultRedirectUri = new URL('/callback', resolveBaseUrl()).toString();
-  const candidates = [defaultRedirectUri];
-  if (fallbackRedirectUri !== defaultRedirectUri) {
-    candidates.push(fallbackRedirectUri);
-  }
-
-  for (const candidate of candidates) {
-    if (await isRedirectUriAllowed(config, candidate)) {
-      return candidate;
-    }
-  }
-
-  console.warn('No valid MockAuth redirect URI found for E2E tests; using default redirect URI.');
-  return defaultRedirectUri;
+function resolveRedirectUri(): string {
+  return new URL('/callback', resolveBaseUrl()).toString();
 }
 
 async function waitForRedirectResponse(page: Page, redirectUri: string) {
@@ -242,14 +207,38 @@ function buildUserStorage(config: OidcRuntimeConfig, tokens: TokenResponse): { s
   };
 }
 
-export async function signInViaMockAuth(
+async function seedOidcSession(
   page: Page,
-  email?: string,
-  options: SignInOptions = {},
-): Promise<boolean> {
-  const expectedEmail = email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+  tokens: TokenResponse,
+  config: OidcRuntimeConfig,
+  options: SeedOidcOptions,
+): Promise<void> {
+  const { storageKey, storageValue } = buildUserStorage(config, tokens);
+  const expectedOrigin = new URL(resolveBaseUrl()).origin;
+
+  await page.addInitScript(
+    ({ key, value, origin }) => {
+      if (window.location.origin !== origin) return;
+      const seededKey = 'e2e:oidc-seeded';
+      if (window.sessionStorage.getItem(seededKey)) return;
+      window.sessionStorage.setItem(key, value);
+      window.sessionStorage.setItem(seededKey, 'true');
+    },
+    { key: storageKey, value: storageValue, origin: expectedOrigin },
+  );
+
+  const landingPath = options.landingPath ?? '/';
+  await page.goto(landingPath);
+  const session = await readOidcSession(page);
+  if (!session?.accessToken) {
+    throw new Error('MockAuth session storage was not initialized.');
+  }
+}
+
+export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOptions = {}): Promise<void> {
+  const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
   const config = await resolveOidcConfig(page.context().request);
-  const redirectUri = await resolveRedirectUri(config);
+  const redirectUri = resolveRedirectUri();
   const { codeVerifier, codeChallenge } = createPkcePair();
   const state = randomState();
   const nonce = randomState();
@@ -318,31 +307,24 @@ export async function signInViaMockAuth(
   }
 
   const tokens = await exchangeAuthCode(config, { code, codeVerifier, redirectUri });
-  const { storageKey, storageValue } = buildUserStorage(config, tokens);
-  const expectedOrigin = new URL(resolveBaseUrl()).origin;
+  await seedOidcSession(page, tokens, config, options);
+}
 
-  await page.addInitScript(
-    ({ key, value, origin }) => {
-      if (window.location.origin !== origin) return;
-      const seededKey = 'e2e:oidc-seeded';
-      if (window.sessionStorage.getItem(seededKey)) return;
-      window.sessionStorage.setItem(key, value);
-      window.sessionStorage.setItem(seededKey, 'true');
-    },
-    { key: storageKey, value: storageValue, origin: expectedOrigin },
-  );
-
+export async function signInViaMockAuth(
+  page: Page,
+  email?: string,
+  options: SignInOptions = {},
+): Promise<boolean> {
+  await seedOidcSessionViaMockAuth(page, {
+    email,
+    onLoginPage: options.onLoginPage,
+    force: options.force,
+  });
+  await ensureClusterAdmin(page);
   const pageTitle = page.getByTestId('page-title');
   const sidebarNav = page.getByTestId('console-sidebar');
   const noAccessState = page.getByTestId('console-no-access');
   const appReady = pageTitle.or(sidebarNav).or(noAccessState);
-
-  await page.goto('/');
-  const session = await readOidcSession(page);
-  if (!session?.accessToken) {
-    throw new Error('MockAuth session storage was not initialized.');
-  }
-  await ensureClusterAdmin(page);
   await page.goto('/');
   await expect(appReady.first()).toBeVisible({ timeout: 30000 });
   return true;

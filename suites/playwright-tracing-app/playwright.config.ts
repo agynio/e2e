@@ -1,9 +1,13 @@
 import { createArgosReporterOptions } from '@argos-ci/playwright/reporter';
 import { defineConfig, devices } from '@playwright/test';
 
-const baseUrl = process.env.E2E_BASE_URL;
-if (!baseUrl) {
-  throw new Error('E2E_BASE_URL is required to run Playwright e2e tests.');
+const BASE_URL = process.env.E2E_BASE_URL;
+
+if (!BASE_URL) {
+  throw new Error(
+    'E2E_BASE_URL is required. Run tests via: devspace run test-e2e\n' +
+      'Or set E2E_BASE_URL manually to the app URL (e.g., https://tracing.agyn.dev).',
+  );
 }
 
 export default defineConfig({
@@ -11,8 +15,8 @@ export default defineConfig({
   timeout: 60000,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  retries: 1,
+  workers: 2,
   reporter: [
     process.env.CI ? ['dot'] : ['list'],
     ['junit', { outputFile: 'junit.xml' }],
@@ -24,18 +28,11 @@ export default defineConfig({
       }),
     ],
   ],
-
   use: {
-    baseURL: baseUrl,
+    baseURL: BASE_URL,
+    ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    ignoreHTTPSErrors: true,
   },
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
