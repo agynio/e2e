@@ -21,16 +21,24 @@ var (
 	tokenCountingOnce sync.Once
 	tokenCountingAddr string
 	tokenCountingErr  error
+	tokenCountingMu   sync.Mutex
 )
 
 func tokenCountingAddress(t *testing.T) string {
 	t.Helper()
 	tokenCountingOnce.Do(func() {
-		tokenCountingAddr, tokenCountingErr = startTokenCountingServer()
+		addr, err := startTokenCountingServer()
+		setTokenCountingError(err)
+		tokenCountingAddr = addr
 	})
-	if tokenCountingErr != nil {
-		t.Fatalf("start token counting server: %v", tokenCountingErr)
+	if err := tokenCountingError(); err != nil {
+		t.Fatalf("start token counting server: %v", err)
 	}
+	t.Cleanup(func() {
+		if err := tokenCountingError(); err != nil {
+			t.Fatalf("token counting server: %v", err)
+		}
+	})
 	return tokenCountingAddr
 }
 
@@ -42,9 +50,28 @@ func startTokenCountingServer() (string, error) {
 	server := grpc.NewServer()
 	tokencountingv1.RegisterTokenCountingServiceServer(server, tokenCountingServer{})
 	go func() {
-		_ = server.Serve(listener)
+		if err := server.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			setTokenCountingError(err)
+		}
 	}()
 	return listener.Addr().String(), nil
+}
+
+func setTokenCountingError(err error) {
+	if err == nil {
+		return
+	}
+	tokenCountingMu.Lock()
+	defer tokenCountingMu.Unlock()
+	if tokenCountingErr == nil {
+		tokenCountingErr = err
+	}
+}
+
+func tokenCountingError() error {
+	tokenCountingMu.Lock()
+	defer tokenCountingMu.Unlock()
+	return tokenCountingErr
 }
 
 type tokenCountingServer struct {

@@ -2,6 +2,8 @@ name: AGN CLI E2E
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
 
 jobs:
   e2e-agn-cli:
@@ -24,19 +26,20 @@ jobs:
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "${api_url}" \
-            | python3 - <<'PY'
+            | python3 - "${asset_name}" <<'PY'
           import json
           import sys
 
+          asset_name = sys.argv[1]
           data = json.load(sys.stdin)
           for asset in data.get("assets", []):
-              if asset.get("name") == "agn-linux-amd64":
+              if asset.get("name") == asset_name:
                   print(asset.get("browser_download_url", ""))
                   break
           PY
           )
           if [ -z "${asset_url}" ]; then
-            echo "Failed to find agn-linux-amd64 release asset." >&2
+            echo "Failed to find ${asset_name} release asset." >&2
             exit 1
           fi
           curl -fsSL -o agn "${asset_url}"
@@ -44,6 +47,8 @@ jobs:
 
       - name: Provision cluster
         uses: agynio/bootstrap/.github/actions/provision@0382a86ed54c603a30cceb91e2fe4eba8c2fd924
+        with:
+          ref: 0382a86ed54c603a30cceb91e2fe4eba8c2fd924
 
       - name: Run go-agn-cli suite
         uses: ./.github/actions/run-tests
