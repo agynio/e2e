@@ -9,5 +9,6 @@ dist/
 node_modules/
 suites/**/.gen/
 suites/**/.provider/
+suites/**/bin/
 suites/**/src/gen/
 tmp/
