@@ -11,6 +11,9 @@ inputs:
     description: When tags are provided, append the smoke tag.
     required: false
     default: "true"
+  agn-binary:
+    description: Optional path to an agn CLI binary in the caller workspace.
+    required: false
   provider-binary:
     description: Optional path to a Terraform provider binary in the caller workspace.
     required: false
@@ -42,6 +45,21 @@ runs:
         mkdir -p "$dest_dir"
         cp "$source_path" "$dest_dir/terraform-provider-agyn"
         chmod +x "$dest_dir/terraform-provider-agyn"
+
+    - name: Stage agn binary
+      if: ${{ inputs.agn-binary != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        source_path="$GITHUB_WORKSPACE/${{ inputs.agn-binary }}"
+        if [ ! -f "$source_path" ]; then
+          echo "Agn binary not found at $source_path" >&2
+          exit 1
+        fi
+        dest_dir="$GITHUB_WORKSPACE/e2e/suites/go-agn-cli/bin"
+        mkdir -p "$dest_dir"
+        cp "$source_path" "$dest_dir/agn"
+        chmod +x "$dest_dir/agn"
 
     - name: Install PyYAML
       shell: bash

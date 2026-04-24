@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package agynio.e2e.go_agn_cli.v1;
+
+import "agynio/api/token_counting/v1/token_counting.proto";
+
+message Placeholder {
+	agynio.api.token_counting.v1.CountTokensRequest request = 1;
+}
