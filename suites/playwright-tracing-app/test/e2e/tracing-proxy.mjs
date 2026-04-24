@@ -21,6 +21,7 @@ function resolveTargetPort(target) {
 function resolveProxyTarget(requestUrl) {
   const url = new URL(requestUrl ?? '/', 'http://proxy.local');
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
+    // Gateway routes are served without the /api prefix (ingress rewrites it).
     const stripped = url.pathname.replace(/^\/api/, '') || '/';
     return { target: gatewayTarget, path: `${stripped}${url.search}` };
   }
