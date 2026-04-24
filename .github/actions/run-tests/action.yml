@@ -90,11 +90,6 @@ runs:
           gateway_url="https://gateway.${domain}:${ingress_port}"
         fi
 
-        if [ -z "${E2E_OIDC_REDIRECT_URI:-}" ] && [ -n "${domain:-}" ] && [ -n "${ingress_port:-}" ]; then
-          E2E_OIDC_REDIRECT_URI="https://tracing.${domain}:${ingress_port}/callback"
-          echo "E2E_OIDC_REDIRECT_URI=$E2E_OIDC_REDIRECT_URI" >> "$GITHUB_ENV"
-        fi
-
         export_base_url="true"
         if [ -z "${AGYN_BASE_URL:-}" ]; then
           export_base_url="false"
