@@ -293,6 +293,12 @@ export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOp
   authorizeUrl.searchParams.set('code_challenge', codeChallenge);
   authorizeUrl.searchParams.set('code_challenge_method', 'S256');
 
+  const redirectTarget = new URL(redirectUri);
+  const redirectPattern = `${redirectTarget.origin}${redirectTarget.pathname}*`;
+  await page.route(redirectPattern, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<html>ok</html>' }),
+  );
+
   const redirectResponsePromise = waitForRedirectResponse(page, redirectUri);
   await page.goto(authorizeUrl.toString());
 
