@@ -44,6 +44,7 @@ async function createUser(
   request: APIRequestContext,
   opts: { email: string; username: string; name?: string; photoUrl?: string; nickname?: string },
 ): Promise<string> {
+  const oidcSubject = `e2e-${opts.email}-${randomSuffix()}`;
   const response = await postConnect<{ user?: { meta?: { id?: string } } }>(
     request,
     USERS_GATEWAY_PATH,
@@ -51,6 +52,7 @@ async function createUser(
     {
       email: opts.email,
       username: opts.username,
+      oidcSubject,
       name: opts.name ?? opts.username,
       nickname: opts.nickname ?? opts.username,
       photoUrl: opts.photoUrl ?? '',

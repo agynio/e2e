@@ -339,9 +339,9 @@ async function postConnectAsClusterAdmin<T>(
   method: string,
   payload: Record<string, unknown>,
 ): Promise<T> {
-  const token = process.env.CLUSTER_ADMIN_TOKEN;
+  const token = process.env.CLUSTER_ADMIN_TOKEN ?? process.env.AGYN_API_TOKEN;
   if (!token) {
-    throw new Error('CLUSTER_ADMIN_TOKEN env var is required for admin operations in e2e.');
+    throw new Error('CLUSTER_ADMIN_TOKEN or AGYN_API_TOKEN env var is required for admin operations in e2e.');
   }
   const headers = { ...CONNECT_HEADERS, Authorization: `Bearer ${token}` };
   const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
