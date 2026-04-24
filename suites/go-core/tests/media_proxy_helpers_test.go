@@ -26,8 +26,8 @@ const (
 	mockAuthTokenURL = "https://mockauth.dev/r/301ebb13-15a8-48f4-baac-e3fa25be29fc/oidc/token"
 	mockAuthClientID = "client_MU95KU3gHQf5Ir7p"
 
-	identityMetadataKey     = "x-identity-id"
-	identityTypeMetadataKey = "x-identity-type"
+	mediaProxyIdentityMetadataKey     = "x-identity-id"
+	mediaProxyIdentityTypeMetadataKey = "x-identity-type"
 )
 
 var (
@@ -38,18 +38,18 @@ var (
 	resolvedIdentity mediaProxyIdentity
 )
 
-type identityType string
+type mediaProxyIdentityType string
 
 const (
-	identityTypeUser   identityType = "user"
-	identityTypeAgent  identityType = "agent"
-	identityTypeApp    identityType = "app"
-	identityTypeRunner identityType = "runner"
+	mediaProxyIdentityTypeUser   mediaProxyIdentityType = "user"
+	mediaProxyIdentityTypeAgent  mediaProxyIdentityType = "agent"
+	mediaProxyIdentityTypeApp    mediaProxyIdentityType = "app"
+	mediaProxyIdentityTypeRunner mediaProxyIdentityType = "runner"
 )
 
 type mediaProxyIdentity struct {
 	IdentityID   string
-	IdentityType identityType
+	IdentityType mediaProxyIdentityType
 }
 
 type mePayload struct {
@@ -186,17 +186,17 @@ func fetchIdentity(ctx context.Context, token string) (mediaProxyIdentity, error
 	return mediaProxyIdentity{IdentityID: identityID, IdentityType: identityType}, nil
 }
 
-func parseIdentityType(value string) (identityType, error) {
+func parseIdentityType(value string) (mediaProxyIdentityType, error) {
 	trimmed := strings.TrimSpace(value)
 	switch trimmed {
-	case string(identityTypeUser):
-		return identityTypeUser, nil
-	case string(identityTypeAgent):
-		return identityTypeAgent, nil
-	case string(identityTypeApp):
-		return identityTypeApp, nil
-	case string(identityTypeRunner):
-		return identityTypeRunner, nil
+	case string(mediaProxyIdentityTypeUser):
+		return mediaProxyIdentityTypeUser, nil
+	case string(mediaProxyIdentityTypeAgent):
+		return mediaProxyIdentityTypeAgent, nil
+	case string(mediaProxyIdentityTypeApp):
+		return mediaProxyIdentityTypeApp, nil
+	case string(mediaProxyIdentityTypeRunner):
+		return mediaProxyIdentityTypeRunner, nil
 	default:
 		return "", fmt.Errorf("unsupported identity type: %q", value)
 	}
@@ -227,8 +227,8 @@ func uploadTestFile(t *testing.T, ctx context.Context, filename, contentType str
 	}
 
 	uploadCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(
-		identityMetadataKey, resolved.IdentityID,
-		identityTypeMetadataKey, string(resolved.IdentityType),
+		mediaProxyIdentityMetadataKey, resolved.IdentityID,
+		mediaProxyIdentityTypeMetadataKey, string(resolved.IdentityType),
 	))
 	client := newFilesClient(t)
 	stream, err := client.UploadFile(uploadCtx)
@@ -321,11 +321,4 @@ func (t bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	clone := req.Clone(req.Context())
 	clone.Header.Set("Authorization", "Bearer "+t.token)
 	return base.RoundTrip(clone)
-}
-
-func envOrDefault(key, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-		return value
-	}
-	return fallback
 }
