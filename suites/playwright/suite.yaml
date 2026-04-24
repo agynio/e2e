@@ -57,8 +57,14 @@ run: |
     exit 1
   fi
 
-  if [ -n "${E2E_OIDC_REDIRECT_URI:-}" ]; then
-    callback_port=$(node -e "const url = new URL(process.env.E2E_OIDC_REDIRECT_URI); if (url.protocol !== 'https:') { throw new Error('E2E_OIDC_REDIRECT_URI must use https'); } console.log(url.port || '443');")
+  base_host=$(node -e "console.log(new URL(process.env.E2E_BASE_URL).hostname)")
+  local_base=""
+  if [ "$base_host" = "localhost" ] || [ "$base_host" = "127.0.0.1" ]; then
+    local_base="yes"
+  fi
+
+  if [ -n "${E2E_OIDC_REDIRECT_URI:-}" ] && [ -n "$local_base" ]; then
+    callback_port=$(node -e "const url = new URL(process.env.E2E_OIDC_REDIRECT_URI); if (url.protocol !== 'https:') { throw new Error('E2E_OIDC_REDIRECT_URI must use https'); } if (!url.port) { throw new Error('E2E_OIDC_REDIRECT_URI must include a non-privileged port for the callback server.'); } const port = Number(url.port); if (!Number.isInteger(port) || port < 1024) { throw new Error('E2E_OIDC_REDIRECT_URI must use a non-privileged port (>=1024).'); } console.log(port);")
     node test/e2e/oidc-callback-server.mjs > /tmp/e2e-oidc-callback.log 2>&1 &
     callback_pid=$!
 

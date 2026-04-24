@@ -14,12 +14,16 @@ if (!BASE_URL) {
 let hostResolverRule: string | undefined;
 if (REDIRECT_URI) {
   let redirectHost = '';
+  let baseHost = '';
   try {
+    baseHost = new URL(BASE_URL).hostname;
     redirectHost = new URL(REDIRECT_URI).hostname;
   } catch (error) {
     throw new Error(`E2E_OIDC_REDIRECT_URI is invalid: ${REDIRECT_URI}`);
   }
-  if (redirectHost && redirectHost !== 'localhost' && redirectHost !== '127.0.0.1') {
+  const baseIsLocal = baseHost === 'localhost' || baseHost === '127.0.0.1';
+  const redirectIsLocal = redirectHost === 'localhost' || redirectHost === '127.0.0.1';
+  if (baseIsLocal && redirectHost && !redirectIsLocal && redirectHost !== baseHost) {
     hostResolverRule = `MAP ${redirectHost} 127.0.0.1`;
   }
 }

@@ -16,10 +16,13 @@ if (redirectUrl.protocol !== 'https:') {
   throw new Error(`E2E_OIDC_REDIRECT_URI must use https (got ${redirectUrl.protocol}).`);
 }
 
-const portRaw = redirectUrl.port || '443';
+if (!redirectUrl.port) {
+  throw new Error('E2E_OIDC_REDIRECT_URI must include a non-privileged port for the callback server.');
+}
+const portRaw = redirectUrl.port;
 const port = Number(portRaw);
-if (!Number.isInteger(port) || port <= 0) {
-  throw new Error(`E2E_OIDC_REDIRECT_URI port is invalid: ${portRaw}`);
+if (!Number.isInteger(port) || port < 1024) {
+  throw new Error(`E2E_OIDC_REDIRECT_URI must use a non-privileged port (>=1024). Got ${portRaw}.`);
 }
 
 const callbackPath = redirectUrl.pathname || '/callback';
