@@ -20,6 +20,7 @@ const defaultEmail = 'e2e-tester@agyn.test';
 const users = new Map();
 const organizations = new Map();
 const memberships = new Map();
+const orgNicknames = new Map();
 const secretProviders = new Map();
 const secrets = new Map();
 const imagePullSecrets = new Map();
@@ -46,6 +47,7 @@ const defaultUser = {
   name: 'E2E Tester',
   email: defaultEmail,
   nickname: 'tester',
+  username: 'tester',
   photoUrl: '',
   clusterRole: 'CLUSTER_ROLE_ADMIN',
 };
@@ -220,6 +222,51 @@ function normalizeMessageOrder(value) {
   return 'MESSAGE_ORDER_UNSPECIFIED';
 }
 
+function resolveRequestIdentity(req) {
+  const header = req.headers['x-e2e-identity-id'];
+  if (Array.isArray(header)) {
+    return header[0] ? header[0].trim() : defaultUserId;
+  }
+  if (typeof header === 'string' && header.trim()) {
+    return header.trim();
+  }
+  return defaultUserId;
+}
+
+function isClusterAdmin(identityId) {
+  return users.get(identityId)?.clusterRole === 'CLUSTER_ROLE_ADMIN';
+}
+
+function deriveUsername(input, fallbackId) {
+  const candidate =
+    input.username ?? input.nickname ?? input.email?.split('@')[0] ?? input.name ?? `user-${fallbackId}`;
+  return String(candidate).trim() || `user-${fallbackId}`;
+}
+
+function resolveNicknameMap(organizationId) {
+  const existing = orgNicknames.get(organizationId);
+  if (existing) return existing;
+  const created = new Map();
+  orgNicknames.set(organizationId, created);
+  return created;
+}
+
+function seedDefaultNickname(organizationId, identityId) {
+  const user = users.get(identityId);
+  if (!user) return;
+  const username = (user.username ?? '').trim();
+  if (!username) return;
+  const nicknameMap = resolveNicknameMap(organizationId);
+  if (nicknameMap.has(username)) return;
+  nicknameMap.set(username, identityId);
+}
+
+function resolveOrgNickname(organizationId, nickname) {
+  const nicknameMap = orgNicknames.get(organizationId);
+  if (!nicknameMap) return null;
+  return nicknameMap.get(nickname) ?? null;
+}
+
 function normalizeGranularity(value) {
   if (typeof value === 'string') return value;
   if (value === 1) return 'GRANULARITY_TOTAL';
@@ -317,6 +364,7 @@ function mapUser(user) {
   return {
     meta: { id: user.id },
     oidcSubject: user.oidcSubject,
+    username: user.username,
     name: user.name,
     email: user.email,
     nickname: user.nickname,
@@ -513,10 +561,13 @@ function mapInstallationAuditLogEntry(entry) {
   };
 }
 
-function handleUsersGateway(method, body, res) {
+function handleUsersGateway(req, method, body, res) {
   switch (method) {
     case 'GetMe': {
-      return sendJson(res, 200, { user: mapUser(defaultUser), clusterRole: defaultUser.clusterRole });
+      const identityId = resolveRequestIdentity(req);
+      const user = users.get(identityId);
+      if (!user) return sendText(res, 404, 'User not found');
+      return sendJson(res, 200, { user: mapUser(user), clusterRole: user.clusterRole });
     }
     case 'ListUsers': {
       return sendJson(res, 200, {
@@ -534,12 +585,14 @@ function handleUsersGateway(method, body, res) {
     }
     case 'CreateUser': {
       const id = randomUUID();
+      const username = deriveUsername(body, id);
       const user = {
         id,
         oidcSubject: body.oidcSubject ?? `mock-${id}`,
         name: body.name ?? body.oidcSubject ?? id,
         email: body.email ?? '',
         nickname: body.nickname ?? '',
+        username,
         photoUrl: body.photoUrl ?? '',
         clusterRole: normalizeClusterRole(body.clusterRole),
       };
@@ -557,10 +610,23 @@ function handleUsersGateway(method, body, res) {
       user.name = body.name ?? user.name;
       user.nickname = body.nickname ?? user.nickname;
       user.photoUrl = body.photoUrl ?? user.photoUrl;
+      if (body.username !== undefined) {
+        user.username = body.username;
+      }
       if (body.clusterRole !== undefined) {
         user.clusterRole = normalizeClusterRole(body.clusterRole);
       }
       return sendJson(res, 200, { user: mapUser(user), clusterRole: user.clusterRole });
+    }
+    case 'UpdateMe': {
+      const identityId = resolveRequestIdentity(req);
+      const user = users.get(identityId);
+      if (!user) return sendText(res, 404, 'User not found');
+      if (body.name !== undefined) user.name = body.name;
+      if (body.nickname !== undefined) user.nickname = body.nickname;
+      if (body.photoUrl !== undefined) user.photoUrl = body.photoUrl;
+      if (body.username !== undefined) user.username = body.username;
+      return sendJson(res, 200, { user: mapUser(user) });
     }
     case 'GetUser': {
       const identityId = body.identityId;
@@ -573,6 +639,27 @@ function handleUsersGateway(method, body, res) {
     case 'DeleteUser': {
       if (body.identityId) users.delete(body.identityId);
       return sendJson(res, 200, {});
+    }
+    case 'SearchUsers': {
+      const prefix = String(body.prefix ?? '').toLowerCase();
+      const limit = Number.isFinite(body.limit) && body.limit > 0 ? body.limit : 25;
+      const callerId = resolveRequestIdentity(req);
+      const includePrivate = isClusterAdmin(callerId);
+      const results = Array.from(users.values())
+        .filter((user) => {
+          const username = (user.username ?? '').toLowerCase();
+          if (!username) return false;
+          if (!prefix) return true;
+          return username.startsWith(prefix);
+        })
+        .slice(0, limit)
+        .map((user) => ({
+          identityId: user.id,
+          username: user.username ?? '',
+          name: includePrivate ? user.name : '',
+          photoUrl: includePrivate ? user.photoUrl : '',
+        }));
+      return sendJson(res, 200, { users: results });
     }
     case 'CreateDevice': {
       const id = randomUUID();
@@ -602,21 +689,23 @@ function handleUsersGateway(method, body, res) {
   }
 }
 
-function handleOrganizationsGateway(method, body, res) {
+function handleOrganizationsGateway(req, method, body, res) {
   switch (method) {
     case 'CreateOrganization': {
       const id = randomUUID();
       const name = body.name ?? `org-${id}`;
       const org = { id, name };
       organizations.set(id, org);
+      const callerId = resolveRequestIdentity(req);
       const membership = {
         id: randomUUID(),
         organizationId: id,
-        identityId: defaultUserId,
+        identityId: callerId,
         role: 'MEMBERSHIP_ROLE_OWNER',
         status: 'MEMBERSHIP_STATUS_ACTIVE',
       };
       memberships.set(membership.id, membership);
+      seedDefaultNickname(id, callerId);
       return sendJson(res, 200, { organization: org });
     }
     case 'ListOrganizations': {
@@ -633,8 +722,9 @@ function handleOrganizationsGateway(method, body, res) {
     }
     case 'ListMyMemberships': {
       const status = normalizeMembershipStatus(body.status);
+      const callerId = resolveRequestIdentity(req);
       const result = Array.from(memberships.values()).filter((membership) => {
-        if (membership.identityId !== defaultUserId) return false;
+        if (membership.identityId !== callerId) return false;
         if (status === 'MEMBERSHIP_STATUS_UNSPECIFIED') return true;
         return membership.status === status;
       });
@@ -660,6 +750,17 @@ function handleOrganizationsGateway(method, body, res) {
       memberships.set(membership.id, membership);
       return sendJson(res, 200, { membership: mapMembership(membership) });
     }
+    case 'AcceptMembership': {
+      const membership = memberships.get(body.membershipId);
+      if (!membership) return sendText(res, 404, 'Membership not found');
+      const callerId = resolveRequestIdentity(req);
+      if (membership.identityId !== callerId) {
+        return sendText(res, 403, 'Membership does not belong to caller');
+      }
+      membership.status = 'MEMBERSHIP_STATUS_ACTIVE';
+      seedDefaultNickname(membership.organizationId, membership.identityId);
+      return sendJson(res, 200, { membership: mapMembership(membership) });
+    }
     case 'UpdateMembershipRole': {
       const membership = memberships.get(body.membershipId);
       if (!membership) return sendText(res, 404, 'Membership not found');
@@ -672,6 +773,20 @@ function handleOrganizationsGateway(method, body, res) {
     }
     default:
       return sendText(res, 404, 'Unknown OrganizationsGateway method');
+  }
+}
+
+function handleIdentityService(req, method, body, res) {
+  switch (method) {
+    case 'ResolveNickname': {
+      const organizationId = body.organizationId ?? '';
+      const nickname = body.nickname ?? '';
+      const identityId = resolveOrgNickname(organizationId, nickname);
+      if (!identityId) return sendText(res, 404, 'Nickname not found');
+      return sendJson(res, 200, { identityId, identityType: 'IDENTITY_TYPE_USER' });
+    }
+    default:
+      return sendText(res, 404, 'Unknown IdentityService method');
   }
 }
 
@@ -1359,10 +1474,10 @@ const server = http.createServer(async (req, res) => {
     const method = parts[2];
     if (!service || !method) return sendText(res, 404, 'Invalid gateway path');
     if (service === 'agynio.api.gateway.v1.UsersGateway') {
-      return handleUsersGateway(method, body, res);
+      return handleUsersGateway(req, method, body, res);
     }
     if (service === 'agynio.api.gateway.v1.OrganizationsGateway') {
-      return handleOrganizationsGateway(method, body, res);
+      return handleOrganizationsGateway(req, method, body, res);
     }
     if (service === 'agynio.api.gateway.v1.SecretsGateway') {
       return handleSecretsGateway(method, body, res);
@@ -1385,6 +1500,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (service === 'agynio.api.gateway.v1.AppsGateway') {
       return handleAppsGateway(method, body, res);
+    }
+    if (service === 'agynio.api.identity.v1.IdentityService') {
+      return handleIdentityService(req, method, body, res);
     }
     return sendText(res, 404, 'Unknown gateway');
   }
