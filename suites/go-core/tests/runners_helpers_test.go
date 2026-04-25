@@ -4,6 +4,7 @@ package tests
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
@@ -15,6 +16,9 @@ const (
 	authorizationIdentityPrefix     = "identity:"
 	authorizationOrganizationPrefix = "organization:"
 	authorizationMemberRelation     = "member"
+	authorizationClusterRelation    = "cluster"
+	authorizationAdminRelation      = "admin"
+	authorizationGlobalCluster      = "cluster:global"
 
 	identityMetadataKey     = "x-identity-id"
 	identityTypeMetadataKey = "x-identity-type"
@@ -23,8 +27,11 @@ const (
 
 	runnerContainerImage = "alpine:3.21"
 )
-
-var authorizationAddr = envOrDefault("AUTHORIZATION_ADDRESS", "authorization:50051")
+var (
+	authorizationAddr      = envOrDefault("AUTHORIZATION_ADDRESS", "authorization:50051")
+	ensureClusterAdminOnce sync.Once
+	ensureClusterAdminErr  error
+)
 
 func newRunnerClient(t *testing.T) runnersv1.RunnersServiceClient {
 	t.Helper()
@@ -53,21 +60,45 @@ func agentContext(ctx context.Context, agentID string) context.Context {
 	return contextWithIdentity(ctx, agentID, identityTypeAgent)
 }
 
+func ensureClusterAdmin(t *testing.T, ctx context.Context, authzClient authorizationv1.AuthorizationServiceClient) {
+	t.Helper()
+	ensureClusterAdminOnce.Do(func() {
+		tuple := &authorizationv1.TupleKey{
+			User:     authorizationIdentityPrefix + clusterAdminIdentityID,
+			Relation: authorizationAdminRelation,
+			Object:   authorizationGlobalCluster,
+		}
+		if _, err := authzClient.Write(ctx, &authorizationv1.WriteRequest{Writes: []*authorizationv1.TupleKey{tuple}}); err != nil {
+			ensureClusterAdminErr = err
+		}
+	})
+	if ensureClusterAdminErr != nil {
+		t.Fatalf("authorization write failed: %v", ensureClusterAdminErr)
+	}
+}
+
 func ensureOrganizationMember(t *testing.T, ctx context.Context, authzClient authorizationv1.AuthorizationServiceClient, identityID string, organizationID string) {
 	t.Helper()
-	tuple := &authorizationv1.TupleKey{
+	ensureClusterAdmin(t, ctx, authzClient)
+	memberTuple := &authorizationv1.TupleKey{
 		User:     authorizationIdentityPrefix + identityID,
 		Relation: authorizationMemberRelation,
 		Object:   authorizationOrganizationPrefix + organizationID,
 	}
-	if _, err := authzClient.Write(ctx, &authorizationv1.WriteRequest{Writes: []*authorizationv1.TupleKey{tuple}}); err != nil {
+	clusterTuple := &authorizationv1.TupleKey{
+		User:     authorizationOrganizationPrefix + organizationID,
+		Relation: authorizationClusterRelation,
+		Object:   authorizationGlobalCluster,
+	}
+	tuples := []*authorizationv1.TupleKey{memberTuple, clusterTuple}
+	if _, err := authzClient.Write(ctx, &authorizationv1.WriteRequest{Writes: tuples}); err != nil {
 		t.Fatalf("authorization write failed: %v", err)
 	}
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cleanupCancel()
 		cleanupCtx = adminContext(cleanupCtx)
-		if _, err := authzClient.Write(cleanupCtx, &authorizationv1.WriteRequest{Deletes: []*authorizationv1.TupleKey{tuple}}); err != nil {
+		if _, err := authzClient.Write(cleanupCtx, &authorizationv1.WriteRequest{Deletes: tuples}); err != nil {
 			t.Logf("cleanup: authorization delete failed for identity %s org %s: %v", identityID, organizationID, err)
 		}
 	})
