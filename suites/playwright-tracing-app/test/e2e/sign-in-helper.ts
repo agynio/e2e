@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { User, type IdTokenClaims } from 'oidc-client-ts';
 import { createHash, randomBytes } from 'node:crypto';
@@ -117,9 +117,9 @@ async function fillMockAuthLoginForm(
   }
 
   const strategyTabs = page.getByTestId('login-strategy-tabs');
-  if (await strategyTabs.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await isLocatorVisible(strategyTabs, 2000)) {
     const emailTab = strategyTabs.getByRole('tab', { name: 'Email' });
-    if (await emailTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await isLocatorVisible(emailTab, 2000)) {
       await emailTab.click();
     }
   }
@@ -140,6 +140,33 @@ function readEnvValue(body: string, key: string): string | undefined {
   const matcher = new RegExp(`${key}:\\s*"([^"]*)"`);
   const match = body.match(matcher);
   return match ? match[1] : undefined;
+}
+
+function isTimeoutError(error: unknown): error is Error {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
+async function isLocatorVisible(locator: Locator, timeout: number): Promise<boolean> {
+  try {
+    return await locator.isVisible({ timeout });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function waitForLocator(locator: Locator, timeout: number): Promise<boolean> {
+  try {
+    await locator.waitFor({ timeout });
+    return true;
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 async function resolveRuntimeEnv(request: APIRequestContext): Promise<Record<string, string | undefined>> {
@@ -304,7 +331,7 @@ export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOp
 
   const loginHeading = page.getByRole('heading', { level: 1, name: /Log in to/ });
   const loginReady = await Promise.race([
-    loginHeading.waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
+    waitForLocator(loginHeading, 10000),
     redirectResponsePromise.then(() => false),
   ]);
 
