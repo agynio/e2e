@@ -71,18 +71,16 @@ func newToolPairTestEnv(t *testing.T, mcpCommand string) toolPairTestEnv {
 
 	turn1Path := filepath.Join(home, "config-tool-pair-turn1.yaml")
 	writeConfig(t, turn1Path, configSpec{
-		model:             toolPairTurn1Model,
-		summarization:     summarization,
-		tokenCountingAddr: tokenCountingAddress(t),
-		mcpCommand:        mcpCommand,
+		model:         toolPairTurn1Model,
+		summarization: summarization,
+		mcpCommand:    mcpCommand,
 	})
 
 	turn2Path := filepath.Join(home, "config-tool-pair-turn2.yaml")
 	writeConfig(t, turn2Path, configSpec{
-		model:             toolPairTurn2Model,
-		summarization:     summarization,
-		tokenCountingAddr: tokenCountingAddress(t),
-		mcpCommand:        mcpCommand,
+		model:         toolPairTurn2Model,
+		summarization: summarization,
+		mcpCommand:    mcpCommand,
 	})
 
 	base := append(os.Environ(), "HOME="+home)

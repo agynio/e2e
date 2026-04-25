@@ -35,8 +35,6 @@ run: |
     exit 1
   fi
 
-  buf generate
-
   tag_args="e2e"
   for tag in "${tags[@]}"; do
     tag_args="${tag_args} ${tag}"

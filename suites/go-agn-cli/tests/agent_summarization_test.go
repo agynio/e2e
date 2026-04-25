@@ -53,16 +53,14 @@ func newSummarizationTestEnv(t *testing.T) summarizationTestEnv {
 
 	turn1Path := filepath.Join(home, "config-turn1.yaml")
 	writeConfig(t, turn1Path, configSpec{
-		model:             "summarize-agent-turn1",
-		summarization:     summarization,
-		tokenCountingAddr: tokenCountingAddress(t),
+		model:         "summarize-agent-turn1",
+		summarization: summarization,
 	})
 
 	turn2Path := filepath.Join(home, "config-turn2.yaml")
 	writeConfig(t, turn2Path, configSpec{
-		model:             "summarize-agent-turn2",
-		summarization:     summarization,
-		tokenCountingAddr: tokenCountingAddress(t),
+		model:         "summarize-agent-turn2",
+		summarization: summarization,
 	})
 
 	base := append(os.Environ(), "HOME="+home)

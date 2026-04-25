@@ -32,11 +32,10 @@ type summarizationSpec struct {
 }
 
 type configSpec struct {
-	model             string
-	systemPrompt      string
-	tokenCountingAddr string
-	summarization     *summarizationSpec
-	mcpCommand        string
+	model         string
+	systemPrompt  string
+	summarization *summarizationSpec
+	mcpCommand    string
 }
 
 func TestMain(m *testing.M) {
@@ -102,9 +101,8 @@ func newTestEnv(t *testing.T, model string, systemPrompt string) testEnv {
 	home := t.TempDir()
 	configPath := filepath.Join(home, "config.yaml")
 	configData := configSpec{
-		model:             model,
-		systemPrompt:      systemPrompt,
-		tokenCountingAddr: tokenCountingAddress(t),
+		model:        model,
+		systemPrompt: systemPrompt,
 	}
 	writeConfig(t, configPath, configData)
 	env := append(os.Environ(), "HOME="+home, "AGN_CONFIG_PATH="+configPath)
@@ -127,8 +125,6 @@ func buildConfigYAML(spec configSpec) string {
 	if strings.TrimSpace(spec.systemPrompt) != "" {
 		writeKeyValue(&builder, 0, "system_prompt", spec.systemPrompt)
 	}
-	builder.WriteString("token_counting:\n")
-	writeKeyValue(&builder, 1, "address", spec.tokenCountingAddr)
 	if spec.summarization != nil {
 		builder.WriteString("summarization:\n")
 		builder.WriteString("  llm:\n")
