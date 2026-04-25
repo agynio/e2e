@@ -98,9 +98,9 @@ func ensureOrganizationMember(t *testing.T, ctx context.Context, authzClient aut
 		Object:   authorizationOrganizationPrefix + organizationID,
 	}
 	clusterTuple := &authorizationv1.TupleKey{
-		User:     authorizationOrganizationPrefix + organizationID,
+		User:     authorizationGlobalCluster,
 		Relation: authorizationClusterRelation,
-		Object:   authorizationGlobalCluster,
+		Object:   authorizationOrganizationPrefix + organizationID,
 	}
 	tuples := []*authorizationv1.TupleKey{memberTuple, clusterTuple}
 	if _, err := authzClient.Write(ctx, &authorizationv1.WriteRequest{Writes: tuples}); err != nil {
