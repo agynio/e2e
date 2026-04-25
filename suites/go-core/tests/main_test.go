@@ -69,18 +69,6 @@ type pipelineRun struct {
 	messageText    string
 }
 
-func envOrDefault(key, fallback string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return fallback
-	}
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return fallback
-	}
-	return trimmed
-}
-
 // pollUntil retries check at interval until it returns nil or ctx expires.
 func pollUntil(ctx context.Context, interval time.Duration, check func(ctx context.Context) error) error {
 	lastErr := check(ctx)
