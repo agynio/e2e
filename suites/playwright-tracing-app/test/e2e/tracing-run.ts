@@ -17,12 +17,18 @@ import {
   sendThreadMessage,
 } from './gateway-api';
 
-const TEST_LLM_ENDPOINT = 'https://testllm.dev/v1/org/agynio/suite/agn/responses';
+const TEST_LLM_ENDPOINTS = {
+  agn: 'https://testllm.dev/v1/org/agynio/suite/agn/responses',
+  codex: 'https://testllm.dev/v1/org/agynio/suite/codex/responses',
+} as const;
 const TEST_LLM_TOKEN = 'test-token';
 const TEST_LLM_MODEL = 'mcp-tools-test';
 const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
-const DEFAULT_INIT_IMAGE = 'ghcr.io/agynio/agent-init-agn:0.4.15';
+const DEFAULT_INIT_IMAGES = {
+  agn: 'ghcr.io/agynio/agent-init-agn:0.4.15',
+  codex: 'ghcr.io/agynio/agent-init-codex:0.13.19',
+} as const;
 const TRACE_DISCOVER_TIMEOUT_MS = 2 * 60_000;
 const TRACE_SUMMARY_TIMEOUT_MS = 2 * 60_000;
 const TRACE_POLL_INTERVAL_MS = 1_000;
@@ -51,9 +57,19 @@ export type FullChainRun = {
   expectedResponse: string;
 };
 
-function resolveInitImage(): string {
-  const override = process.env.AGN_INIT_IMAGE?.trim();
-  return override || DEFAULT_INIT_IMAGE;
+type TraceSdk = keyof typeof TEST_LLM_ENDPOINTS;
+
+type FullChainRunOptions = {
+  sdk?: TraceSdk;
+};
+
+function resolveInitImage(sdk: TraceSdk): string {
+  const override = sdk === 'codex' ? process.env.CODEX_INIT_IMAGE?.trim() : process.env.AGN_INIT_IMAGE?.trim();
+  return override || DEFAULT_INIT_IMAGES[sdk];
+}
+
+function resolveLlmEndpoint(sdk: TraceSdk): string {
+  return TEST_LLM_ENDPOINTS[sdk];
 }
 
 function buildMcpName(prefix: string): string {
@@ -114,6 +130,7 @@ async function waitForTraceIdByMessageId(page: Page, params: {
   messageId: string;
 }): Promise<string> {
   const start = Date.now();
+  let sawSpans = false;
   while (Date.now() - start < TRACE_DISCOVER_TIMEOUT_MS) {
     const response = await listSpans(page, {
       organizationId: params.organizationId,
@@ -121,6 +138,9 @@ async function waitForTraceIdByMessageId(page: Page, params: {
       pageSize: 1,
       orderBy: ListSpansOrderBy.START_TIME_DESC,
     });
+    if ((response.resourceSpans ?? []).length > 0) {
+      sawSpans = true;
+    }
     for (const resourceSpan of response.resourceSpans ?? []) {
       for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
         for (const span of scopeSpan.spans ?? []) {
@@ -131,6 +151,12 @@ async function waitForTraceIdByMessageId(page: Page, params: {
       }
     }
     await page.waitForTimeout(TRACE_POLL_INTERVAL_MS);
+  }
+  if (!sawSpans) {
+    throw new Error(
+      `ListSpans(filter: { messageId: ${params.messageId} }) returned no spans after ${TRACE_DISCOVER_TIMEOUT_MS / 1000}s. ` +
+        'Check message-id correlation and ensure the agent init image is up to date (e.g. codex init image).',
+    );
   }
   throw new Error(`Timed out waiting for trace id for message ${params.messageId}.`);
 }
@@ -159,15 +185,16 @@ async function waitForTraceSummary(page: Page, traceId: string): Promise<void> {
   throw new Error(`Timed out waiting for trace summary. status=${String(lastStatus)} counts=${countsDescription}`);
 }
 
-export async function createFullChainRun(page: Page): Promise<FullChainRun> {
+export async function createFullChainRun(page: Page, options: FullChainRunOptions = {}): Promise<FullChainRun> {
+  const sdk = options.sdk ?? 'agn';
   const identityId = await getIdentityId(page);
   const organizationId = await createOrganization(page, `e2e-tracing-${randomUUID()}`);
   const apiToken = await createApiToken(page, `e2e-tracing-token-${randomUUID()}`);
 
   const providerId = await createLlmProvider(page, {
     organizationId,
-    name: `e2e-testllm-${randomUUID()}`,
-    endpoint: TEST_LLM_ENDPOINT,
+    name: `e2e-${sdk}-testllm-${randomUUID()}`,
+    endpoint: resolveLlmEndpoint(sdk),
     protocol: 'PROTOCOL_RESPONSES',
     authMethod: 'AUTH_METHOD_BEARER',
     token: TEST_LLM_TOKEN,
@@ -185,7 +212,7 @@ export async function createFullChainRun(page: Page): Promise<FullChainRun> {
     name: `e2e-agent-${randomUUID()}`,
     model: modelId,
     image: AGENT_IMAGE,
-    initImage: resolveInitImage(),
+    initImage: resolveInitImage(sdk),
   });
 
   await createAgentEnv(page, {
