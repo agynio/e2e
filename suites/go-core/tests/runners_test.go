@@ -133,8 +133,9 @@ func TestRunnerLifecycle(t *testing.T) {
 	}
 
 	listResp, err := runnerClient.ListWorkloads(adminCtx, &runnersv1.ListWorkloadsRequest{
-		PageSize: 10,
-		Statuses: []runnersv1.WorkloadStatus{runnersv1.WorkloadStatus_WORKLOAD_STATUS_RUNNING},
+		OrganizationId: &organizationID,
+		PageSize:       10,
+		Statuses:       []runnersv1.WorkloadStatus{runnersv1.WorkloadStatus_WORKLOAD_STATUS_RUNNING},
 	})
 	if err != nil {
 		t.Fatalf("ListWorkloads failed: %v", err)
