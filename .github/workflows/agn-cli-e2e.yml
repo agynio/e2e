@@ -1,0 +1,62 @@
+name: AGN CLI E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  e2e-agn-cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download agn CLI release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api_url="https://api.github.com/repos/agynio/agn-cli/releases/latest"
+          asset_name="agn-linux-amd64"
+          asset_url=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api_url}" \
+            | AGN_ASSET_NAME="${asset_name}" python3 -c "$(cat <<'PY'
+          import json
+          import os
+          import sys
+
+          asset_name = os.environ.get('AGN_ASSET_NAME', '')
+          if not asset_name:
+              raise SystemExit('AGN_ASSET_NAME is required')
+          data = json.load(sys.stdin)
+          for asset in data.get('assets', []):
+              if asset.get('name') == asset_name:
+                  print(asset.get('browser_download_url', ''))
+                  break
+          PY
+          )")
+          if [ -z "${asset_url}" ]; then
+            echo "Failed to find ${asset_name} release asset." >&2
+            exit 1
+          fi
+          curl -fsSL -o agn "${asset_url}"
+          chmod +x agn
+
+      - name: Provision cluster
+        uses: agynio/bootstrap/.github/actions/provision@0382a86ed54c603a30cceb91e2fe4eba8c2fd924
+        with:
+          ref: 0382a86ed54c603a30cceb91e2fe4eba8c2fd924
+
+      - name: Run go-agn-cli suite
+        uses: ./.github/actions/run-tests
+        with:
+          ref: ${{ github.sha }}
+          tag: svc_agn_cli
+          include-smoke: false
+          agn-binary: agn
