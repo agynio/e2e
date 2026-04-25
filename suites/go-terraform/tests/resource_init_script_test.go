@@ -1,4 +1,4 @@
-//go:build e2e && svc_gateway
+//go:build e2e && (svc_gateway || tf_provider_agyn)
 
 package tests
 
