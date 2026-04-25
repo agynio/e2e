@@ -16,7 +16,7 @@ async function expectChatListVisible(page: Page) {
   await expect(list).toBeVisible({ timeout: 15000 });
 }
 
-test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator'] }, () => {
+test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations'] }, () => {
   test('renders chat list on load', async ({ userAPage }) => {
     const organizationId = await createOrganization(userAPage, `e2e-org-list-${Date.now()}`);
     await setSelectedOrganization(userAPage, organizationId);
@@ -31,42 +31,46 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_agent
     await argosScreenshot(userAPage, 'chats-list-loaded');
   });
 
-  test('participant picker shows available options', async ({ userAPage }) => {
-    const now = Date.now();
-    const organizationId = await createOrganization(userAPage, `e2e-org-picker-${now}`);
-    await setSelectedOrganization(userAPage, organizationId);
-    const agentName = `e2e-agent-picker-${now}`;
-    await createAgent(userAPage, {
-      organizationId,
-      name: agentName,
-      role: 'assistant',
-      model: crypto.randomUUID(),
-      description: 'E2E participant picker agent',
-      configuration: '{}',
-      image: 'agent-image:latest',
-      initImage: DEFAULT_TEST_INIT_IMAGE,
-    });
-    const chatsLoaded = userAPage.waitForResponse(
-      (resp) => resp.url().includes('GetChats') && resp.status() === 200,
-      { timeout: 15000 },
-    );
-    await userAPage.goto('/chats');
-    await chatsLoaded;
+  test(
+    'participant picker shows available options',
+    { tag: ['@svc_agents_orchestrator'] },
+    async ({ userAPage }) => {
+      const now = Date.now();
+      const organizationId = await createOrganization(userAPage, `e2e-org-picker-${now}`);
+      await setSelectedOrganization(userAPage, organizationId);
+      const agentName = `e2e-agent-picker-${now}`;
+      await createAgent(userAPage, {
+        organizationId,
+        name: agentName,
+        role: 'assistant',
+        model: crypto.randomUUID(),
+        description: 'E2E participant picker agent',
+        configuration: '{}',
+        image: 'agent-image:latest',
+        initImage: DEFAULT_TEST_INIT_IMAGE,
+      });
+      const chatsLoaded = userAPage.waitForResponse(
+        (resp) => resp.url().includes('GetChats') && resp.status() === 200,
+        { timeout: 15000 },
+      );
+      await userAPage.goto('/chats');
+      await chatsLoaded;
 
-    await expectChatListVisible(userAPage);
+      await expectChatListVisible(userAPage);
 
-    const newChatBtn = userAPage.getByTitle('New chat');
-    await expect(newChatBtn).toBeVisible({ timeout: 15000 });
-    await newChatBtn.click();
+      const newChatBtn = userAPage.getByTitle('New chat');
+      await expect(newChatBtn).toBeVisible({ timeout: 15000 });
+      await newChatBtn.click();
 
-    const autocomplete = userAPage.getByPlaceholder('Search participants...');
-    await expect(autocomplete).toBeVisible({ timeout: 15000 });
-    await autocomplete.click();
+      const autocomplete = userAPage.getByPlaceholder('Search participants...');
+      await expect(autocomplete).toBeVisible({ timeout: 15000 });
+      await autocomplete.click();
 
-    await expect(userAPage.getByRole('option', { name: agentName })).toBeVisible({ timeout: 15000 });
+      await expect(userAPage.getByRole('option', { name: agentName })).toBeVisible({ timeout: 15000 });
 
-    await argosScreenshot(userAPage, 'participant-picker-dropdown');
-  });
+      await argosScreenshot(userAPage, 'participant-picker-dropdown');
+    },
+  );
 
   test('redirects root to /chats', async ({ userAPage }) => {
     await userAPage.goto('/');

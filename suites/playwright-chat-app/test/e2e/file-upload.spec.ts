@@ -14,7 +14,16 @@ import { setSelectedOrganization } from './organization-helpers';
 const defaultTestLlmEndpoint = 'https://test-llm.agyn.dev';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
-test.describe('file-upload', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator'] }, () => {
+test.describe('file-upload', {
+  tag: [
+    '@svc_chat_app',
+    '@svc_gateway',
+    '@svc_agents_orchestrator',
+    '@svc_organizations',
+    '@svc_files',
+    '@svc_media_proxy',
+  ],
+}, () => {
   test('uploads a file and renders attachment', async ({ page }) => {
     test.setTimeout(120_000);
     const { organizationId, agentId } = await setupTestAgent(page, {

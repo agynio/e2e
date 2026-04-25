@@ -3,7 +3,7 @@ import { test, expect } from './multi-user-fixtures';
 import { createChat, createOrganization, resolveIdentityId, sendChatMessage } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
-test.describe('chat-detail', { tag: ['@svc_chat_app', '@svc_gateway'] }, () => {
+test.describe('chat-detail', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations'] }, () => {
   test('shows chat messages', async ({ userAPage, userBPage }) => {
     const now = Date.now();
     const message = `E2E detail message ${now}`;

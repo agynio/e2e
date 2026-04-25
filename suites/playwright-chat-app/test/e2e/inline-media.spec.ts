@@ -60,7 +60,16 @@ async function waitForReply(page: Page, chatId: string, identityId: string) {
   await page.reload();
 }
 
-test.describe('inline-media', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator'] }, () => {
+test.describe('inline-media', {
+  tag: [
+    '@svc_chat_app',
+    '@svc_gateway',
+    '@svc_agents_orchestrator',
+    '@svc_organizations',
+    '@svc_files',
+    '@svc_media_proxy',
+  ],
+}, () => {
   test('renders mermaid diagrams inline', async ({ page }) => {
     test.setTimeout(120_000);
     const message = `Please respond with a mermaid diagram only.

@@ -3,7 +3,7 @@ import { test, expect } from './multi-user-fixtures';
 import { createChat, createOrganization, resolveIdentityId, updateChatStatus } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
-test.describe('chat-status-switch', { tag: ['@svc_chat_app', '@svc_gateway'] }, () => {
+test.describe('chat-status-switch', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations'] }, () => {
   test('switches from open to closed chat status', async ({ userAPage, userBPage }) => {
     const organizationId = await createOrganization(userAPage, `e2e-org-status-${Date.now()}`);
     const userBId = await resolveIdentityId(userBPage);

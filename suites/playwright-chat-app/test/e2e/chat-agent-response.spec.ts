@@ -13,7 +13,9 @@ import { setSelectedOrganization } from './organization-helpers';
 const defaultTestLlmEndpoint = 'https://test-llm.agyn.dev';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
-test.describe('chat-agent-response', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator'] }, () => {
+test.describe('chat-agent-response', {
+  tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator', '@svc_organizations'],
+}, () => {
   test('agent response appears after message send', async ({ page }) => {
     test.setTimeout(120_000);
     const { organizationId, agentId } = await setupTestAgent(page, {

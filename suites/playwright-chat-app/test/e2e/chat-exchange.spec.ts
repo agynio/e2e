@@ -10,7 +10,7 @@ import {
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
-test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway'] }, () => {
+test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations'] }, () => {
   test('two users exchange messages in a shared chat', async ({ userAPage, userBPage }) => {
     const messageFromA = `Hello from User A ${Date.now()}`;
     const messageFromB = `Reply from User B ${Date.now()}`;

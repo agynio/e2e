@@ -47,7 +47,9 @@ async function createAgentForOrg(page: Page, organizationId: string, name: strin
   });
 }
 
-test.describe('organization-switching', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator'] }, () => {
+test.describe('organization-switching', {
+  tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator', '@svc_organizations'],
+}, () => {
   test('switching organization updates chat list', async ({ page }) => {
     const now = Date.now();
     const organizationIdA = await createOrganization(page, `e2e-org-a-${now}`);
