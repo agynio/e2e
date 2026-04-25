@@ -16,11 +16,6 @@ if ! command -v kubectl >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "ERROR: docker not found in PATH" >&2
-  exit 1
-fi
-
 if [ ! -d "$suites_dir" ]; then
   echo "ERROR: suites directory not found at $suites_dir" >&2
   exit 1
@@ -146,7 +141,11 @@ PY
       exit 1
     fi
 
-    if ! select_output=$(docker run --rm -i -e TAGS="$tags" -v "$suite_dir":"$workdir" -w "$workdir" "$image" bash -s < "$select_file"); then
+    if ! select_output=$(
+      cd "$suite_dir"
+      export TAGS="$tags"
+      bash -s < "$select_file"
+    ); then
       echo "ERROR: select failed for suite $suite_name" >&2
       exit 1
     fi
