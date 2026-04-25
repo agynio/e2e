@@ -13,6 +13,11 @@ type SeedOidcOptions = {
   landingPath?: string;
 };
 
+type BrowserLoginOptions = {
+  onLoginPage?: (page: Page) => Promise<void>;
+  email?: string;
+};
+
 type OidcRuntimeConfig = {
   authority: string;
   clientId: string;
@@ -82,12 +87,53 @@ function decodeJwtPayload(token: string): IdTokenClaims {
   return claims as IdTokenClaims;
 }
 
-async function clearAuthState(page: Page): Promise<void> {
+export async function clearAuthState(page: Page): Promise<void> {
   await page.context().clearCookies();
-  await page.addInitScript(() => {
+  const expectedOrigin = new URL(resolveBaseUrl()).origin;
+  const clearedKey = 'e2e:oidc-cleared';
+  const clearStorage = ({ origin, key }: { origin: string; key: string }) => {
+    if (window.location.origin !== origin) return;
+    if (window.sessionStorage.getItem(key)) return;
     window.sessionStorage.clear();
     window.localStorage.clear();
-  });
+    window.sessionStorage.setItem(key, 'true');
+  };
+
+  await page.addInitScript(clearStorage, { origin: expectedOrigin, key: clearedKey });
+
+  const currentOrigin = new URL(page.url()).origin;
+  if (currentOrigin === expectedOrigin) {
+    await page.evaluate(clearStorage, { origin: expectedOrigin, key: clearedKey });
+  }
+}
+
+async function fillMockAuthLoginForm(
+  page: Page,
+  expectedEmail: string,
+  onLoginPage?: (page: Page) => Promise<void>,
+): Promise<void> {
+  if (onLoginPage) {
+    await onLoginPage(page);
+  }
+
+  const strategyTabs = page.getByTestId('login-strategy-tabs');
+  if (await strategyTabs.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const emailTab = strategyTabs.getByRole('tab', { name: 'Email' });
+    if (await emailTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await emailTab.click();
+    }
+  }
+
+  const emailInput = page.getByTestId('login-email-input');
+  if ((await emailInput.count()) > 0) {
+    await expect(emailInput).toBeVisible({ timeout: 5000 });
+    await emailInput.fill(expectedEmail);
+  } else {
+    const usernameInput = page.getByTestId('login-username-input');
+    await expect(usernameInput).toBeVisible({ timeout: 5000 });
+    await usernameInput.fill(expectedEmail);
+  }
+  await page.getByRole('button', { name: 'Continue' }).click();
 }
 
 function readEnvValue(body: string, key: string): string | undefined {
@@ -263,28 +309,7 @@ export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOp
   ]);
 
   if (loginReady) {
-    if (options.onLoginPage) {
-      await options.onLoginPage(page);
-    }
-
-    const strategyTabs = page.getByTestId('login-strategy-tabs');
-    if (await strategyTabs.isVisible({ timeout: 2000 }).catch(() => false)) {
-      const emailTab = strategyTabs.getByRole('tab', { name: 'Email' });
-      if (await emailTab.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await emailTab.click();
-      }
-    }
-
-    const emailInput = page.getByTestId('login-email-input');
-    if ((await emailInput.count()) > 0) {
-      await expect(emailInput).toBeVisible({ timeout: 5000 });
-      await emailInput.fill(expectedEmail);
-    } else {
-      const usernameInput = page.getByTestId('login-username-input');
-      await expect(usernameInput).toBeVisible({ timeout: 5000 });
-      await usernameInput.fill(expectedEmail);
-    }
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await fillMockAuthLoginForm(page, expectedEmail, options.onLoginPage);
   }
 
   const redirectResponse = await redirectResponsePromise;
@@ -304,4 +329,11 @@ export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOp
 
   const tokens = await exchangeAuthCode(config, { code, codeVerifier, redirectUri });
   await seedOidcSession(page, tokens, config, options);
+}
+
+export async function completeMockAuthLogin(page: Page, options: BrowserLoginOptions = {}): Promise<void> {
+  const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+  const loginHeading = page.getByRole('heading', { level: 1, name: /Log in to/ });
+  await expect(loginHeading).toBeVisible({ timeout: 30000 });
+  await fillMockAuthLoginForm(page, expectedEmail, options.onLoginPage);
 }
