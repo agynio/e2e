@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { User, type IdTokenClaims } from 'oidc-client-ts';
 import { createHash, randomBytes } from 'node:crypto';
@@ -11,6 +11,11 @@ type SeedOidcOptions = {
   force?: boolean;
   email?: string;
   landingPath?: string;
+};
+
+type BrowserLoginOptions = {
+  onLoginPage?: (page: Page) => Promise<void>;
+  email?: string;
 };
 
 type OidcRuntimeConfig = {
@@ -82,18 +87,86 @@ function decodeJwtPayload(token: string): IdTokenClaims {
   return claims as IdTokenClaims;
 }
 
-async function clearAuthState(page: Page): Promise<void> {
+export async function clearAuthState(page: Page): Promise<void> {
   await page.context().clearCookies();
-  await page.addInitScript(() => {
+  const expectedOrigin = new URL(resolveBaseUrl()).origin;
+  const clearedKey = 'e2e:oidc-cleared';
+  const clearStorage = ({ origin, key }: { origin: string; key: string }) => {
+    if (window.location.origin !== origin) return;
+    if (window.sessionStorage.getItem(key)) return;
     window.sessionStorage.clear();
     window.localStorage.clear();
-  });
+    window.sessionStorage.setItem(key, 'true');
+  };
+
+  await page.addInitScript(clearStorage, { origin: expectedOrigin, key: clearedKey });
+
+  const currentOrigin = new URL(page.url()).origin;
+  if (currentOrigin === expectedOrigin) {
+    await page.evaluate(clearStorage, { origin: expectedOrigin, key: clearedKey });
+  }
+}
+
+async function fillMockAuthLoginForm(
+  page: Page,
+  expectedEmail: string,
+  onLoginPage?: (page: Page) => Promise<void>,
+): Promise<void> {
+  if (onLoginPage) {
+    await onLoginPage(page);
+  }
+
+  const strategyTabs = page.getByTestId('login-strategy-tabs');
+  if (await isLocatorVisible(strategyTabs, 2000)) {
+    const emailTab = strategyTabs.getByRole('tab', { name: 'Email' });
+    if (await isLocatorVisible(emailTab, 2000)) {
+      await emailTab.click();
+    }
+  }
+
+  const emailInput = page.getByTestId('login-email-input');
+  if ((await emailInput.count()) > 0) {
+    await expect(emailInput).toBeVisible({ timeout: 5000 });
+    await emailInput.fill(expectedEmail);
+  } else {
+    const usernameInput = page.getByTestId('login-username-input');
+    await expect(usernameInput).toBeVisible({ timeout: 5000 });
+    await usernameInput.fill(expectedEmail);
+  }
+  await page.getByRole('button', { name: 'Continue' }).click();
 }
 
 function readEnvValue(body: string, key: string): string | undefined {
   const matcher = new RegExp(`${key}:\\s*"([^"]*)"`);
   const match = body.match(matcher);
   return match ? match[1] : undefined;
+}
+
+function isTimeoutError(error: unknown): error is Error {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
+async function isLocatorVisible(locator: Locator, timeout: number): Promise<boolean> {
+  try {
+    return await locator.isVisible({ timeout });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function waitForLocator(locator: Locator, timeout: number): Promise<boolean> {
+  try {
+    await locator.waitFor({ timeout });
+    return true;
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 async function resolveRuntimeEnv(request: APIRequestContext): Promise<Record<string, string | undefined>> {
@@ -258,33 +331,12 @@ export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOp
 
   const loginHeading = page.getByRole('heading', { level: 1, name: /Log in to/ });
   const loginReady = await Promise.race([
-    loginHeading.waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
+    waitForLocator(loginHeading, 10000),
     redirectResponsePromise.then(() => false),
   ]);
 
   if (loginReady) {
-    if (options.onLoginPage) {
-      await options.onLoginPage(page);
-    }
-
-    const strategyTabs = page.getByTestId('login-strategy-tabs');
-    if (await strategyTabs.isVisible({ timeout: 2000 }).catch(() => false)) {
-      const emailTab = strategyTabs.getByRole('tab', { name: 'Email' });
-      if (await emailTab.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await emailTab.click();
-      }
-    }
-
-    const emailInput = page.getByTestId('login-email-input');
-    if ((await emailInput.count()) > 0) {
-      await expect(emailInput).toBeVisible({ timeout: 5000 });
-      await emailInput.fill(expectedEmail);
-    } else {
-      const usernameInput = page.getByTestId('login-username-input');
-      await expect(usernameInput).toBeVisible({ timeout: 5000 });
-      await usernameInput.fill(expectedEmail);
-    }
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await fillMockAuthLoginForm(page, expectedEmail, options.onLoginPage);
   }
 
   const redirectResponse = await redirectResponsePromise;
@@ -304,4 +356,11 @@ export async function seedOidcSessionViaMockAuth(page: Page, options: SeedOidcOp
 
   const tokens = await exchangeAuthCode(config, { code, codeVerifier, redirectUri });
   await seedOidcSession(page, tokens, config, options);
+}
+
+export async function completeMockAuthLogin(page: Page, options: BrowserLoginOptions = {}): Promise<void> {
+  const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+  const loginHeading = page.getByRole('heading', { level: 1, name: /Log in to/ });
+  await expect(loginHeading).toBeVisible({ timeout: 30000 });
+  await fillMockAuthLoginForm(page, expectedEmail, options.onLoginPage);
 }
