@@ -396,7 +396,6 @@ runs:
           e2e/.diagnostics/
         include-hidden-files: true
         if-no-files-found: warn
-        include-hidden-files: true
 
     - name: Fail if tests failed
       if: ${{ steps.run.outputs.exit_code != '0' }}
