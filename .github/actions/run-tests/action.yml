@@ -394,6 +394,7 @@ runs:
         path: |
           e2e/.artifacts/
           e2e/.diagnostics/
+        include-hidden-files: true
         if-no-files-found: warn
 
     - name: Fail if tests failed
