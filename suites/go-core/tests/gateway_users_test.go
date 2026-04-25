@@ -47,6 +47,7 @@ func TestAPIToken_ConnectRPCEndpointAuthenticated(t *testing.T) {
 	defer cancel()
 
 	client := newAgentsGatewayClient(t)
+	agentID := createGatewayAgent(t, client)
 	resp, err := client.ListAgents(ctx, connect.NewRequest(&agentsv1.ListAgentsRequest{
 		OrganizationId: gatewayOrganizationID(t),
 	}))
@@ -54,6 +55,7 @@ func TestAPIToken_ConnectRPCEndpointAuthenticated(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Msg)
 	require.NotNil(t, resp.Msg.Agents)
+	require.True(t, hasGatewayAgentID(resp.Msg.Agents, agentID))
 }
 
 func TestAPIToken_ConnectRPCEndpointInvalidToken(t *testing.T) {
@@ -142,12 +144,13 @@ func TestUsersGateway_CreateAPITokenUnauthenticated(t *testing.T) {
 }
 
 func TestAPIToken_CreatedTokenAuthenticates(t *testing.T) {
-	baseIdentity := fetchGatewayIdentity(t, gatewayAPIToken(t))
+	baseToken := gatewayUserToken(t)
+	baseIdentity := fetchGatewayIdentity(t, baseToken)
 
 	ctx, cancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
 	defer cancel()
 
-	client := newUsersGatewayClient(t)
+	client := newUsersGatewayClientWithToken(t, baseToken)
 	createResp, err := client.CreateAPIToken(ctx, connect.NewRequest(&usersv1.CreateAPITokenRequest{
 		Name: fmt.Sprintf("e2e-roundtrip-token-%d", time.Now().UnixNano()),
 	}))
@@ -174,8 +177,13 @@ func TestAPIToken_CreatedTokenAuthenticates(t *testing.T) {
 
 func newUsersGatewayClient(t *testing.T) gatewayv1connect.UsersGatewayClient {
 	t.Helper()
+	return newUsersGatewayClientWithToken(t, gatewayUserToken(t))
+}
+
+func newUsersGatewayClientWithToken(t *testing.T, token string) gatewayv1connect.UsersGatewayClient {
+	t.Helper()
 	return gatewayv1connect.NewUsersGatewayClient(
-		newGatewayAuthenticatedClient(t, gatewayAPIToken(t)),
+		newGatewayAuthenticatedClient(t, token),
 		gatewayBaseURL(t),
 	)
 }

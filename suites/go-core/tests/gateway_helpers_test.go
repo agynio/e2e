@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,18 +15,25 @@ import (
 	"testing"
 	"time"
 
+	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 )
 
 const (
-	gatewayBaseURLEnvKey      = "AGYN_BASE_URL"
-	gatewayAPITokenEnvKey     = "AGYN_API_TOKEN"
-	gatewayOrganizationEnvKey = "AGYN_ORGANIZATION_ID"
-	gatewayModelEnvKey        = "AGYN_MODEL_ID"
-	zitiManagementAddrEnvKey  = "ZITI_MANAGEMENT_ADDRESS"
-	defaultZitiManagementAddr = "ziti-management:50051"
-	zitiGatewayBaseURL        = "http://gateway"
-	gatewayRequestTimeout     = 30 * time.Second
+	gatewayBaseURLEnvKey        = "AGYN_BASE_URL"
+	gatewayAPITokenEnvKey       = "AGYN_API_TOKEN"
+	gatewayOrganizationEnvKey   = "AGYN_ORGANIZATION_ID"
+	gatewayModelEnvKey          = "AGYN_MODEL_ID"
+	gatewayAgentImageEnvKey     = "AGYN_AGENT_IMAGE"
+	gatewayAgentInitImageEnvKey = "AGYN_AGENT_INIT_IMAGE"
+	gatewayUsersAddrEnvKey      = "USERS_ADDRESS"
+	defaultGatewayUsersAddr     = "users:50051"
+	zitiManagementAddrEnvKey    = "ZITI_MANAGEMENT_ADDRESS"
+	defaultZitiManagementAddr   = "ziti-management:50051"
+	zitiGatewayBaseURL          = "http://gateway"
+	gatewayRequestTimeout       = 30 * time.Second
 )
 
 type gatewayMePayload struct {
@@ -77,6 +85,20 @@ func gatewayModelID(t *testing.T) string {
 	return requireGatewayEnv(t, gatewayModelEnvKey)
 }
 
+func gatewayAgentImage(t *testing.T) string {
+	t.Helper()
+	return requireGatewayEnv(t, gatewayAgentImageEnvKey)
+}
+
+func gatewayAgentInitImage(t *testing.T) string {
+	t.Helper()
+	return requireGatewayEnv(t, gatewayAgentInitImageEnvKey)
+}
+
+func gatewayUsersAddr() string {
+	return envOrDefault(gatewayUsersAddrEnvKey, defaultGatewayUsersAddr)
+}
+
 func zitiManagementAddr(t *testing.T) string {
 	t.Helper()
 	return envOrDefault(zitiManagementAddrEnvKey, defaultZitiManagementAddr)
@@ -104,6 +126,48 @@ func newGatewayAuthenticatedClient(t *testing.T, token string) *http.Client {
 	client := newGatewayClient(t)
 	client.Transport = gatewayBearerTransport{token: token, base: client.Transport}
 	return client
+}
+
+func gatewayUserToken(t *testing.T) string {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
+	defer cancel()
+
+	usersConn := dialGRPC(t, gatewayUsersAddr())
+	usersClient := usersv1.NewUsersServiceClient(usersConn)
+
+	subject := fmt.Sprintf("e2e-gateway-%s", uuid.NewString())
+	name := fmt.Sprintf("E2E Gateway %s", subject)
+	email := fmt.Sprintf("%s@test.local", subject)
+
+	resp, err := usersClient.ResolveOrCreateUser(ctx, &usersv1.ResolveOrCreateUserRequest{
+		OidcSubject: subject,
+		Name:        name,
+		Email:       email,
+	})
+	require.NoError(t, err)
+	if resp == nil || resp.GetUser() == nil || resp.GetUser().GetMeta() == nil {
+		t.Fatal("resolve user: missing user metadata")
+	}
+	identityID := strings.TrimSpace(resp.GetUser().GetMeta().GetId())
+	if identityID == "" {
+		t.Fatal("resolve user: identity id missing")
+	}
+
+	callCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs("x-identity-id", identityID))
+	tokenResp, err := usersClient.CreateAPIToken(callCtx, &usersv1.CreateAPITokenRequest{
+		Name: fmt.Sprintf("e2e-gateway-token-%s", uuid.NewString()),
+	})
+	require.NoError(t, err)
+	if tokenResp == nil || tokenResp.GetToken() == nil {
+		t.Fatal("create api token: missing response")
+	}
+	plaintext := strings.TrimSpace(tokenResp.GetPlaintextToken())
+	if plaintext == "" {
+		t.Fatal("create api token: plaintext token missing")
+	}
+	return plaintext
 }
 
 func gatewayTransport(t *testing.T) http.RoundTripper {

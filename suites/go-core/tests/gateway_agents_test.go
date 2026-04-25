@@ -20,6 +20,7 @@ func TestAgentsGateway_ListAgents(t *testing.T) {
 	defer cancel()
 
 	client := newAgentsGatewayClient(t)
+	agentID := createGatewayAgent(t, client)
 	resp, err := client.ListAgents(ctx, connect.NewRequest(&agentsv1.ListAgentsRequest{
 		OrganizationId: gatewayOrganizationID(t),
 	}))
@@ -27,6 +28,7 @@ func TestAgentsGateway_ListAgents(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Msg)
 	require.NotNil(t, resp.Msg.Agents)
+	require.True(t, hasGatewayAgentID(resp.Msg.Agents, agentID))
 }
 
 func TestAgentsGateway_CreateAndDeleteAgent(t *testing.T) {
@@ -39,6 +41,8 @@ func TestAgentsGateway_CreateAndDeleteAgent(t *testing.T) {
 		Role:           "assistant",
 		Model:          gatewayModelID(t),
 		Configuration:  "{}",
+		Image:          gatewayAgentImage(t),
+		InitImage:      gatewayAgentInitImage(t),
 		OrganizationId: gatewayOrganizationID(t),
 	}
 	createResp, err := client.CreateAgent(ctx, connect.NewRequest(createReq))
@@ -66,11 +70,11 @@ func TestAgentsGateway_ListMcps(t *testing.T) {
 	defer cancel()
 
 	client := newAgentsGatewayClient(t)
-	resp, err := client.ListMcps(ctx, connect.NewRequest(&agentsv1.ListMcpsRequest{}))
+	agentID := createGatewayAgent(t, client)
+	resp, err := client.ListMcps(ctx, connect.NewRequest(&agentsv1.ListMcpsRequest{AgentId: agentID}))
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Msg)
-	require.NotNil(t, resp.Msg.Mcps)
 }
 
 func TestAgentsGateway_InvalidPayloadReturnsClientError(t *testing.T) {
@@ -88,4 +92,46 @@ func newAgentsGatewayClient(t *testing.T) gatewayv1connect.AgentsGatewayClient {
 		newGatewayAuthenticatedClient(t, gatewayAPIToken(t)),
 		gatewayBaseURL(t),
 	)
+}
+
+func createGatewayAgent(t *testing.T, client gatewayv1connect.AgentsGatewayClient) string {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
+	defer cancel()
+
+	resp, err := client.CreateAgent(ctx, connect.NewRequest(&agentsv1.CreateAgentRequest{
+		Name:           fmt.Sprintf("e2e-gateway-agent-%s", uuid.NewString()),
+		Role:           "assistant",
+		Model:          gatewayModelID(t),
+		Configuration:  "{}",
+		Image:          gatewayAgentImage(t),
+		InitImage:      gatewayAgentInitImage(t),
+		OrganizationId: gatewayOrganizationID(t),
+	}))
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Msg)
+	require.NotNil(t, resp.Msg.Agent)
+	require.NotNil(t, resp.Msg.Agent.Meta)
+
+	agentID := strings.TrimSpace(resp.Msg.Agent.Meta.Id)
+	require.NotEmpty(t, agentID)
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
+		defer cleanupCancel()
+		_, _ = client.DeleteAgent(cleanupCtx, connect.NewRequest(&agentsv1.DeleteAgentRequest{Id: agentID}))
+	})
+
+	return agentID
+}
+
+func hasGatewayAgentID(agents []*agentsv1.Agent, agentID string) bool {
+	for _, agent := range agents {
+		if strings.TrimSpace(agent.GetMeta().GetId()) == agentID {
+			return true
+		}
+	}
+	return false
 }
