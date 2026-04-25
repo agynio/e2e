@@ -56,6 +56,11 @@ function resolveInitImage(): string {
   return override || DEFAULT_INIT_IMAGE;
 }
 
+function buildMcpName(prefix: string): string {
+  const suffix = randomUUID().replace(/-/g, '_');
+  return `${prefix}_${suffix}`;
+}
+
 function isHex(value: string): boolean {
   return /^[0-9a-fA-F]+$/.test(value) && value.length % 2 === 0;
 }
@@ -191,7 +196,7 @@ export async function createFullChainRun(page: Page): Promise<FullChainRun> {
 
   const memoryMcpId = await createMcp(page, {
     agentId,
-    name: `memory-${randomUUID()}`,
+    name: buildMcpName('memory'),
     image: MCP_IMAGE,
     command: MEMORY_MCP_COMMAND,
   });
@@ -204,7 +209,7 @@ export async function createFullChainRun(page: Page): Promise<FullChainRun> {
 
   await createMcp(page, {
     agentId,
-    name: `filesystem-${randomUUID()}`,
+    name: buildMcpName('filesystem'),
     image: MCP_IMAGE,
     command: FILESYSTEM_MCP_COMMAND,
   });
