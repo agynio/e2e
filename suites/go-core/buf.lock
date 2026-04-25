@@ -4,8 +4,8 @@ deps:
   - remote: buf.build
     owner: agynio
     repository: api
-    commit: 0c3439c9954c41edbb633c6a0df915ca
-    digest: shake256:9413c5ef59e316eb902acad778a2c55043fe0d31d593d2f533425aa263ee6f4686a095fe5affc9370ec461e5540d89abdb3fd8707c86cc04591751af89d0f4a4
+    commit: c93d50fb004044178f3a64bc851f27c0
+    digest: shake256:3e7091dc91e0bd95a1876a95553dc9e135264e0727ca60f8bb7e53f66b2b9f547f86b45bee84286f6a2ede49a85edd4bc34f11bd36318ec235f18b75391f9623
   - remote: buf.build
     owner: opentelemetry
     repository: opentelemetry
