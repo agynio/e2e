@@ -58,4 +58,5 @@ jobs:
         with:
           ref: ${{ github.sha }}
           tag: svc_agn_cli
+          include-smoke: false
           agn-binary: agn
