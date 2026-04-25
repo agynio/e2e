@@ -5,6 +5,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -125,13 +126,17 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list workloads by thread: %v", err)
 	}
-	if len(allWorkloads) < 2 {
+	sortedAllWorkloads, err := sortWorkloadsByCreatedAt(allWorkloads, false)
+	if err != nil {
+		t.Fatalf("sort workloads by created_at: %v", err)
+	}
+	if len(sortedAllWorkloads) < 2 {
 		t.Fatalf("expected at least 2 workloads, got %d", len(allWorkloads))
 	}
-	if allWorkloads[0].GetStatus() != runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED || allWorkloads[1].GetStatus() != runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED {
-		t.Fatalf("expected two consecutive failed workloads, got %s and %s", allWorkloads[0].GetStatus(), allWorkloads[1].GetStatus())
+	if sortedAllWorkloads[0].GetStatus() != runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED || sortedAllWorkloads[1].GetStatus() != runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED {
+		t.Fatalf("expected two consecutive failed workloads, got %s and %s", sortedAllWorkloads[0].GetStatus(), sortedAllWorkloads[1].GetStatus())
 	}
-	if workloadID(t, allWorkloads[0]) != workloadID(t, failedLatest) || workloadID(t, allWorkloads[1]) != workloadID(t, failedPrevious) {
+	if workloadID(t, sortedAllWorkloads[0]) != workloadID(t, failedLatest) || workloadID(t, sortedAllWorkloads[1]) != workloadID(t, failedPrevious) {
 		t.Fatalf("expected failures to be the most recent workloads")
 	}
 
@@ -205,15 +210,19 @@ func waitForFailedWorkloads(
 		if err != nil {
 			return err
 		}
-		if len(workloads) < count {
+		sortedWorkloads, err := sortWorkloadsByCreatedAt(workloads, false)
+		if err != nil {
+			return err
+		}
+		if len(sortedWorkloads) < count {
 			return fmt.Errorf("expected %d failed workloads, got %d", count, len(workloads))
 		}
-		for _, workload := range workloads[:count] {
+		for _, workload := range sortedWorkloads[:count] {
 			if err := validateFailedWorkload(workload, threadID, agentID); err != nil {
 				return err
 			}
 		}
-		failed = workloads
+		failed = sortedWorkloads
 		return nil
 	})
 	if err != nil {
@@ -273,25 +282,96 @@ func waitForRetryWorkload(
 		if err != nil {
 			return err
 		}
-		for _, workload := range workloads {
-			if workload.GetStatus() == runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED {
-				continue
-			}
-			createdAt := workloadCreatedAtErr(workload)
-			if createdAt.err != nil {
-				return createdAt.err
-			}
-			if createdAt.time.After(removedAt) {
-				retry = workload
-				return nil
-			}
+		candidate, err := firstWorkloadAfter(workloads, removedAt)
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("retry workload not found")
+		retry = candidate
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return retry, nil
+}
+
+type workloadSortEntry struct {
+	workload  *runnersv1.Workload
+	createdAt time.Time
+	id        string
+}
+
+func sortWorkloadsByCreatedAt(workloads []*runnersv1.Workload, ascending bool) ([]*runnersv1.Workload, error) {
+	entries, err := buildWorkloadSortEntries(workloads)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].createdAt.Equal(entries[j].createdAt) {
+			if ascending {
+				return entries[i].id < entries[j].id
+			}
+			return entries[i].id > entries[j].id
+		}
+		if ascending {
+			return entries[i].createdAt.Before(entries[j].createdAt)
+		}
+		return entries[i].createdAt.After(entries[j].createdAt)
+	})
+	sorted := make([]*runnersv1.Workload, 0, len(entries))
+	for _, entry := range entries {
+		sorted = append(sorted, entry.workload)
+	}
+	return sorted, nil
+}
+
+func firstWorkloadAfter(workloads []*runnersv1.Workload, after time.Time) (*runnersv1.Workload, error) {
+	if after.IsZero() {
+		return nil, fmt.Errorf("after time is zero")
+	}
+	entries, err := buildWorkloadSortEntries(workloads)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].createdAt.Equal(entries[j].createdAt) {
+			return entries[i].id < entries[j].id
+		}
+		return entries[i].createdAt.Before(entries[j].createdAt)
+	})
+	for _, entry := range entries {
+		if entry.createdAt.After(after) {
+			return entry.workload, nil
+		}
+	}
+	return nil, fmt.Errorf("no workload created after %s", after.Format(time.RFC3339Nano))
+}
+
+func buildWorkloadSortEntries(workloads []*runnersv1.Workload) ([]workloadSortEntry, error) {
+	entries := make([]workloadSortEntry, 0, len(workloads))
+	for _, workload := range workloads {
+		if workload == nil {
+			return nil, fmt.Errorf("workload is nil")
+		}
+		meta := workload.GetMeta()
+		if meta == nil {
+			return nil, fmt.Errorf("workload metadata missing")
+		}
+		workloadID := meta.GetId()
+		if workloadID == "" {
+			return nil, fmt.Errorf("workload id missing")
+		}
+		createdAt := meta.GetCreatedAt()
+		if createdAt == nil {
+			return nil, fmt.Errorf("workload %s created_at missing", workloadID)
+		}
+		entries = append(entries, workloadSortEntry{
+			workload:  workload,
+			createdAt: createdAt.AsTime(),
+			id:        workloadID,
+		})
+	}
+	return entries, nil
 }
 
 func waitForRunnerWorkloadGone(ctx context.Context, client runnerv1.RunnerServiceClient, workloadID string) error {
