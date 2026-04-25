@@ -7,6 +7,10 @@ inputs:
   tag:
     description: Additional tags (comma-separated or repeated by callers).
     required: false
+  include_smoke:
+    description: When tags are provided, append the smoke tag.
+    required: false
+    default: "true"
   provider-binary:
     description: Optional path to a Terraform provider binary in the caller workspace.
     required: false
@@ -337,6 +341,12 @@ runs:
           fi
         done
 
+        include_smoke="${{ inputs.include_smoke }}"
+        if [ -z "$include_smoke" ]; then
+          include_smoke="true"
+        fi
+        include_smoke=$(echo "$include_smoke" | tr '[:upper:]' '[:lower:]')
+
         namespace="${DEVSPACE_NAMESPACE:-platform}"
         cd "$GITHUB_WORKSPACE/e2e"
 
@@ -351,7 +361,9 @@ runs:
           devspace run test-e2e
           exit_code=$?
         else
-          unique_tags+=("smoke")
+          if [ "$include_smoke" = "true" ]; then
+            unique_tags+=("smoke")
+          fi
           declare -A seen_run=()
           tag_args=()
           for tag in "${unique_tags[@]}"; do

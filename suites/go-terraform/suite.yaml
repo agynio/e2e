@@ -1,7 +1,7 @@
 image: ghcr.io/agynio/devcontainer-go:1
 workdir: /opt/app/data
 select: |
-  suite_tags=("svc_gateway")
+  suite_tags=("svc_gateway" "tf_provider_agyn")
 
   if [ -z "${TAGS:-}" ]; then
     echo "${suite_tags[0]}"
@@ -20,7 +20,7 @@ run: |
   set -euo pipefail
   cd /opt/app/data
 
-  suite_tags=("svc_gateway")
+  suite_tags=("svc_gateway" "tf_provider_agyn")
   tags=()
   if [ -n "${TAGS:-}" ]; then
     for tag in ${TAGS}; do
