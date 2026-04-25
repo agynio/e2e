@@ -1,4 +1,7 @@
+import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
+import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
+import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
 const CHAT_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ChatGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
@@ -6,7 +9,12 @@ const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 
-export const DEFAULT_TEST_INIT_IMAGE = 'ghcr.io/agynio/agent-init-codex:latest';
+export const DEFAULT_TEST_INIT_IMAGE =
+  process.env.E2E_AGENT_INIT_IMAGE ??
+  process.env.CODEX_INIT_IMAGE ??
+  'ghcr.io/agynio/agent-init-codex:0.13.19';
+
+export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
@@ -51,7 +59,7 @@ type Message = {
   body?: string;
 };
 
-type ProtoChatStatus = 'CHAT_STATUS_OPEN' | 'CHAT_STATUS_CLOSED';
+type MembershipRoleValue = 'MEMBERSHIP_ROLE_OWNER' | 'MEMBERSHIP_ROLE_MEMBER';
 
 type GetMessagesResponseWire = {
   messages?: Message[];
@@ -68,6 +76,24 @@ type BatchGetUsersResponseWire = {
 
 const CHAT_ORG_STORAGE_KEY = 'ui.organization.chat-map';
 const CHAT_ORG_STORAGE_VERSION = 1;
+
+function enumName(schema: Parameters<typeof enumToJson>[0], value: number): string {
+  const jsonValue = enumToJson(schema, value as never);
+  if (typeof jsonValue !== 'string') {
+    throw new Error(`Expected enum ${schema.typeName} to serialize as string.`);
+  }
+  return jsonValue;
+}
+
+const CHAT_STATUS_MAP = {
+  open: enumName(ChatStatusSchema, ChatStatus.OPEN),
+  closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
+} satisfies Record<'open' | 'closed', string>;
+
+const MEMBERSHIP_ROLE_MAP = {
+  MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
+  MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
+} satisfies Record<MembershipRoleValue, string>;
 
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;
@@ -221,11 +247,9 @@ export async function updateChatStatus(
   chatId: string,
   status: 'open' | 'closed',
 ): Promise<void> {
-  const protoStatus: ProtoChatStatus =
-    status === 'closed' ? 'CHAT_STATUS_CLOSED' : 'CHAT_STATUS_OPEN';
   await postConnect(page, CHAT_GATEWAY_PATH, 'UpdateChat', {
     chatId,
-    status: protoStatus,
+    status: CHAT_STATUS_MAP[status],
   });
 }
 
@@ -246,13 +270,13 @@ export async function createMembership(
   page: Page,
   organizationId: string,
   identityId: string,
-  role: 'MEMBERSHIP_ROLE_OWNER' | 'MEMBERSHIP_ROLE_MEMBER' = 'MEMBERSHIP_ROLE_MEMBER',
+  role: MembershipRoleValue = 'MEMBERSHIP_ROLE_MEMBER',
 ): Promise<string> {
   const response = await postConnect<CreateMembershipResponseWire>(
     page,
     ORGS_GATEWAY_PATH,
     'CreateMembership',
-    { organizationId, identityId, role },
+    { organizationId, identityId, role: MEMBERSHIP_ROLE_MAP[role] },
   );
   if (!response.membership?.id) {
     throw new Error('CreateMembership response missing membership id.');
@@ -334,6 +358,15 @@ type SetupTestAgentOptions = {
   initImage?: string;
 };
 
+type CreateTestModelOptions = {
+  organizationId: string;
+  endpoint: string;
+  namePrefix?: string;
+  remoteName?: string;
+  authMethod?: string;
+  token?: string;
+};
+
 async function waitForAgent(page: Page, organizationId: string, agentId: string): Promise<void> {
   const timeoutMs = 20000;
   const start = Date.now();
@@ -364,6 +397,29 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   return agentId;
 }
 
+export async function createTestModel(
+  page: Page,
+  opts: CreateTestModelOptions,
+): Promise<{ modelId: string; providerId: string; modelName: string }> {
+  const now = Date.now();
+  const providerId = await createLLMProvider(page, {
+    endpoint: opts.endpoint,
+    authMethod: opts.authMethod ?? 'AUTH_METHOD_BEARER',
+    token: opts.token ?? 'unused',
+    organizationId: opts.organizationId,
+  });
+
+  const modelName = `${opts.namePrefix ?? 'e2e-model'}-${now}`;
+  const modelId = await createModel(page, {
+    name: modelName,
+    llmProviderId: providerId,
+    remoteName: opts.remoteName ?? 'simple-hello',
+    organizationId: opts.organizationId,
+  });
+
+  return { modelId, providerId, modelName };
+}
+
 export async function setupTestAgent(
   page: Page,
   opts: SetupTestAgentOptions,
@@ -372,18 +428,10 @@ export async function setupTestAgent(
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
   const initImage = opts.initImage ?? DEFAULT_TEST_INIT_IMAGE;
 
-  const providerId = await createLLMProvider(page, {
+  const { modelId } = await createTestModel(page, {
+    organizationId,
     endpoint: opts.endpoint,
-    authMethod: 'AUTH_METHOD_BEARER',
-    token: 'unused',
-    organizationId,
-  });
-
-  const modelId = await createModel(page, {
-    name: `e2e-model-${now}`,
-    llmProviderId: providerId,
-    remoteName: 'simple-hello',
-    organizationId,
+    namePrefix: 'e2e-model',
   });
 
   const agentName = `e2e-codex-agent-${now}`;
@@ -394,7 +442,7 @@ export async function setupTestAgent(
     model: modelId,
     description: 'E2E test agent using TestLLM simple-hello',
     configuration: '{}',
-    image: 'alpine:3.21',
+    image: DEFAULT_TEST_AGENT_IMAGE,
     initImage,
   });
 
