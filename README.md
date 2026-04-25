@@ -19,7 +19,7 @@ Optional domain override:
 
 - `E2E_DOMAIN`
 
-Full-chain tests use `AGN_INIT_IMAGE` for the agent init image (falls back to the default used by go-core).
+Full-chain tests use `AGN_INIT_IMAGE` for the agn agent init image and `CODEX_INIT_IMAGE` for codex (each falls back to the default used by go-core).
 
 Example runs:
 

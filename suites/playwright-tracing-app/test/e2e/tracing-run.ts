@@ -138,12 +138,10 @@ async function waitForTraceIdByMessageId(page: Page, params: {
       pageSize: 1,
       orderBy: ListSpansOrderBy.START_TIME_DESC,
     });
-    if ((response.resourceSpans ?? []).length > 0) {
-      sawSpans = true;
-    }
     for (const resourceSpan of response.resourceSpans ?? []) {
       for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
         for (const span of scopeSpan.spans ?? []) {
+          sawSpans = true;
           if (span.traceId) {
             return decodeTraceId(span.traceId);
           }
