@@ -1,4 +1,4 @@
-//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_files || svc_media_proxy || smoke)
+//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_files || svc_gateway || svc_media_proxy || smoke)
 
 package tests
 

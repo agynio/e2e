@@ -12,6 +12,9 @@ inputs:
       - agynio/api/agents/v1
       - agynio/api/authorization/v1
       - agynio/api/files/v1
+      - agynio/api/gateway/v1/agents.proto
+      - agynio/api/gateway/v1/users.proto
+      - agynio/api/identity/v1
       - agynio/api/llm/v1
       - agynio/api/metering/v1
       - agynio/api/organizations/v1
@@ -21,6 +24,7 @@ inputs:
       - agynio/api/threads/v1
       - agynio/api/tracing/v1
       - agynio/api/users/v1
+      - agynio/api/ziti_management/v1
   - module: buf.build/opentelemetry/opentelemetry
     paths:
       - opentelemetry/proto/common/v1
@@ -29,6 +33,10 @@ inputs:
 
 plugins:
   - remote: buf.build/protocolbuffers/go
+    out: .gen/go
+    opt:
+      - paths=source_relative
+  - remote: buf.build/connectrpc/go
     out: .gen/go
     opt:
       - paths=source_relative
