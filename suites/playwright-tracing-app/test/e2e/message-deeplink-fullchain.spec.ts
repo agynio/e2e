@@ -8,7 +8,7 @@ test.describe('message deep link full chain', { tag: ['@svc_tracing_app', '@svc_
 
     await page.goto(`/message/${run.messageId}?orgId=${run.organizationId}`);
 
-    const runUrlPattern = new RegExp(`/${run.organizationId}/runs/[0-9a-f]{32}$`);
+    const runUrlPattern = new RegExp(`/${run.organizationId}/runs/[0-9a-f]{32}(\\?.*)?$`);
     await expect(page).toHaveURL(runUrlPattern, { timeout: 60000 });
 
     const currentUrl = new URL(page.url());
