@@ -1,19 +1,15 @@
 import { argosScreenshot } from '@argos-ci/playwright';
+import * as crypto from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { test, expect } from './multi-user-fixtures';
 import {
   createAgent,
   createChat,
   createOrganization,
-  createTestModel,
-  DEFAULT_TEST_AGENT_IMAGE,
   DEFAULT_TEST_INIT_IMAGE,
   resolveIdentityId,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
-
-const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
-const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
 async function expectChatListVisible(page: Page) {
   const list = page.getByTestId('chat-list');
@@ -37,25 +33,20 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
 
   test(
     'participant picker shows available options',
-    { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations', '@svc_agents_orchestrator'] },
+    { tag: ['@svc_agents_orchestrator'] },
     async ({ userAPage }) => {
       const now = Date.now();
       const organizationId = await createOrganization(userAPage, `e2e-org-picker-${now}`);
       await setSelectedOrganization(userAPage, organizationId);
-      const { modelId } = await createTestModel(userAPage, {
-        organizationId,
-        endpoint: llmEndpoint,
-        namePrefix: 'e2e-model-picker',
-      });
       const agentName = `e2e-agent-picker-${now}`;
       await createAgent(userAPage, {
         organizationId,
         name: agentName,
         role: 'assistant',
-        model: modelId,
+        model: crypto.randomUUID(),
         description: 'E2E participant picker agent',
         configuration: '{}',
-        image: DEFAULT_TEST_AGENT_IMAGE,
+        image: 'agent-image:latest',
         initImage: DEFAULT_TEST_INIT_IMAGE,
       });
       const chatsLoaded = userAPage.waitForResponse(
