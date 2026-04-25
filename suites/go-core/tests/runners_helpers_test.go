@@ -4,12 +4,15 @@ package tests
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 
 	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
 	runnersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runners/v1"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -27,6 +30,7 @@ const (
 
 	runnerContainerImage = "alpine:3.21"
 )
+
 var (
 	authorizationAddr      = envOrDefault("AUTHORIZATION_ADDRESS", "authorization:50051")
 	ensureClusterAdminOnce sync.Once
@@ -69,6 +73,14 @@ func ensureClusterAdmin(t *testing.T, ctx context.Context, authzClient authoriza
 			Object:   authorizationGlobalCluster,
 		}
 		if _, err := authzClient.Write(ctx, &authorizationv1.WriteRequest{Writes: []*authorizationv1.TupleKey{tuple}}); err != nil {
+			statusErr, ok := status.FromError(err)
+			if !ok {
+				ensureClusterAdminErr = err
+				return
+			}
+			if statusErr.Code() == codes.InvalidArgument && strings.Contains(statusErr.Message(), "already exists") {
+				return
+			}
 			ensureClusterAdminErr = err
 		}
 	})
