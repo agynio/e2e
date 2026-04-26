@@ -27,7 +27,7 @@ const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
 const DEFAULT_INIT_IMAGES = {
   agn: 'ghcr.io/agynio/agent-init-agn:0.4.15',
-  codex: 'ghcr.io/agynio/agent-init-codex:0.13.19',
+  codex: 'ghcr.io/agynio/agent-init-codex:0.13.20',
 } as const;
 const TRACE_DISCOVER_TIMEOUT_MS = 2 * 60_000;
 const TRACE_SUMMARY_TIMEOUT_MS = 2 * 60_000;
