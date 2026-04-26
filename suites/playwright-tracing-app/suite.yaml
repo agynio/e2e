@@ -1,4 +1,4 @@
-image: mcr.microsoft.com/playwright:v1.59.1-noble
+image: ghcr.io/agynio/playwright:v1.59.1-noble
 workdir: /opt/app/data
 required_env:
   - AGN_INIT_IMAGE
