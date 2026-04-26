@@ -20,15 +20,29 @@ import {
 const TEST_LLM_ENDPOINTS = {
   agn: 'https://testllm.dev/v1/org/agynio/suite/agn/responses',
   codex: 'https://testllm.dev/v1/org/agynio/suite/codex/responses',
+  claude: 'https://testllm.dev/v1/org/agynio/suite/claude/messages',
 } as const;
+type TraceSdk = keyof typeof TEST_LLM_ENDPOINTS;
+
+const TEST_LLM_PROTOCOLS: Record<TraceSdk, string> = {
+  agn: 'PROTOCOL_RESPONSES',
+  codex: 'PROTOCOL_RESPONSES',
+  claude: 'PROTOCOL_ANTHROPIC_MESSAGES',
+};
 const TEST_LLM_TOKEN = 'test-token';
 const TEST_LLM_MODEL = 'mcp-tools-test';
 const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
-const DEFAULT_INIT_IMAGES = {
+const DEFAULT_INIT_IMAGES: Record<TraceSdk, string> = {
   agn: 'ghcr.io/agynio/agent-init-agn:0.4.15',
   codex: 'ghcr.io/agynio/agent-init-codex:0.13.20',
-} as const;
+  claude: 'ghcr.io/agynio/agent-init-claude:0.1.23',
+};
+const INIT_IMAGE_OVERRIDES: Record<TraceSdk, string | undefined> = {
+  agn: process.env.AGN_INIT_IMAGE?.trim(),
+  codex: process.env.CODEX_INIT_IMAGE?.trim(),
+  claude: process.env.CLAUDE_INIT_IMAGE?.trim(),
+};
 const TRACE_DISCOVER_TIMEOUT_MS = 2 * 60_000;
 const TRACE_SUMMARY_TIMEOUT_MS = 2 * 60_000;
 const TRACE_POLL_INTERVAL_MS = 1_000;
@@ -57,19 +71,21 @@ export type FullChainRun = {
   expectedResponse: string;
 };
 
-type TraceSdk = keyof typeof TEST_LLM_ENDPOINTS;
-
 type FullChainRunOptions = {
   sdk?: TraceSdk;
 };
 
 function resolveInitImage(sdk: TraceSdk): string {
-  const override = sdk === 'codex' ? process.env.CODEX_INIT_IMAGE?.trim() : process.env.AGN_INIT_IMAGE?.trim();
+  const override = INIT_IMAGE_OVERRIDES[sdk];
   return override || DEFAULT_INIT_IMAGES[sdk];
 }
 
 function resolveLlmEndpoint(sdk: TraceSdk): string {
   return TEST_LLM_ENDPOINTS[sdk];
+}
+
+function resolveLlmProtocol(sdk: TraceSdk): string {
+  return TEST_LLM_PROTOCOLS[sdk];
 }
 
 function buildMcpName(prefix: string): string {
@@ -193,7 +209,7 @@ export async function createFullChainRun(page: Page, options: FullChainRunOption
     organizationId,
     name: `e2e-${sdk}-testllm-${randomUUID()}`,
     endpoint: resolveLlmEndpoint(sdk),
-    protocol: 'PROTOCOL_RESPONSES',
+    protocol: resolveLlmProtocol(sdk),
     authMethod: 'AUTH_METHOD_BEARER',
     token: TEST_LLM_TOKEN,
   });
