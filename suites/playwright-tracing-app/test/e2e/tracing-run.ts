@@ -38,6 +38,11 @@ const DEFAULT_INIT_IMAGES: Record<TraceSdk, string> = {
   codex: 'ghcr.io/agynio/agent-init-codex:0.13.20',
   claude: 'ghcr.io/agynio/agent-init-claude:0.1.23',
 };
+const INIT_IMAGE_ENV_VARS: Record<TraceSdk, string> = {
+  agn: 'AGN_INIT_IMAGE',
+  codex: 'CODEX_INIT_IMAGE',
+  claude: 'CLAUDE_INIT_IMAGE',
+};
 const INIT_IMAGE_OVERRIDES: Record<TraceSdk, string | undefined> = {
   agn: process.env.AGN_INIT_IMAGE?.trim(),
   codex: process.env.CODEX_INIT_IMAGE?.trim(),
@@ -144,6 +149,7 @@ function extractCounts(counts: Record<string, number | string> | undefined): Tra
 async function waitForTraceIdByMessageId(page: Page, params: {
   organizationId: string;
   messageId: string;
+  sdk: TraceSdk;
 }): Promise<string> {
   const start = Date.now();
   let sawSpans = false;
@@ -167,9 +173,10 @@ async function waitForTraceIdByMessageId(page: Page, params: {
     await page.waitForTimeout(TRACE_POLL_INTERVAL_MS);
   }
   if (!sawSpans) {
+    const envVar = INIT_IMAGE_ENV_VARS[params.sdk];
     throw new Error(
       `ListSpans(filter: { messageId: ${params.messageId} }) returned no spans after ${TRACE_DISCOVER_TIMEOUT_MS / 1000}s. ` +
-        'Check message-id correlation and ensure the agent init image is up to date (e.g. codex init image).',
+        `Check message-id correlation and ensure the ${params.sdk} agent init image is up to date (override via ${envVar}).`,
     );
   }
   throw new Error(`Timed out waiting for trace id for message ${params.messageId}.`);
@@ -266,7 +273,7 @@ export async function createFullChainRun(page: Page, options: FullChainRunOption
     body: MCP_TOOLS_PROMPT,
   });
 
-  const runId = await waitForTraceIdByMessageId(page, { organizationId, messageId });
+  const runId = await waitForTraceIdByMessageId(page, { organizationId, messageId, sdk });
   await waitForTraceSummary(page, runId);
 
   return {
