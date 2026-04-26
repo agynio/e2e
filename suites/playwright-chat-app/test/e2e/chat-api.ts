@@ -2,6 +2,7 @@ import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
+import { signInViaMockAuth } from './sign-in-helper';
 
 const CHAT_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ChatGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
@@ -15,6 +16,9 @@ export const DEFAULT_TEST_INIT_IMAGE =
   'ghcr.io/agynio/agent-init-codex:0.13.19';
 
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
+
+const FAKE_AGENT_EMAIL = process.env.E2E_FAKE_AGENT_EMAIL ?? 'e2e-fake-agent@agyn.test';
+let fakeAgentSession: Promise<{ page: Page; identityId: string }> | null = null;
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
@@ -94,6 +98,10 @@ const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
   MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
 } satisfies Record<MembershipRoleValue, string>;
+
+export function shouldUseFakeAgentReplies(): boolean {
+  return process.env.E2E_FAKE_AGENT_RESPONSES === 'true';
+}
 
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;
@@ -204,6 +212,23 @@ export async function resolveIdentityId(page: Page): Promise<string> {
     throw new Error('/api/me response missing identity_id');
   }
   return payload.identity_id;
+}
+
+async function getFakeAgentSession(page: Page): Promise<{ page: Page; identityId: string }> {
+  if (!fakeAgentSession) {
+    fakeAgentSession = (async () => {
+      const browser = page.context().browser();
+      if (!browser) {
+        throw new Error('Fake agent replies require a browser instance.');
+      }
+      const agentContext = await browser.newContext();
+      const agentPage = await agentContext.newPage();
+      await signInViaMockAuth(agentPage, FAKE_AGENT_EMAIL, { force: true });
+      const identityId = await resolveIdentityId(agentPage);
+      return { page: agentPage, identityId };
+    })();
+  }
+  return fakeAgentSession;
 }
 
 export async function resolveUserLabel(page: Page, identityId: string): Promise<string> {
@@ -423,7 +448,7 @@ export async function createTestModel(
 export async function setupTestAgent(
   page: Page,
   opts: SetupTestAgentOptions,
-): Promise<{ organizationId: string; agentId: string; agentName: string }> {
+): Promise<{ organizationId: string; agentId: string; agentName: string; participantId: string }> {
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
   const initImage = opts.initImage ?? DEFAULT_TEST_INIT_IMAGE;
@@ -446,7 +471,11 @@ export async function setupTestAgent(
     initImage,
   });
 
-  return { organizationId, agentId, agentName };
+  const participantId = shouldUseFakeAgentReplies()
+    ? (await getFakeAgentSession(page)).identityId
+    : agentId;
+
+  return { organizationId, agentId, agentName, participantId };
 }
 
 export async function createAgentEnv(
@@ -522,4 +551,13 @@ export async function sendChatMessage(
     chatId,
     body: message,
   });
+}
+
+export async function sendFakeAgentReply(
+  page: Page,
+  chatId: string,
+  message: string,
+): Promise<void> {
+  const session = await getFakeAgentSession(page);
+  await sendChatMessage(session.page, chatId, message);
 }

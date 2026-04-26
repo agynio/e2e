@@ -2,6 +2,9 @@ import { createArgosReporterOptions } from '@argos-ci/playwright/reporter';
 import { defineConfig, devices } from '@playwright/test';
 
 const BASE_URL = process.env.E2E_BASE_URL;
+const shouldUploadToArgos = Boolean(
+  process.env.ARGOS_TOKEN && process.env.E2E_ENABLE_ARGOS_UPLOAD === 'true',
+);
 
 if (!BASE_URL) {
   throw new Error(
@@ -24,7 +27,8 @@ export default defineConfig({
     [
       '@argos-ci/playwright/reporter',
       createArgosReporterOptions({
-        uploadToArgos: Boolean(process.env.CI && process.env.ARGOS_TOKEN),
+        uploadToArgos: shouldUploadToArgos,
+        ignoreUploadFailures: true,
       }),
     ],
   ],
