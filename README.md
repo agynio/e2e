@@ -19,9 +19,12 @@ Optional domain override:
 
 - `E2E_DOMAIN`
 
-Full-chain tests use `AGN_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-agn:0.4.15`) for agn,
-`CODEX_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-codex:0.13.20`) for codex, and
-`CLAUDE_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-claude:0.1.23`) for claude.
+Full-chain tests use `AGN_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-agn:0.4`) for agn,
+`CODEX_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-codex:0.13`) for codex, and
+`CLAUDE_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-claude:0.1`) for claude.
+For exact reproducibility, set `*_INIT_IMAGE` to a pinned patch tag
+(for example, `ghcr.io/agynio/agent-init-agn:0.4.15`) or an image digest
+(for example, `ghcr.io/agynio/agent-init-agn@sha256:<digest>`).
 
 Example runs:
 

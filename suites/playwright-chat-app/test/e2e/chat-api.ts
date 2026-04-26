@@ -12,7 +12,7 @@ const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 export const DEFAULT_TEST_INIT_IMAGE =
   process.env.E2E_AGENT_INIT_IMAGE ??
   process.env.CODEX_INIT_IMAGE ??
-  'ghcr.io/agynio/agent-init-codex:0.13.19';
+  'ghcr.io/agynio/agent-init-codex:0.13';
 
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
