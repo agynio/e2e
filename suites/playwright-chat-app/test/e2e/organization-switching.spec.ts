@@ -10,7 +10,7 @@ import {
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
-const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
+const defaultTestLlmEndpoint = 'https://test-llm.agyn.dev';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
 async function createAgentForOrg(page: Page, organizationId: string, name: string) {

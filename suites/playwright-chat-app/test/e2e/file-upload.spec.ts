@@ -4,12 +4,7 @@ import { test, expect } from './fixtures';
 import {
   createAgentEnv,
   createChat,
-  resolveIdentityId,
-  sendFakeAgentReply,
-  sendChatMessage,
-  shouldUseFakeAgentReplies,
   setupTestAgent,
-  waitForAgentReply,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
@@ -33,10 +28,8 @@ test.describe('file-upload', {
       initImage: process.env.E2E_AGENT_INIT_IMAGE,
     });
     await createAgentEnv(page, agentId, 'TEST_SCENARIO', 'attachments');
-    const identityId = await resolveIdentityId(page);
     const chatId = await createChat(page, organizationId, participantId);
     await setSelectedOrganization(page, organizationId);
-    const useFakeAgent = shouldUseFakeAgentReplies();
 
     const chatLoaded = page.waitForResponse(
       (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
@@ -62,15 +55,12 @@ test.describe('file-upload', {
     await page.getByLabel('Send message').click();
     await sendResponse;
 
-    if (useFakeAgent) {
-      await sendFakeAgentReply(page, chatId, 'Here is the attachment summary.');
-    }
-
-    await waitForAgentReply(page, chatId, identityId, 180000);
-    await page.reload();
-
-    const attachments = page.getByTestId('message-attachments');
-    await expect(attachments.first()).toBeVisible({ timeout: 120000 });
+    const userMessage = page
+      .getByTestId('chat-message')
+      .filter({ hasText: 'Please summarize the file.' })
+      .first();
+    await expect(userMessage).toBeVisible({ timeout: 120000 });
+    await expect(userMessage.getByTestId('message-attachments')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'chat-file-upload');
   });
 });

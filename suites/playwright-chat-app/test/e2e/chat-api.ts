@@ -2,7 +2,6 @@ import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
-import { signInViaMockAuth } from './sign-in-helper';
 
 const CHAT_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ChatGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
@@ -17,8 +16,8 @@ export const DEFAULT_TEST_INIT_IMAGE =
 
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
-const FAKE_AGENT_EMAIL = process.env.E2E_FAKE_AGENT_EMAIL ?? 'e2e-fake-agent@agyn.test';
-let fakeAgentSession: Promise<{ page: Page; identityId: string }> | null = null;
+const DEFAULT_CLUSTER_ADMIN_IDENTITY_ID = 'a3c1e9d2-7f4b-5e1a-9c3d-2b8f6a4e7d10';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
@@ -35,6 +34,10 @@ type CreateOrganizationResponseWire = {
 
 type CreateMembershipResponseWire = {
   membership?: { id?: string };
+};
+
+type CreateAPITokenResponseWire = {
+  plaintextToken?: string;
 };
 
 type ListAccessibleOrganizationsResponseWire = {
@@ -99,16 +102,38 @@ const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
 } satisfies Record<MembershipRoleValue, string>;
 
-export function shouldUseFakeAgentReplies(): boolean {
-  return process.env.E2E_FAKE_AGENT_RESPONSES === 'true';
-}
-
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;
   if (!baseUrl) {
     throw new Error('E2E_BASE_URL is required to run e2e tests.');
   }
   return baseUrl;
+}
+
+function resolveClusterAdminIdentityId(): string {
+  const rawId = process.env.E2E_CLUSTER_ADMIN_IDENTITY_ID ?? process.env.CLUSTER_ADMIN_IDENTITY_ID;
+  const identityId = (rawId ?? DEFAULT_CLUSTER_ADMIN_IDENTITY_ID).trim();
+  if (!identityId) {
+    throw new Error('Cluster admin identity id is required for e2e tests.');
+  }
+  if (!UUID_PATTERN.test(identityId)) {
+    throw new Error(`Cluster admin identity id is not a valid UUID: ${identityId}`);
+  }
+  return identityId;
+}
+
+function resolveClusterAdminToken(): string {
+  const rawToken =
+    process.env.E2E_CLUSTER_ADMIN_TOKEN ??
+    process.env.CLUSTER_ADMIN_TOKEN ??
+    process.env.AGYN_API_TOKEN;
+  const token = rawToken?.trim() ?? '';
+  if (!token) {
+    throw new Error(
+      'Cluster admin token is required (set E2E_CLUSTER_ADMIN_TOKEN, CLUSTER_ADMIN_TOKEN, or AGYN_API_TOKEN).',
+    );
+  }
+  return token;
 }
 
 function buildRpcUrl(servicePath: string, method: string): string {
@@ -214,23 +239,6 @@ export async function resolveIdentityId(page: Page): Promise<string> {
   return payload.identity_id;
 }
 
-async function getFakeAgentSession(page: Page): Promise<{ page: Page; identityId: string }> {
-  if (!fakeAgentSession) {
-    fakeAgentSession = (async () => {
-      const browser = page.context().browser();
-      if (!browser) {
-        throw new Error('Fake agent replies require a browser instance.');
-      }
-      const agentContext = await browser.newContext();
-      const agentPage = await agentContext.newPage();
-      await signInViaMockAuth(agentPage, FAKE_AGENT_EMAIL, { force: true });
-      const identityId = await resolveIdentityId(agentPage);
-      return { page: agentPage, identityId };
-    })();
-  }
-  return fakeAgentSession;
-}
-
 export async function resolveUserLabel(page: Page, identityId: string): Promise<string> {
   const response = await postConnect<BatchGetUsersResponseWire>(
     page,
@@ -288,7 +296,43 @@ export async function createOrganization(page: Page, name: string): Promise<stri
   if (!response.organization?.id) {
     throw new Error('CreateOrganization response missing organization id.');
   }
-  return response.organization.id;
+  const organizationId = response.organization.id;
+  await ensureClusterAdminMembership(page, organizationId);
+  return organizationId;
+}
+
+async function ensureClusterAdminMembership(page: Page, organizationId: string): Promise<void> {
+  const clusterAdminIdentityId = resolveClusterAdminIdentityId();
+  const currentIdentityId = await resolveIdentityId(page);
+  if (currentIdentityId === clusterAdminIdentityId) {
+    return;
+  }
+  const membershipId = await createMembership(page, organizationId, clusterAdminIdentityId);
+  await acceptMembershipAsClusterAdmin(page, membershipId);
+}
+
+async function acceptMembershipAsClusterAdmin(page: Page, membershipId: string): Promise<void> {
+  const token = resolveClusterAdminToken();
+  const response = await page.context().request.post(buildRpcUrl(ORGS_GATEWAY_PATH, 'AcceptMembership'), {
+    data: { membershipId },
+    headers: { ...CONNECT_HEADERS, Authorization: `Bearer ${token}` },
+  });
+  if (response.ok()) {
+    return;
+  }
+  const body = await response.text();
+  if (response.status() === 412) {
+    try {
+      const parsed = JSON.parse(body) as { code?: string; message?: string };
+      const message = parsed.message ?? '';
+      if (parsed.code === 'failed_precondition' && message.includes('not pending')) {
+        return;
+      }
+    } catch (_error) {
+      // fall through to throw below
+    }
+  }
+  throw new Error(`ConnectRPC AcceptMembership failed with status ${response.status()}: ${body}`);
 }
 
 export async function createMembership(
@@ -309,6 +353,20 @@ export async function createMembership(
   return response.membership.id;
 }
 
+export async function createApiToken(page: Page, name: string): Promise<string> {
+  const response = await postConnect<CreateAPITokenResponseWire>(
+    page,
+    USERS_GATEWAY_PATH,
+    'CreateAPIToken',
+    { name },
+  );
+  const token = response.plaintextToken;
+  if (!token) {
+    throw new Error('CreateAPIToken response missing plaintext token.');
+  }
+  return token;
+}
+
 export async function acceptMembership(page: Page, membershipId: string): Promise<void> {
   await postConnect(page, ORGS_GATEWAY_PATH, 'AcceptMembership', { membershipId });
 }
@@ -327,18 +385,28 @@ export async function listAccessibleOrganizations(
 
 export async function createLLMProvider(
   page: Page,
-  opts: { endpoint: string; authMethod: string; token: string; organizationId: string },
+  opts: {
+    endpoint: string;
+    authMethod: string;
+    token: string;
+    organizationId: string;
+    protocol?: string;
+  },
 ): Promise<string> {
+  const payload: Record<string, unknown> = {
+    endpoint: opts.endpoint,
+    authMethod: opts.authMethod,
+    token: opts.token,
+    organizationId: opts.organizationId,
+  };
+  if (opts.protocol) {
+    payload.protocol = opts.protocol;
+  }
   const response = await postConnect<CreateLLMProviderResponseWire>(
     page,
     LLM_GATEWAY_PATH,
     'CreateLLMProvider',
-    {
-      endpoint: opts.endpoint,
-      authMethod: opts.authMethod,
-      token: opts.token,
-      organizationId: opts.organizationId,
-    },
+    payload,
   );
   if (!response.provider?.meta?.id) {
     throw new Error('CreateLLMProvider response missing provider id.');
@@ -390,6 +458,7 @@ type CreateTestModelOptions = {
   remoteName?: string;
   authMethod?: string;
   token?: string;
+  protocol?: string;
 };
 
 async function waitForAgent(page: Page, organizationId: string, agentId: string): Promise<void> {
@@ -430,8 +499,9 @@ export async function createTestModel(
   const providerId = await createLLMProvider(page, {
     endpoint: opts.endpoint,
     authMethod: opts.authMethod ?? 'AUTH_METHOD_BEARER',
-    token: opts.token ?? 'unused',
+    token: opts.token ?? 'test-token',
     organizationId: opts.organizationId,
+    protocol: opts.protocol ?? 'PROTOCOL_RESPONSES',
   });
 
   const modelName = `${opts.namePrefix ?? 'e2e-model'}-${now}`;
@@ -452,6 +522,7 @@ export async function setupTestAgent(
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
   const initImage = opts.initImage ?? DEFAULT_TEST_INIT_IMAGE;
+  const apiToken = await createApiToken(page, `e2e-agent-token-${now}`);
 
   const { modelId } = await createTestModel(page, {
     organizationId,
@@ -470,10 +541,8 @@ export async function setupTestAgent(
     image: DEFAULT_TEST_AGENT_IMAGE,
     initImage,
   });
-
-  const participantId = shouldUseFakeAgentReplies()
-    ? (await getFakeAgentSession(page)).identityId
-    : agentId;
+  await createAgentEnv(page, agentId, 'LLM_API_TOKEN', apiToken);
+  const participantId = agentId;
 
   return { organizationId, agentId, agentName, participantId };
 }
@@ -530,12 +599,21 @@ export async function waitForAgentReply(
   timeoutMs = 120000,
   intervalMs = 3000,
 ): Promise<Message> {
+  const initialMessages = await getMessages(page, chatId);
+  const seenMessageIds = new Set(
+    initialMessages
+      .map((message) => message.id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0),
+  );
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const messages = await getMessages(page, chatId);
-    const agentMsg = messages.find(
-      (message) => message.senderId && message.senderId !== senderIdToExclude && message.body,
-    );
+    const agentMsg = messages.find((message) => {
+      if (!message.body) return false;
+      if (message.senderId === senderIdToExclude) return false;
+      if (message.id && seenMessageIds.has(message.id)) return false;
+      return true;
+    });
     if (agentMsg) return agentMsg;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
@@ -551,13 +629,4 @@ export async function sendChatMessage(
     chatId,
     body: message,
   });
-}
-
-export async function sendFakeAgentReply(
-  page: Page,
-  chatId: string,
-  message: string,
-): Promise<void> {
-  const session = await getFakeAgentSession(page);
-  await sendChatMessage(session.page, chatId, message);
 }

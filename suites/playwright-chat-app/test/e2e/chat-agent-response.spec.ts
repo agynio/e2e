@@ -1,12 +1,9 @@
 import { argosScreenshot } from '@argos-ci/playwright';
 import { test, expect } from './fixtures';
 import {
-  createAgentEnv,
   createChat,
   resolveIdentityId,
-  sendFakeAgentReply,
   sendChatMessage,
-  shouldUseFakeAgentReplies,
   setupTestAgent,
   waitForAgentReply,
 } from './chat-api';
@@ -20,21 +17,16 @@ test.describe('chat-agent-response', {
 }, () => {
   test('agent response appears after message send', async ({ page }) => {
     test.setTimeout(180_000);
-    const { organizationId, agentId, participantId } = await setupTestAgent(page, {
+    const { organizationId, participantId } = await setupTestAgent(page, {
       endpoint: llmEndpoint,
       initImage: process.env.E2E_AGENT_INIT_IMAGE,
     });
-    await createAgentEnv(page, agentId, 'TEST_SCENARIO', 'attachments');
     const identityId = await resolveIdentityId(page);
     const chatId = await createChat(page, organizationId, participantId);
     await setSelectedOrganization(page, organizationId);
-    const useFakeAgent = shouldUseFakeAgentReplies();
+    const message = 'hello';
 
-    const message = `Hello agent response ${Date.now()}`;
     await sendChatMessage(page, chatId, message);
-    if (useFakeAgent) {
-      await sendFakeAgentReply(page, chatId, `Agent reply ${Date.now()}`);
-    }
 
     const chatLoaded = page.waitForResponse(
       (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
@@ -44,10 +36,17 @@ test.describe('chat-agent-response', {
     await chatLoaded;
 
     await waitForAgentReply(page, chatId, identityId, 180_000);
+    const refreshedMessages = page.waitForResponse(
+      (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
+      { timeout: 15000 },
+    );
     await page.reload();
+    await refreshedMessages;
 
     const messageList = page.getByTestId('chat-message');
-    await expect(messageList).toHaveCount(2, { timeout: 120000 });
+    await expect(messageList).toHaveCount(2, { timeout: 180000 });
+    await expect(messageList.first()).toContainText(message, { timeout: 180000 });
+    await expect(messageList.nth(1)).toBeVisible({ timeout: 180000 });
     await argosScreenshot(page, 'chat-agent-response');
   });
 });

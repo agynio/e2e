@@ -4,9 +4,7 @@ import {
   createChat,
   resolveIdentityId,
   sendChatMessage,
-  sendFakeAgentReply,
   setupTestAgent,
-  shouldUseFakeAgentReplies,
   waitForAgentReply,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
@@ -26,12 +24,9 @@ test.describe('chat-with-agent', {
     const identityId = await resolveIdentityId(page);
     const chatId = await createChat(page, organizationId, participantId);
     await setSelectedOrganization(page, organizationId);
-    const useFakeAgent = shouldUseFakeAgentReplies();
-    const message = `Hello agent ${Date.now()}`;
+    const message = 'hello';
+
     await sendChatMessage(page, chatId, message);
-    if (useFakeAgent) {
-      await sendFakeAgentReply(page, chatId, `Agent reply ${Date.now()}`);
-    }
 
     const chatLoaded = page.waitForResponse(
       (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
@@ -41,12 +36,17 @@ test.describe('chat-with-agent', {
     await chatLoaded;
 
     await waitForAgentReply(page, chatId, identityId, 180_000);
+    const refreshedMessages = page.waitForResponse(
+      (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
+      { timeout: 15000 },
+    );
     await page.reload();
+    await refreshedMessages;
 
     const messageList = page.getByTestId('chat-message');
     await expect(messageList).toHaveCount(2, { timeout: 180000 });
-    const agentMessage = messageList.filter({ hasNotText: 'Hello agent' }).first();
-    await expect(agentMessage).toBeVisible({ timeout: 180000 });
+    await expect(messageList.first()).toContainText(message, { timeout: 180000 });
+    await expect(messageList.nth(1)).toBeVisible({ timeout: 180000 });
 
     await argosScreenshot(page, 'chat-agent-reply');
   });
