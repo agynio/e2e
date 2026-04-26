@@ -1,7 +1,12 @@
 import { argosScreenshot } from '@argos-ci/playwright';
 import { test, expect } from './fixtures';
-import { ensureAgentReply } from './agent-reply-helper';
-import { createChat, setupTestAgent } from './chat-api';
+import {
+  createChat,
+  resolveIdentityId,
+  sendChatMessage,
+  setupTestAgent,
+  waitForAgentReply,
+} from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
 const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
@@ -16,9 +21,12 @@ test.describe('chat-with-agent', {
       endpoint: llmEndpoint,
       initImage: process.env.E2E_AGENT_INIT_IMAGE,
     });
+    const identityId = await resolveIdentityId(page);
     const chatId = await createChat(page, organizationId, participantId);
     await setSelectedOrganization(page, organizationId);
     const message = 'hello';
+
+    await sendChatMessage(page, chatId, message);
 
     const chatLoaded = page.waitForResponse(
       (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
@@ -27,17 +35,16 @@ test.describe('chat-with-agent', {
     await page.goto(`/chats/${encodeURIComponent(chatId)}`);
     await chatLoaded;
 
-    const sendResponse = page.waitForResponse(
-      (resp) => resp.url().includes('SendMessage') && resp.status() === 200,
+    await waitForAgentReply(page, chatId, identityId, 180_000);
+    const refreshedMessages = page.waitForResponse(
+      (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
       { timeout: 15000 },
     );
-    await page.getByTestId('markdown-composer-editor').fill(message);
-    await page.getByLabel('Send message').click();
-    await sendResponse;
-
-    await ensureAgentReply(page, chatId, message);
+    await page.reload();
+    await refreshedMessages;
 
     const messageList = page.getByTestId('chat-message');
+    await expect(messageList).toHaveCount(2, { timeout: 180000 });
     await expect(messageList.first()).toContainText(message, { timeout: 180000 });
     await expect(messageList.nth(1)).toBeVisible({ timeout: 180000 });
 

@@ -4,7 +4,6 @@ import { test, expect } from './fixtures';
 import {
   createAgentEnv,
   createChat,
-  sendChatMessage,
   setupTestAgent,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';

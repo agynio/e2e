@@ -33,6 +33,10 @@ type CreateMembershipResponseWire = {
   membership?: { id?: string };
 };
 
+type CreateAPITokenResponseWire = {
+  plaintextToken?: string;
+};
+
 type ListAccessibleOrganizationsResponseWire = {
   organizations?: Array<{ id: string; name: string }>;
 };
@@ -284,6 +288,20 @@ export async function createMembership(
   return response.membership.id;
 }
 
+export async function createApiToken(page: Page, name: string): Promise<string> {
+  const response = await postConnect<CreateAPITokenResponseWire>(
+    page,
+    USERS_GATEWAY_PATH,
+    'CreateAPIToken',
+    { name },
+  );
+  const token = response.plaintextToken;
+  if (!token) {
+    throw new Error('CreateAPIToken response missing plaintext token.');
+  }
+  return token;
+}
+
 export async function acceptMembership(page: Page, membershipId: string): Promise<void> {
   await postConnect(page, ORGS_GATEWAY_PATH, 'AcceptMembership', { membershipId });
 }
@@ -302,18 +320,28 @@ export async function listAccessibleOrganizations(
 
 export async function createLLMProvider(
   page: Page,
-  opts: { endpoint: string; authMethod: string; token: string; organizationId: string },
+  opts: {
+    endpoint: string;
+    authMethod: string;
+    token: string;
+    organizationId: string;
+    protocol?: string;
+  },
 ): Promise<string> {
+  const payload: Record<string, unknown> = {
+    endpoint: opts.endpoint,
+    authMethod: opts.authMethod,
+    token: opts.token,
+    organizationId: opts.organizationId,
+  };
+  if (opts.protocol) {
+    payload.protocol = opts.protocol;
+  }
   const response = await postConnect<CreateLLMProviderResponseWire>(
     page,
     LLM_GATEWAY_PATH,
     'CreateLLMProvider',
-    {
-      endpoint: opts.endpoint,
-      authMethod: opts.authMethod,
-      token: opts.token,
-      organizationId: opts.organizationId,
-    },
+    payload,
   );
   if (!response.provider?.meta?.id) {
     throw new Error('CreateLLMProvider response missing provider id.');
@@ -365,6 +393,7 @@ type CreateTestModelOptions = {
   remoteName?: string;
   authMethod?: string;
   token?: string;
+  protocol?: string;
 };
 
 async function waitForAgent(page: Page, organizationId: string, agentId: string): Promise<void> {
@@ -405,8 +434,9 @@ export async function createTestModel(
   const providerId = await createLLMProvider(page, {
     endpoint: opts.endpoint,
     authMethod: opts.authMethod ?? 'AUTH_METHOD_BEARER',
-    token: opts.token ?? 'unused',
+    token: opts.token ?? 'test-token',
     organizationId: opts.organizationId,
+    protocol: opts.protocol ?? 'PROTOCOL_RESPONSES',
   });
 
   const modelName = `${opts.namePrefix ?? 'e2e-model'}-${now}`;
@@ -427,6 +457,7 @@ export async function setupTestAgent(
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
   const initImage = opts.initImage ?? DEFAULT_TEST_INIT_IMAGE;
+  const apiToken = await createApiToken(page, `e2e-agent-token-${now}`);
 
   const { modelId } = await createTestModel(page, {
     organizationId,
@@ -445,7 +476,7 @@ export async function setupTestAgent(
     image: DEFAULT_TEST_AGENT_IMAGE,
     initImage,
   });
-
+  await createAgentEnv(page, agentId, 'LLM_API_TOKEN', apiToken);
   const participantId = agentId;
 
   return { organizationId, agentId, agentName, participantId };
