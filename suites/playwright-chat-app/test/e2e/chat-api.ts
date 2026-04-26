@@ -123,10 +123,15 @@ function resolveClusterAdminIdentityId(): string {
 }
 
 function resolveClusterAdminToken(): string {
-  const rawToken = process.env.E2E_CLUSTER_ADMIN_TOKEN ?? process.env.CLUSTER_ADMIN_TOKEN;
+  const rawToken =
+    process.env.E2E_CLUSTER_ADMIN_TOKEN ??
+    process.env.CLUSTER_ADMIN_TOKEN ??
+    process.env.AGYN_API_TOKEN;
   const token = rawToken?.trim() ?? '';
   if (!token) {
-    throw new Error('Cluster admin token is required (set E2E_CLUSTER_ADMIN_TOKEN or CLUSTER_ADMIN_TOKEN).');
+    throw new Error(
+      'Cluster admin token is required (set E2E_CLUSTER_ADMIN_TOKEN, CLUSTER_ADMIN_TOKEN, or AGYN_API_TOKEN).',
+    );
   }
   return token;
 }
