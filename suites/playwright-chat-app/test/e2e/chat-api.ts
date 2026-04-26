@@ -423,7 +423,7 @@ export async function createTestModel(
 export async function setupTestAgent(
   page: Page,
   opts: SetupTestAgentOptions,
-): Promise<{ organizationId: string; agentId: string; agentName: string }> {
+): Promise<{ organizationId: string; agentId: string; agentName: string; participantId: string }> {
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
   const initImage = opts.initImage ?? DEFAULT_TEST_INIT_IMAGE;
@@ -446,7 +446,9 @@ export async function setupTestAgent(
     initImage,
   });
 
-  return { organizationId, agentId, agentName };
+  const participantId = agentId;
+
+  return { organizationId, agentId, agentName, participantId };
 }
 
 export async function createAgentEnv(
@@ -501,12 +503,21 @@ export async function waitForAgentReply(
   timeoutMs = 120000,
   intervalMs = 3000,
 ): Promise<Message> {
+  const initialMessages = await getMessages(page, chatId);
+  const seenMessageIds = new Set(
+    initialMessages
+      .map((message) => message.id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0),
+  );
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const messages = await getMessages(page, chatId);
-    const agentMsg = messages.find(
-      (message) => message.senderId && message.senderId !== senderIdToExclude && message.body,
-    );
+    const agentMsg = messages.find((message) => {
+      if (!message.body) return false;
+      if (message.senderId === senderIdToExclude) return false;
+      if (message.id && seenMessageIds.has(message.id)) return false;
+      return true;
+    });
     if (agentMsg) return agentMsg;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }

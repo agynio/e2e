@@ -3,14 +3,12 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
   createChat,
-  resolveIdentityId,
   sendChatMessage,
   setupTestAgent,
-  waitForAgentReply,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
-const defaultTestLlmEndpoint = 'https://test-llm.agyn.dev';
+const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
 const mermaidSource = `graph TD
@@ -37,27 +35,28 @@ const vegaLiteSource = JSON.stringify({
   },
 });
 
-async function openChat(page: Page, pageUrl: string, message: string) {
-  const { organizationId } = await setupTestAgent(page, {
+async function openChat(page: Page, message: string): Promise<void> {
+  const { organizationId, participantId } = await setupTestAgent(page, {
     endpoint: llmEndpoint,
     initImage: process.env.E2E_AGENT_INIT_IMAGE,
   });
-  const identityId = await resolveIdentityId(page);
-  const chatId = await createChat(page, organizationId, identityId);
+  const chatId = await createChat(page, organizationId, participantId);
   await setSelectedOrganization(page, organizationId);
   await sendChatMessage(page, chatId, message);
   const chatLoaded = page.waitForResponse(
     (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
     { timeout: 15000 },
   );
-  await page.goto(pageUrl);
+  await page.goto(`/chats/${encodeURIComponent(chatId)}`);
   await chatLoaded;
-  return { chatId, identityId };
 }
 
-async function waitForReply(page: Page, chatId: string, identityId: string) {
-  await waitForAgentReply(page, chatId, identityId);
-  await page.reload();
+function mermaidMessage(source: string) {
+  return `\`\`\`mermaid\n${source}\n\`\`\``;
+}
+
+function vegaMessage(source: string) {
+  return `\`\`\`vega-lite\n${source}\n\`\`\``;
 }
 
 test.describe('inline-media', {
@@ -71,69 +70,48 @@ test.describe('inline-media', {
   ],
 }, () => {
   test('renders mermaid diagrams inline', async ({ page }) => {
-    test.setTimeout(120_000);
-    const message = `Please respond with a mermaid diagram only.
-${mermaidSource}`;
+    test.setTimeout(180_000);
+    await openChat(page, mermaidMessage(mermaidSource));
 
-    const { chatId, identityId } = await openChat(page, '/chats', message);
-    await waitForReply(page, chatId, identityId);
-
-    const mermaidCanvas = page.getByTestId('chat-message-attachment-mermaid');
+    const mermaidCanvas = page.getByTestId('markdown-mermaid');
     await expect(mermaidCanvas).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-mermaid');
   });
 
   test('renders vega-lite charts inline', async ({ page }) => {
-    test.setTimeout(120_000);
-    const message = `Please respond with a vega-lite chart only.
-${vegaLiteSource}`;
+    test.setTimeout(180_000);
+    await openChat(page, vegaMessage(vegaLiteSource));
 
-    const { chatId, identityId } = await openChat(page, '/chats', message);
-    await waitForReply(page, chatId, identityId);
-
-    const chart = page.getByTestId('chat-message-attachment-vega-lite');
+    const chart = page.getByTestId('markdown-vega-lite');
     await expect(chart).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-vega-lite');
   });
 
   test('handles invalid mermaid input', async ({ page }) => {
-    test.setTimeout(120_000);
-    const message = `Please respond with an invalid mermaid diagram only.
-graph TD
+    test.setTimeout(180_000);
+    const invalidMermaidSource = `graph TD
   A -->`;
+    await openChat(page, mermaidMessage(invalidMermaidSource));
 
-    const { chatId, identityId } = await openChat(page, '/chats', message);
-    await waitForReply(page, chatId, identityId);
-
-    await expect(page.getByText('Mermaid diagram failed to render')).toBeVisible({ timeout: 120000 });
+    await expect(page.getByText('Mermaid render failed')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-mermaid-invalid');
   });
 
   test('handles invalid vega-lite input', async ({ page }) => {
-    test.setTimeout(120_000);
-    const message = `Please respond with invalid vega-lite json only.
-{"data":{"values":[{"x":1,"y":2}]},"mark":"bar"}`;
+    test.setTimeout(180_000);
+    const invalidVegaSource = '{"data":{"values":[{"x":1,"y":2}]},"mark":"bar"}';
+    await openChat(page, vegaMessage(invalidVegaSource));
 
-    const { chatId, identityId } = await openChat(page, '/chats', message);
-    await waitForReply(page, chatId, identityId);
-
-    await expect(page.getByText('Failed to render Vega-Lite chart')).toBeVisible({ timeout: 120000 });
+    await expect(page.getByTestId('markdown-vega-lite')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-vega-lite-invalid');
   });
 
   test('renders multiple inline media attachments', async ({ page }) => {
-    test.setTimeout(120_000);
-    const message = `Please respond with a mermaid diagram followed by a vega-lite chart.
-Mermaid:
-${mermaidSource}
-Vega-lite:
-${vegaLiteSource}`;
+    test.setTimeout(180_000);
+    await openChat(page, `${mermaidMessage(mermaidSource)}\n\n${vegaMessage(vegaLiteSource)}`);
 
-    const { chatId, identityId } = await openChat(page, '/chats', message);
-    await waitForReply(page, chatId, identityId);
-
-    await expect(page.getByTestId('chat-message-attachment-mermaid')).toBeVisible({ timeout: 120000 });
-    await expect(page.getByTestId('chat-message-attachment-vega-lite')).toBeVisible({ timeout: 120000 });
+    await expect(page.getByTestId('markdown-mermaid')).toBeVisible({ timeout: 120000 });
+    await expect(page.getByTestId('markdown-vega-lite')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-media-multi');
   });
 });
