@@ -1,0 +1,52 @@
+image: mcr.microsoft.com/playwright:v1.59.1-noble
+workdir: /opt/app/data
+select: |
+  suite_tags=("svc_chat_app" "svc_gateway" "svc_agents_orchestrator" "svc_organizations" "svc_files" "svc_media_proxy")
+
+  if [ -z "${TAGS:-}" ]; then
+    exit 0
+  fi
+
+  for tag in ${TAGS}; do
+    for suite_tag in "${suite_tags[@]}"; do
+      if [ "$tag" = "$suite_tag" ]; then
+        echo "$tag"
+        exit 0
+      fi
+    done
+  done
+run: |
+  set -euo pipefail
+  cd /opt/app/data
+
+  export E2E_DOMAIN="${E2E_DOMAIN:-agyn.dev}"
+  export E2E_BASE_URL="${E2E_BASE_URL:-https://chat.${E2E_DOMAIN}}"
+
+  npm ci --no-fund --no-audit
+  npx buf generate
+
+  grep_tags=""
+  if [ -n "${TAGS:-}" ]; then
+    for tag in ${TAGS}; do
+      if [ -n "$grep_tags" ]; then
+        grep_tags="${grep_tags}|"
+      fi
+      grep_tags="${grep_tags}@${tag}"
+    done
+  fi
+
+  set +e
+  if [ -n "$grep_tags" ]; then
+    CI=true npx playwright test --grep "$grep_tags"
+  else
+    CI=true npx playwright test
+  fi
+  status=$?
+  set -e
+
+  if [ ! -f junit.xml ]; then
+    echo "ERROR: junit.xml not created" >&2
+    exit 1
+  fi
+
+  exit "$status"
