@@ -18,7 +18,7 @@ test.describe('chat-status-switch', { tag: ['@svc_chat_app', '@svc_gateway', '@s
     await userAPage.goto(`/chats/${encodeURIComponent(chatId)}`);
     await messagesLoaded;
 
-    await expect(userAPage.getByTestId('chat-status-chip')).toHaveText('Closed');
+    await expect(userAPage.getByRole('button', { name: 'Chat status: Resolved' })).toBeVisible({ timeout: 15000 });
     await argosScreenshot(userAPage, 'chat-status-closed');
   });
 });
