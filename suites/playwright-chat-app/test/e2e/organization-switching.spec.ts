@@ -50,10 +50,17 @@ test.describe('organization-switching', {
     await expect(list).toBeVisible({ timeout: 15000 });
     await argosScreenshot(page, 'org-switch-org-a');
 
-    const orgSelector = page.getByTestId('organization-switcher');
-    await expect(orgSelector).toBeVisible({ timeout: 15000 });
-    await orgSelector.click();
-    await page.getByRole('option', { name: organizationNameB }).click();
+    const userMenuTrigger = page.getByTestId('user-menu-trigger');
+    await expect(userMenuTrigger).toBeVisible({ timeout: 15000 });
+    await userMenuTrigger.click();
+
+    const orgSwitcher = page.getByTestId('org-switcher');
+    await expect(orgSwitcher).toBeVisible({ timeout: 15000 });
+    await orgSwitcher.click();
+
+    const orgItem = page.getByTestId(`org-item-${organizationIdB}`);
+    await expect(orgItem).toBeVisible({ timeout: 15000 });
+    await orgItem.click({ force: true });
 
     await expect(list).toBeVisible({ timeout: 15000 });
     await argosScreenshot(page, 'org-switch-org-b');
