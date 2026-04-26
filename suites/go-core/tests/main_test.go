@@ -57,7 +57,7 @@ var (
 	runnersAddr    = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
 	secretsAddr    = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
 	tracingAddr    = envOrDefault("TRACING_ADDRESS", "tracing:50051")
-	codexInitImage = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:0.13.19")
+	codexInitImage = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:0.13.20")
 	agnInitImage   = envOrDefault("AGN_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:0.4.15")
 )
 

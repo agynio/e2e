@@ -19,7 +19,8 @@ Optional domain override:
 
 - `E2E_DOMAIN`
 
-Full-chain tests use `AGN_INIT_IMAGE` for the agn agent init image and `CODEX_INIT_IMAGE` for codex (each falls back to the default used by go-core).
+Full-chain tests use `AGN_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-agn:0.4.15`) for agn and
+`CODEX_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-codex:0.13.20`) for codex.
 
 Example runs:
 
