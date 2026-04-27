@@ -106,6 +106,7 @@ PY
     run_file="$tmp_dir/run"
     manifests_file="$tmp_dir/manifests"
     service_account_file="$tmp_dir/service_account"
+    required_env_file="$tmp_dir/required_env"
 
     service_account=""
     if [ -s "$service_account_file" ]; then
@@ -153,6 +154,32 @@ PY
     if [ -z "$(echo "$select_output" | tr -d '[:space:]')" ]; then
       echo "Skipping suite $suite_name (no matching tests)."
       exit 0
+    fi
+
+    required_envs=()
+    if [ -s "$required_env_file" ]; then
+      while IFS= read -r env_name || [ -n "$env_name" ]; do
+        trimmed=$(echo "$env_name" | xargs)
+        if [ -n "$trimmed" ]; then
+          required_envs+=("$trimmed")
+        fi
+      done < "$required_env_file"
+    fi
+
+    if [ "${#required_envs[@]}" -gt 0 ]; then
+      missing_envs=()
+      for env_name in "${required_envs[@]}"; do
+        env_value=${!env_name:-}
+        trimmed_value=$(echo "$env_value" | xargs)
+        if [ -z "$trimmed_value" ]; then
+          missing_envs+=("$env_name")
+        fi
+      done
+      if [ "${#missing_envs[@]}" -gt 0 ]; then
+        printf 'ERROR: suite %s missing required environment variables: %s\n' \
+          "$suite_name" "${missing_envs[*]}" >&2
+        exit 1
+      fi
     fi
 
     manifest_files=()

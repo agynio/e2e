@@ -6,7 +6,7 @@ import {
   createOrganization,
   createTestModel,
   DEFAULT_TEST_AGENT_IMAGE,
-  DEFAULT_TEST_INIT_IMAGE,
+  resolveCodexInitImage,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
@@ -27,7 +27,7 @@ async function createAgentForOrg(page: Page, organizationId: string, name: strin
     description: 'Org switch agent',
     configuration: '{}',
     image: DEFAULT_TEST_AGENT_IMAGE,
-    initImage: DEFAULT_TEST_INIT_IMAGE,
+    initImage: resolveCodexInitImage(process.env.E2E_AGENT_INIT_IMAGE),
   });
 }
 
