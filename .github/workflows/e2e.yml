@@ -26,9 +26,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@cb90c2fdeaf59facdb883ce8597e2099de51e8c6
+        uses: agynio/bootstrap/.github/actions/provision@main
         with:
-          ref: cb90c2fdeaf59facdb883ce8597e2099de51e8c6
+          ref: main
 
       - name: Run E2E tests
         uses: ./.github/actions/run-tests
