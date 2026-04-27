@@ -33,6 +33,11 @@ const TEST_LLM_TOKEN = 'test-token';
 const TEST_LLM_MODEL = 'mcp-tools-test';
 const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
+const DEFAULT_INIT_IMAGES: Record<TraceSdk, string> = {
+  agn: 'ghcr.io/agynio/agent-init-agn:latest',
+  codex: 'ghcr.io/agynio/agent-init-codex:latest',
+  claude: 'ghcr.io/agynio/agent-init-claude:latest',
+};
 const INIT_IMAGE_ENV_VARS: Record<TraceSdk, string> = {
   agn: 'AGN_INIT_IMAGE',
   codex: 'CODEX_INIT_IMAGE',
@@ -72,11 +77,11 @@ type FullChainRunOptions = {
 
 function resolveInitImage(sdk: TraceSdk): string {
   const envVar = INIT_IMAGE_ENV_VARS[sdk];
-  const value = process.env[envVar]?.trim() ?? '';
-  if (!value) {
-    throw new Error(`${envVar} is required to run tracing full-chain tests.`);
+  const value = process.env[envVar]?.trim();
+  if (value) {
+    return value;
   }
-  return value;
+  return DEFAULT_INIT_IMAGES[sdk];
 }
 
 function resolveLlmEndpoint(sdk: TraceSdk): string {
