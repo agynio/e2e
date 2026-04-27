@@ -37,9 +37,6 @@ const (
 	tracingSummaryTimeout  = 2 * time.Minute
 	tracingStartTimeBuffer = 30 * time.Second
 
-	testLLMEndpointCodex = "https://testllm.dev/v1/org/agynio/suite/codex/responses"
-	testLLMEndpointAgn   = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
-
 	labelManagedBy = "managed-by"
 	labelAgentID   = "agent-id"
 	labelThreadID  = "thread-id"
