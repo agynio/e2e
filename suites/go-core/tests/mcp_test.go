@@ -46,6 +46,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -111,13 +112,13 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		labelThreadID:  threadID,
 	}
 	t.Cleanup(func() {
-		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+		ids, err := findWorkloadsByLabels(runnerCtx, runnerClient, labels)
 		if err != nil {
 			t.Logf("cleanup: find workloads: %v", err)
 			return
 		}
 		for _, workloadID := range ids {
-			cleanupWorkload(t, ctx, runnerClient, workloadID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 		}
 	})
 
@@ -129,7 +130,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 
 	expected := "I've created the entity 'test_project' (type: project) with the observation 'A test project'. The /test-data directory contains one file: hello.txt."
 
-	readyCtx, readyCancel := context.WithTimeout(ctx, 4*time.Minute)
+	readyCtx, readyCancel := context.WithTimeout(runnerCtx, 4*time.Minute)
 	defer readyCancel()
 	if err := waitForMcpSidecarsReady(t, readyCtx, runnerClient, labels); err != nil {
 		t.Fatalf("wait for mcp sidecars: %v", err)

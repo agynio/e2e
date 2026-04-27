@@ -46,6 +46,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -108,10 +109,10 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 		if workloadID == "" {
 			return
 		}
-		cleanupWorkload(t, ctx, runnerClient, workloadID)
+		cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(ctx, workloadWaitTimeout)
+	pollCtx, pollCancel := context.WithTimeout(runnerCtx, workloadWaitTimeout)
 	defer pollCancel()
 	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
@@ -150,7 +151,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 		t.Fatalf("wait for unacked messages to drain: %v", err)
 	}
 
-	idleCtx, idleCancel := context.WithTimeout(ctx, idleStopTimeout)
+	idleCtx, idleCancel := context.WithTimeout(runnerCtx, idleStopTimeout)
 	defer idleCancel()
 	if err := pollUntil(idleCtx, pollInterval, func(ctx context.Context) error {
 		logRunnersWorkloadState(t, ctx, runnersClient, workloadID)
@@ -163,7 +164,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 		}
 		return nil
 	}); err != nil {
-		diagCtx, cancelDiag := context.WithTimeout(context.Background(), 10*time.Second)
+		diagCtx, cancelDiag := context.WithTimeout(runnerCtx, 10*time.Second)
 		defer cancelDiag()
 		logRunnersWorkloadState(t, diagCtx, runnersClient, workloadID)
 		t.Fatalf("wait for workload stop: %v", err)

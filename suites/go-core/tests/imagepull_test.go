@@ -50,6 +50,7 @@ func TestImagePullSecretAttachedToPod(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -115,10 +116,10 @@ func TestImagePullSecretAttachedToPod(t *testing.T) {
 		if workloadID == "" {
 			return
 		}
-		cleanupWorkload(t, ctx, runnerClient, workloadID)
+		cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(ctx, 90*time.Second)
+	pollCtx, pollCancel := context.WithTimeout(runnerCtx, 90*time.Second)
 	defer pollCancel()
 	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labelsMap)
