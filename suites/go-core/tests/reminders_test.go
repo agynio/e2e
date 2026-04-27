@@ -362,7 +362,13 @@ func remindersAppIdentityID(t *testing.T) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := newAppsClient(t).GetAppBySlug(ctx, &appsv1.GetAppBySlugRequest{Slug: remindersAppSlug})
+	caller := fetchGatewayIdentity(t, gatewayAPIToken(t))
+	callCtx := remindersIdentityContext(ctx, caller.IdentityID)
+	orgID := gatewayOrganizationID(t)
+	resp, err := newAppsClient(t).GetAppBySlug(callCtx, &appsv1.GetAppBySlugRequest{
+		Slug:           remindersAppSlug,
+		OrganizationId: orgID,
+	})
 	require.NoError(t, err)
 	if resp == nil || resp.GetApp() == nil {
 		t.Fatal("get app by slug: missing app")
