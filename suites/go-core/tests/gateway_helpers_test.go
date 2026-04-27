@@ -1,4 +1,4 @@
-//go:build e2e && (svc_gateway || smoke)
+//go:build e2e && (svc_gateway || svc_reminders || smoke)
 
 package tests
 
