@@ -172,9 +172,25 @@ runs:
           echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
         fi
 
-        if [ -z "${AGYN_AGENT_INIT_IMAGE:-}" ]; then
-          AGYN_AGENT_INIT_IMAGE="ghcr.io/agynio/agent-init:v1.0.0"
-          echo "AGYN_AGENT_INIT_IMAGE=$AGYN_AGENT_INIT_IMAGE" >> "$GITHUB_ENV"
+        required_init_envs=(
+          AGYN_AGENT_INIT_IMAGE
+          CODEX_INIT_IMAGE
+          AGN_INIT_IMAGE
+          CLAUDE_INIT_IMAGE
+          AGN_EXPOSE_INIT_IMAGE
+        )
+        missing_init_envs=()
+        for env_name in "${required_init_envs[@]}"; do
+          env_value=${!env_name:-}
+          trimmed_value=$(echo "$env_value" | xargs)
+          if [ -z "$trimmed_value" ]; then
+            missing_init_envs+=("$env_name")
+          fi
+        done
+        if [ "${#missing_init_envs[@]}" -gt 0 ]; then
+          printf 'Missing required init image environment variables: %s\n' \
+            "${missing_init_envs[*]}" >&2
+          exit 1
         fi
 
         if [ -z "${AGYN_MODEL_ID:-}" ]; then

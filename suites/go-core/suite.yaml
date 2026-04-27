@@ -3,6 +3,10 @@ workdir: /opt/app/data
 manifests:
   - manifests/agents-orchestrator
 service_account: agents-orchestrator-e2e
+required_env:
+  - AGN_INIT_IMAGE
+  - CODEX_INIT_IMAGE
+  - AGN_EXPOSE_INIT_IMAGE
 select: |
   suite_tags=("svc_agents_orchestrator" "svc_runners" "svc_metering" "svc_k8s_runner" "svc_organizations" "svc_files" "svc_gateway" "svc_media_proxy" "smoke")
 

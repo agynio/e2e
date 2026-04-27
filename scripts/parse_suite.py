@@ -26,7 +26,7 @@ def parse_suite(path: str) -> dict[str, str]:
     if not isinstance(data, dict):
         raise ValueError(f"Suite file {path} must define a YAML mapping at the top level.")
 
-    allowed_keys = {"image", "workdir", "select", "run", "manifests", "service_account"}
+    allowed_keys = {"image", "workdir", "select", "run", "manifests", "service_account", "required_env"}
     required_keys = {"image", "select", "run"}
     unknown_keys = set(data.keys()) - allowed_keys
     if unknown_keys:
@@ -55,6 +55,20 @@ def parse_suite(path: str) -> dict[str, str]:
                 value = "\n".join(entries)
             elif not isinstance(value, str):
                 raise ValueError(f"Value for '{key}' in {path} must be a string or list of strings.")
+        elif key == "required_env":
+            if value is None or value == "":
+                value = ""
+            elif isinstance(value, list):
+                entries: list[str] = []
+                for entry in value:
+                    if not isinstance(entry, str):
+                        raise ValueError(f"Required env entries in {path} must be strings.")
+                    trimmed = entry.strip()
+                    if trimmed:
+                        entries.append(trimmed)
+                value = "\n".join(entries)
+            else:
+                raise ValueError(f"Value for '{key}' in {path} must be a list of strings.")
         else:
             if value is None:
                 value = ""
@@ -81,7 +95,7 @@ def main() -> int:
         return 1
     os.makedirs(output_dir, exist_ok=True)
 
-    for key in ("image", "workdir", "select", "run", "manifests", "service_account"):
+    for key in ("image", "workdir", "select", "run", "manifests", "service_account", "required_env"):
         value = data.get(key, "")
         output_path = os.path.join(output_dir, key)
         with open(output_path, "w", encoding="utf-8") as handle:

@@ -9,11 +9,6 @@ const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 
-export const DEFAULT_TEST_INIT_IMAGE =
-  process.env.E2E_AGENT_INIT_IMAGE ??
-  process.env.CODEX_INIT_IMAGE ??
-  'ghcr.io/agynio/agent-init-codex:0.13';
-
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
 const DEFAULT_CLUSTER_ADMIN_IDENTITY_ID = 'a3c1e9d2-7f4b-5e1a-9c3d-2b8f6a4e7d10';
@@ -23,6 +18,21 @@ const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
   'Connect-Protocol-Version': '1',
 };
+
+export function resolveCodexInitImage(override?: string): string {
+  if (override !== undefined) {
+    const trimmed = override.trim();
+    if (!trimmed) {
+      throw new Error('initImage is required to create chat agents.');
+    }
+    return trimmed;
+  }
+  const value = process.env.CODEX_INIT_IMAGE?.trim() ?? '';
+  if (!value) {
+    throw new Error('CODEX_INIT_IMAGE is required to create chat agents.');
+  }
+  return value;
+}
 
 type CreateChatResponseWire = {
   chat?: { id?: string };
@@ -476,7 +486,11 @@ async function waitForAgent(page: Page, organizationId: string, agentId: string)
 
 export async function createAgent(page: Page, opts: CreateAgentOptions): Promise<string> {
   const { initImage, ...rest } = opts;
-  const payload = { ...rest, initImage };
+  const trimmedInitImage = initImage.trim();
+  if (!trimmedInitImage) {
+    throw new Error('initImage is required to create chat agents.');
+  }
+  const payload = { ...rest, initImage: trimmedInitImage };
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
@@ -521,7 +535,7 @@ export async function setupTestAgent(
 ): Promise<{ organizationId: string; agentId: string; agentName: string; participantId: string }> {
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
-  const initImage = opts.initImage ?? DEFAULT_TEST_INIT_IMAGE;
+  const initImage = resolveCodexInitImage(opts.initImage);
   const apiToken = await createApiToken(page, `e2e-agent-token-${now}`);
 
   const { modelId } = await createTestModel(page, {

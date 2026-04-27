@@ -11,6 +11,12 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    env:
+      AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
+      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13
+      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
+      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1
+      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,9 +55,9 @@ jobs:
           chmod +x agn
 
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@0382a86ed54c603a30cceb91e2fe4eba8c2fd924
+        uses: agynio/bootstrap/.github/actions/provision@main
         with:
-          ref: 0382a86ed54c603a30cceb91e2fe4eba8c2fd924
+          ref: main
 
       - name: Run go-agn-cli suite
         uses: ./.github/actions/run-tests

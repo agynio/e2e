@@ -57,8 +57,8 @@ var (
 	runnersAddr    = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
 	secretsAddr    = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
 	tracingAddr    = envOrDefault("TRACING_ADDRESS", "tracing:50051")
-	codexInitImage = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:0.13")
-	agnInitImage   = envOrDefault("AGN_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:0.4")
+	codexInitImage = requireEnv("CODEX_INIT_IMAGE")
+	agnInitImage   = requireEnv("AGN_INIT_IMAGE")
 )
 
 type pipelineRun struct {
@@ -141,6 +141,9 @@ func createAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServic
 
 func createAgentWithIdleTimeout(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, initImage, idleTimeout string) *agentsv1.Agent {
 	t.Helper()
+	if strings.TrimSpace(initImage) == "" {
+		t.Fatal("create agent: init image is required")
+	}
 	request := &agentsv1.CreateAgentRequest{
 		Name:           name,
 		Role:           "assistant",

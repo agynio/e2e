@@ -19,10 +19,14 @@ Optional domain override:
 
 - `E2E_DOMAIN`
 
-Full-chain tests use `AGN_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-agn:0.4`) for agn,
-`CODEX_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-codex:0.13`) for codex, and
-`CLAUDE_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-claude:0.1`) for claude.
-For exact reproducibility, set `*_INIT_IMAGE` to a pinned patch tag
+Full-chain tests require explicit init images:
+
+- `AGN_INIT_IMAGE` (agn, for example `ghcr.io/agynio/agent-init-agn:0.4`)
+- `CODEX_INIT_IMAGE` (codex, for example `ghcr.io/agynio/agent-init-codex:0.13`)
+- `CLAUDE_INIT_IMAGE` (claude, for example `ghcr.io/agynio/agent-init-claude:0.1`)
+- `AGN_EXPOSE_INIT_IMAGE` (go-core expose tests, for example `ghcr.io/agynio/agent-init-agn:0.4`)
+
+For exact reproducibility, pin `*_INIT_IMAGE` to a patch tag
 (for example, `ghcr.io/agynio/agent-init-agn:0.4.15`) or an image digest
 (for example, `ghcr.io/agynio/agent-init-agn@sha256:<digest>`).
 

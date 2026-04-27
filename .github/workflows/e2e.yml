@@ -15,14 +15,20 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    env:
+      AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
+      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13
+      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
+      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1
+      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@cb90c2fdeaf59facdb883ce8597e2099de51e8c6
+        uses: agynio/bootstrap/.github/actions/provision@main
         with:
-          ref: cb90c2fdeaf59facdb883ce8597e2099de51e8c6
+          ref: main
 
       - name: Run E2E tests
         uses: ./.github/actions/run-tests

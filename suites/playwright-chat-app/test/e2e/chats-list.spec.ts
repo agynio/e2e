@@ -7,8 +7,8 @@ import {
   createOrganization,
   createTestModel,
   DEFAULT_TEST_AGENT_IMAGE,
-  DEFAULT_TEST_INIT_IMAGE,
   resolveIdentityId,
+  resolveCodexInitImage,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
@@ -56,7 +56,7 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
         description: 'E2E participant picker agent',
         configuration: '{}',
         image: DEFAULT_TEST_AGENT_IMAGE,
-        initImage: DEFAULT_TEST_INIT_IMAGE,
+        initImage: resolveCodexInitImage(process.env.E2E_AGENT_INIT_IMAGE),
       });
       const chatsLoaded = userAPage.waitForResponse(
         (resp) => resp.url().includes('GetChats') && resp.status() === 200,

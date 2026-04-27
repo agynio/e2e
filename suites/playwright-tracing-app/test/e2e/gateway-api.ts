@@ -199,12 +199,16 @@ export async function createAgent(page: Page, params: {
   role?: string;
   configuration?: string;
 }): Promise<string> {
+  const initImage = params.initImage.trim();
+  if (!initImage) {
+    throw new Error('initImage is required to create agents.');
+  }
   const payload: Record<string, unknown> = {
     organizationId: params.organizationId,
     name: params.name,
     model: params.model,
     image: params.image,
-    initImage: params.initImage,
+    initImage,
     role: params.role ?? 'assistant',
   };
   if (params.description !== undefined) {
