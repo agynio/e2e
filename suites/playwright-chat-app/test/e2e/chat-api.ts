@@ -11,9 +11,6 @@ const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
-const DEFAULT_CLUSTER_ADMIN_IDENTITY_ID = 'a3c1e9d2-7f4b-5e1a-9c3d-2b8f6a4e7d10';
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
   'Connect-Protocol-Version': '1',
@@ -118,32 +115,6 @@ function resolveBaseUrl(): string {
     throw new Error('E2E_BASE_URL is required to run e2e tests.');
   }
   return baseUrl;
-}
-
-function resolveClusterAdminIdentityId(): string {
-  const rawId = process.env.E2E_CLUSTER_ADMIN_IDENTITY_ID ?? process.env.CLUSTER_ADMIN_IDENTITY_ID;
-  const identityId = (rawId ?? DEFAULT_CLUSTER_ADMIN_IDENTITY_ID).trim();
-  if (!identityId) {
-    throw new Error('Cluster admin identity id is required for e2e tests.');
-  }
-  if (!UUID_PATTERN.test(identityId)) {
-    throw new Error(`Cluster admin identity id is not a valid UUID: ${identityId}`);
-  }
-  return identityId;
-}
-
-function resolveClusterAdminToken(): string {
-  const rawToken =
-    process.env.E2E_CLUSTER_ADMIN_TOKEN ??
-    process.env.CLUSTER_ADMIN_TOKEN ??
-    process.env.AGYN_API_TOKEN;
-  const token = rawToken?.trim() ?? '';
-  if (!token) {
-    throw new Error(
-      'Cluster admin token is required (set E2E_CLUSTER_ADMIN_TOKEN, CLUSTER_ADMIN_TOKEN, or AGYN_API_TOKEN).',
-    );
-  }
-  return token;
 }
 
 function buildRpcUrl(servicePath: string, method: string): string {
@@ -306,43 +277,7 @@ export async function createOrganization(page: Page, name: string): Promise<stri
   if (!response.organization?.id) {
     throw new Error('CreateOrganization response missing organization id.');
   }
-  const organizationId = response.organization.id;
-  await ensureClusterAdminMembership(page, organizationId);
-  return organizationId;
-}
-
-async function ensureClusterAdminMembership(page: Page, organizationId: string): Promise<void> {
-  const clusterAdminIdentityId = resolveClusterAdminIdentityId();
-  const currentIdentityId = await resolveIdentityId(page);
-  if (currentIdentityId === clusterAdminIdentityId) {
-    return;
-  }
-  const membershipId = await createMembership(page, organizationId, clusterAdminIdentityId);
-  await acceptMembershipAsClusterAdmin(page, membershipId);
-}
-
-async function acceptMembershipAsClusterAdmin(page: Page, membershipId: string): Promise<void> {
-  const token = resolveClusterAdminToken();
-  const response = await page.context().request.post(buildRpcUrl(ORGS_GATEWAY_PATH, 'AcceptMembership'), {
-    data: { membershipId },
-    headers: { ...CONNECT_HEADERS, Authorization: `Bearer ${token}` },
-  });
-  if (response.ok()) {
-    return;
-  }
-  const body = await response.text();
-  if (response.status() === 412) {
-    try {
-      const parsed = JSON.parse(body) as { code?: string; message?: string };
-      const message = parsed.message ?? '';
-      if (parsed.code === 'failed_precondition' && message.includes('not pending')) {
-        return;
-      }
-    } catch (_error) {
-      // fall through to throw below
-    }
-  }
-  throw new Error(`ConnectRPC AcceptMembership failed with status ${response.status()}: ${body}`);
+  return response.organization.id;
 }
 
 export async function createMembership(

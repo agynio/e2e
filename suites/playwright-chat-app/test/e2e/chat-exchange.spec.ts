@@ -85,7 +85,7 @@ test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_or
     const organizationId = await createOrganization(userAPage, `e2e-org-exchange-${Date.now()}`);
     // Add User B to the organization
     const membershipId = await createMembership(userAPage, organizationId, userBId);
-    // Accept in case the invite is pending (User A may not be cluster admin)
+    // Accept in case the invite is still pending.
     await acceptMembership(userBPage, membershipId);
     const chatId = await createChat(userAPage, organizationId, userBId);
     await sendChatMessage(userAPage, chatId, messageFromA);
