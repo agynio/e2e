@@ -16,6 +16,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const mcpToolsImage = "ghcr.io/agynio/e2e/mcp-tools:20260427-1"
+
 func TestMCPToolsE2E(t *testing.T) {
 	runMCPToolsE2E(t, testLLMEndpointCodex, codexInitImage)
 }
@@ -73,8 +75,8 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		agentsClient,
 		agentID,
 		"memory",
-		"node:22-slim",
-		`npx -y supergateway@3.4.3 --stdio "npx -y @modelcontextprotocol/server-memory@2026.1.26" --outputTransport streamableHttp --port $MCP_PORT --streamableHttpPath /mcp`,
+		mcpToolsImage,
+		`supergateway --stdio "mcp-server-memory" --outputTransport streamableHttp --port $MCP_PORT --streamableHttpPath /mcp`,
 	)
 	memoryMcpID := memoryMCP.GetMeta().GetId()
 	if memoryMcpID == "" {
@@ -89,8 +91,8 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		agentsClient,
 		agentID,
 		"filesystem",
-		"node:22-slim",
-		`mkdir -p /test-data && printf 'hello' > /test-data/hello.txt && npx -y supergateway@3.4.3 --stdio "npx -y @modelcontextprotocol/server-filesystem@2026.1.14 /test-data" --outputTransport streamableHttp --port $MCP_PORT --streamableHttpPath /mcp`,
+		mcpToolsImage,
+		`mkdir -p /test-data && printf 'hello' > /test-data/hello.txt && supergateway --stdio "mcp-server-filesystem /test-data" --outputTransport streamableHttp --port $MCP_PORT --streamableHttpPath /mcp`,
 	)
 	filesystemMcpID := filesystemMCP.GetMeta().GetId()
 	if filesystemMcpID == "" {

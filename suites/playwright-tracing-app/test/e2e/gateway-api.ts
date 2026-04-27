@@ -8,6 +8,7 @@ const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
 const THREADS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ThreadsGateway';
 const TRACING_GATEWAY_PATH = '/api/agynio.api.gateway.v1.TracingGateway';
+const RUNNERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.RunnersGateway';
 
 type IdentityWire = {
   meta?: { id?: string };
@@ -59,11 +60,35 @@ type SpanWire = {
   name?: string;
 };
 
+type AttributeValueWire = {
+  stringValue?: string;
+};
+
+type ResourceAttributeWire = {
+  key?: string;
+  value?: AttributeValueWire;
+};
+
+type ResourceWire = {
+  attributes?: ResourceAttributeWire[];
+};
+
+type ContainerWire = {
+  name?: string;
+  status?: string | number;
+};
+
+type WorkloadWire = {
+  meta?: { id?: string };
+  containers?: ContainerWire[];
+};
+
 type ScopeSpansWire = {
   spans?: SpanWire[];
 };
 
 type ResourceSpansWire = {
+  resource?: ResourceWire;
   scopeSpans?: ScopeSpansWire[];
 };
 
@@ -76,6 +101,12 @@ export type TraceSummaryResponseWire = {
   status?: string | number;
   countsByName?: Record<string, number | string>;
   countsByStatus?: Record<string, number | string>;
+  totalSpans?: number | string;
+};
+
+export type ListWorkloadsByThreadResponseWire = {
+  workloads?: WorkloadWire[];
+  nextPageToken?: string;
 };
 
 function resolveBaseUrl(): string {
@@ -105,6 +136,28 @@ async function postConnect<T>(
     data: payload,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      'Connect-Protocol-Version': '1',
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Connect RPC ${servicePath}/${method} failed (${response.status()}): ${body}`);
+  }
+  return (await response.json()) as T;
+}
+
+async function postConnectWithToken<T>(
+  page: Page,
+  servicePath: string,
+  method: string,
+  payload: Record<string, unknown>,
+  token: string,
+): Promise<T> {
+  const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
+    data: payload,
+    headers: {
+      Authorization: `Bearer ${token}`,
       'Connect-Protocol-Version': '1',
       'Content-Type': 'application/json',
     },
@@ -338,4 +391,33 @@ export async function getTraceSummary(page: Page, traceId: string): Promise<Trac
   return postConnect<TraceSummaryResponseWire>(page, TRACING_GATEWAY_PATH, 'GetTraceSummary', {
     traceId,
   });
+}
+
+export async function listWorkloadsByThread(page: Page, params: {
+  threadId: string;
+  agentId?: string;
+  token?: string;
+}): Promise<ListWorkloadsByThreadResponseWire> {
+  const payload: Record<string, unknown> = {
+    threadId: params.threadId,
+    pageSize: 25,
+  };
+  if (params.agentId) {
+    payload.agentId = params.agentId;
+  }
+  if (params.token) {
+    return postConnectWithToken<ListWorkloadsByThreadResponseWire>(
+      page,
+      RUNNERS_GATEWAY_PATH,
+      'ListWorkloadsByThread',
+      payload,
+      params.token,
+    );
+  }
+  return postConnect<ListWorkloadsByThreadResponseWire>(
+    page,
+    RUNNERS_GATEWAY_PATH,
+    'ListWorkloadsByThread',
+    payload,
+  );
 }

@@ -1,4 +1,4 @@
-image: ghcr.io/agynio/playwright:v1.59.1-noble
+image: ghcr.io/agynio/e2e/playwright:v1.59.1-noble
 workdir: /opt/app/data
 select: |
   if [ -z "${TAGS:-}" ]; then
