@@ -47,6 +47,10 @@ type CreateAPITokenResponseWire = {
   plaintextToken?: string;
 };
 
+type GetMeResponseWire = {
+  user?: { meta?: { id?: string } };
+};
+
 type ListAccessibleOrganizationsResponseWire = {
   organizations?: Array<{ id: string; name: string }>;
 };
@@ -200,24 +204,12 @@ async function storeChatOrganization(page: Page, chatId: string, organizationId:
 }
 
 export async function resolveIdentityId(page: Page): Promise<string> {
-  const session = await readOidcSession(page);
-  const token = session?.accessToken ?? null;
-  const headers: Record<string, string> = token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
-
-  const baseUrl = resolveBaseUrl();
-  const response = await page.context().request.get(`${baseUrl}/api/me`, { headers });
-  if (!response.ok()) {
-    const body = await response.text();
-    throw new Error(`GET /api/me failed with status ${response.status()}: ${body}`);
+  const response = await postConnect<GetMeResponseWire>(page, USERS_GATEWAY_PATH, 'GetMe', {});
+  const identityId = response.user?.meta?.id ?? '';
+  if (!identityId) {
+    throw new Error('UsersGateway.GetMe response missing identity id.');
   }
-
-  const payload = (await response.json()) as { identity_id?: string };
-  if (!payload.identity_id) {
-    throw new Error('/api/me response missing identity_id');
-  }
-  return payload.identity_id;
+  return identityId;
 }
 
 export async function resolveUserLabel(page: Page, identityId: string): Promise<string> {
