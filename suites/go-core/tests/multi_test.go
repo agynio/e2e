@@ -37,6 +37,7 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -91,16 +92,16 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 	workloadBID := ""
 	t.Cleanup(func() {
 		if workloadAID != "" {
-			cleanupWorkload(t, ctx, runnerClient, workloadAID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadAID)
 		}
 	})
 	t.Cleanup(func() {
 		if workloadBID != "" {
-			cleanupWorkload(t, ctx, runnerClient, workloadBID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadBID)
 		}
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(ctx, 90*time.Second)
+	pollCtx, pollCancel := context.WithTimeout(runnerCtx, 90*time.Second)
 	defer pollCancel()
 	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labelsA)
@@ -116,7 +117,7 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 		t.Fatalf("wait for workload A: %v", err)
 	}
 
-	pollCtxB, pollCancelB := context.WithTimeout(ctx, 90*time.Second)
+	pollCtxB, pollCancelB := context.WithTimeout(runnerCtx, 90*time.Second)
 	defer pollCancelB()
 	if err := pollUntil(pollCtxB, pollInterval, func(ctx context.Context) error {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labelsB)
@@ -136,11 +137,11 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 		t.Fatalf("expected distinct workloads, got %s", workloadAID)
 	}
 
-	labelsRespA, err := getWorkloadLabels(ctx, runnerClient, workloadAID)
+	labelsRespA, err := getWorkloadLabels(runnerCtx, runnerClient, workloadAID)
 	if err != nil {
 		t.Fatalf("get labels for workload A: %v", err)
 	}
-	labelsRespB, err := getWorkloadLabels(ctx, runnerClient, workloadBID)
+	labelsRespB, err := getWorkloadLabels(runnerCtx, runnerClient, workloadBID)
 	if err != nil {
 		t.Fatalf("get labels for workload B: %v", err)
 	}
@@ -172,6 +173,7 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -215,11 +217,11 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 	workloadIDs := []string{}
 	t.Cleanup(func() {
 		for _, workloadID := range workloadIDs {
-			cleanupWorkload(t, ctx, runnerClient, workloadID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 		}
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(ctx, 90*time.Second)
+	pollCtx, pollCancel := context.WithTimeout(runnerCtx, 90*time.Second)
 	defer pollCancel()
 	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
@@ -241,7 +243,7 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 	}
 	foundThreads := map[string]bool{}
 	for _, workloadID := range workloadIDs {
-		labelsResp, err := getWorkloadLabels(ctx, runnerClient, workloadID)
+		labelsResp, err := getWorkloadLabels(runnerCtx, runnerClient, workloadID)
 		if err != nil {
 			t.Fatalf("get labels for workload %s: %v", workloadID, err)
 		}

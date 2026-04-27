@@ -60,6 +60,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -98,17 +99,17 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 		labelThreadID:  threadID,
 	}
 	t.Cleanup(func() {
-		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+		ids, err := findWorkloadsByLabels(runnerCtx, runnerClient, labels)
 		if err != nil {
 			t.Logf("cleanup: find workloads: %v", err)
 			return
 		}
 		for _, workloadID := range ids {
-			cleanupWorkload(t, ctx, runnerClient, workloadID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 		}
 	})
 
-	failureCtx, failureCancel := context.WithTimeout(ctx, failedWorkloadTimeout)
+	failureCtx, failureCancel := context.WithTimeout(runnerCtx, failedWorkloadTimeout)
 	defer failureCancel()
 	failedWorkloads, err := waitForFailedWorkloads(failureCtx, runnersClient, threadID, agentID, 2)
 	if err != nil {
@@ -122,7 +123,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	assertFailedWorkload(t, failedLatest, threadID, agentID)
 	assertFailedWorkload(t, failedPrevious, threadID, agentID)
 
-	allWorkloads, err := listWorkloadsByThread(ctx, runnersClient, threadID, agentID, nil)
+	allWorkloads, err := listWorkloadsByThread(runnerCtx, runnersClient, threadID, agentID, nil)
 	if err != nil {
 		t.Fatalf("list workloads by thread: %v", err)
 	}
@@ -159,7 +160,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 		t.Fatalf("update agent init image: %v", err)
 	}
 
-	fastRetryCtx, fastRetryCancel := context.WithTimeout(ctx, fastRetryTimeout)
+	fastRetryCtx, fastRetryCancel := context.WithTimeout(runnerCtx, fastRetryTimeout)
 	defer fastRetryCancel()
 	retryWorkload, err := waitForRetryWorkload(fastRetryCtx, runnersClient, threadID, agentID, removedAt)
 	if err != nil {
@@ -185,7 +186,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 		if instanceID == "" {
 			t.Fatalf("failed workload %s missing instance id", workloadID(t, failed))
 		}
-		cleanupCtx, cleanupCancel := context.WithTimeout(ctx, runnerCleanupTimeout)
+		cleanupCtx, cleanupCancel := context.WithTimeout(runnerCtx, runnerCleanupTimeout)
 		if err := waitForRunnerWorkloadGone(cleanupCtx, runnerClient, instanceID); err != nil {
 			cleanupCancel()
 			t.Fatalf("wait for runner workload %s cleanup: %v", instanceID, err)

@@ -37,6 +37,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -81,17 +82,18 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 
 		agentCleanupCtx := withIdentity(cleanupCtx, agentID)
 		ackAllUnackedMessagesBestEffort(t, agentCleanupCtx, threadsClient, agentID)
-		ids, err := findWorkloadsByLabels(cleanupCtx, runnerClient, labels)
+		runnerCleanupCtx := withIdentity(cleanupCtx, identityID)
+		ids, err := findWorkloadsByLabels(runnerCleanupCtx, runnerClient, labels)
 		if err != nil {
 			t.Logf("cleanup: find workloads: %v", err)
 			return
 		}
 		for _, workloadID := range ids {
-			cleanupWorkload(t, cleanupCtx, runnerClient, workloadID)
+			cleanupWorkload(t, runnerCleanupCtx, runnerClient, workloadID)
 		}
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(ctx, 90*time.Second)
+	pollCtx, pollCancel := context.WithTimeout(runnerCtx, 90*time.Second)
 	defer pollCancel()
 	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
@@ -112,7 +114,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	defer ticker.Stop()
 
 	for {
-		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+		ids, err := findWorkloadsByLabels(runnerCtx, runnerClient, labels)
 		if err != nil {
 			t.Fatalf("find workloads: %v", err)
 		}

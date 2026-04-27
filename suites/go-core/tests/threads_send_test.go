@@ -38,6 +38,7 @@ func TestThreadsSendShell(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -77,13 +78,13 @@ func TestThreadsSendShell(t *testing.T) {
 		labelThreadID:  threadID,
 	}
 	t.Cleanup(func() {
-		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+		ids, err := findWorkloadsByLabels(runnerCtx, runnerClient, labels)
 		if err != nil {
 			t.Logf("cleanup: find workloads: %v", err)
 			return
 		}
 		for _, workloadID := range ids {
-			cleanupWorkload(t, ctx, runnerClient, workloadID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 		}
 	})
 
