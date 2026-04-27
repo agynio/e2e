@@ -65,6 +65,8 @@ func TestRemindersAgentLoop(t *testing.T) {
 
 	reminderNote := fmt.Sprintf("e2e reminder %s", uuid.NewString())
 	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	createAgentEnv(t, ctx, agentsClient, agentID, "AGYN_API_TOKEN", token)
+	createAgentEnv(t, ctx, agentsClient, agentID, "AGYN_BASE_URL", zitiGatewayBaseURL)
 	createAgentEnv(t, ctx, agentsClient, agentID, "AGYN_ORGANIZATION_ID", orgID)
 	createAgentEnv(t, ctx, agentsClient, agentID, "REMINDER_NOTE", reminderNote)
 
