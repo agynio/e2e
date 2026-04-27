@@ -4,6 +4,17 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Suite tag to run (e.g. svc_reminders)"
+        required: false
+        type: string
+      include_smoke:
+        description: "Include smoke suites"
+        required: false
+        default: true
+        type: boolean
 
 concurrency:
   group: e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
@@ -34,3 +45,5 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           ref: ${{ github.sha }}
+          tag: ${{ inputs.tag }}
+          include-smoke: ${{ inputs.include_smoke }}
