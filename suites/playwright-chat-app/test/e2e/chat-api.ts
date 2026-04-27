@@ -9,6 +9,10 @@ const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 
+export const DEFAULT_TEST_INIT_IMAGE =
+  process.env.E2E_AGENT_INIT_IMAGE?.trim() ||
+  process.env.CODEX_INIT_IMAGE?.trim() ||
+  'ghcr.io/agynio/agent-init-codex:latest';
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
 const CONNECT_HEADERS = {
@@ -24,11 +28,11 @@ export function resolveCodexInitImage(override?: string): string {
     }
     return trimmed;
   }
-  const value = process.env.CODEX_INIT_IMAGE?.trim() ?? '';
-  if (!value) {
-    throw new Error('CODEX_INIT_IMAGE is required to create chat agents.');
+  const value = process.env.CODEX_INIT_IMAGE?.trim();
+  if (value) {
+    return value;
   }
-  return value;
+  return DEFAULT_TEST_INIT_IMAGE;
 }
 
 type CreateChatResponseWire = {
