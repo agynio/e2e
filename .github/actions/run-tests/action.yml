@@ -172,14 +172,15 @@ runs:
           echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
         fi
 
-        if [ -z "${AGYN_AGENT_INIT_IMAGE:-}" ]; then
-          AGYN_AGENT_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:latest"
-          echo "AGYN_AGENT_INIT_IMAGE=$AGYN_AGENT_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
         if [ -z "${CODEX_INIT_IMAGE:-}" ]; then
           CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:latest"
           echo "CODEX_INIT_IMAGE=$CODEX_INIT_IMAGE" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${AGYN_AGENT_INIT_IMAGE:-}" ]; then
+          # No agynio/agent-init image exists; default to the codex init image.
+          AGYN_AGENT_INIT_IMAGE="$CODEX_INIT_IMAGE"
+          echo "AGYN_AGENT_INIT_IMAGE=$AGYN_AGENT_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
         if [ -z "${AGN_INIT_IMAGE:-}" ]; then
