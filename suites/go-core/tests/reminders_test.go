@@ -149,11 +149,7 @@ func TestRemindersDeliveryFailurePending(t *testing.T) {
 	created := createReminder(t, threadID, 0, "missing thread "+uuid.NewString())
 	t.Cleanup(func() { cancelReminderBestEffort(t, created.ID) })
 
-	time.Sleep(10 * time.Second)
-
-	reminder := getReminder(t, created.ID)
-	require.Equal(t, "pending", reminder.Status)
-	require.Nil(t, reminder.CompletedAt)
+	assertReminderStaysPending(t, created.ID, 10*time.Second)
 }
 
 func remindersAppsAddr() string {
@@ -173,9 +169,9 @@ func remindersGatewayEndpoint(t *testing.T, path string) string {
 	t.Helper()
 	trimmed := strings.TrimPrefix(path, "/")
 	if trimmed == "" {
-		return gatewayEndpoint(t, "apps/reminders")
+		return gatewayEndpoint(t, "apps/"+remindersAppSlug)
 	}
-	return gatewayEndpoint(t, "apps/reminders/"+trimmed)
+	return gatewayEndpoint(t, "apps/"+remindersAppSlug+"/"+trimmed)
 }
 
 func newRemindersRequest(t *testing.T, ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
@@ -333,8 +329,10 @@ func createThreadWithAppParticipant(
 	defer cancel()
 
 	callCtx := remindersIdentityContext(ctx, callerIdentityID)
+	orgID := gatewayOrganizationID(t)
 	resp, err := client.CreateThread(callCtx, &threadsv1.CreateThreadRequest{
 		ParticipantIds: []string{callerIdentityID, appIdentityID},
+		OrganizationId: &orgID,
 	})
 	require.NoError(t, err)
 	thread := resp.GetThread()
@@ -372,6 +370,21 @@ func pollReminderStatus(t *testing.T, reminderID, targetStatus string, timeout t
 	}
 	t.Fatalf("reminder %s did not reach status %q within %s", reminderID, targetStatus, timeout)
 	return reminderResponse{}
+}
+
+func assertReminderStaysPending(t *testing.T, reminderID string, duration time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(duration)
+	for time.Now().Before(deadline) {
+		reminder := getReminder(t, reminderID)
+		if reminder.Status != "pending" {
+			t.Fatalf("expected reminder %s to stay pending, got %q", reminderID, reminder.Status)
+		}
+		if reminder.CompletedAt != nil {
+			t.Fatalf("expected reminder %s completed_at to stay nil", reminderID)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func pollThreadMessages(
