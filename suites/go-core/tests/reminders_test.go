@@ -281,6 +281,62 @@ func cancelReminderBestEffort(t *testing.T, reminderID string) {
 	}
 }
 
+func cancelPendingRemindersBestEffort(t *testing.T, threadID string) {
+	t.Helper()
+	reminders := listRemindersBestEffort(t, threadID, "pending")
+	for _, reminder := range reminders {
+		reminderID := strings.TrimSpace(reminder.ID)
+		if reminderID == "" {
+			continue
+		}
+		cancelReminderBestEffort(t, reminderID)
+	}
+}
+
+func listRemindersBestEffort(t *testing.T, threadID, status string) []reminderResponse {
+	t.Helper()
+	payload := map[string]any{"thread_id": threadID}
+	if status != "" {
+		payload["status"] = status
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Logf("cleanup: marshal reminders list: %v", err)
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
+	defer cancel()
+
+	req, err := newRemindersRequest(t, ctx, http.MethodPost, "list-reminders", bytes.NewReader(body))
+	if err != nil {
+		t.Logf("cleanup: list reminders request: %v", err)
+		return nil
+	}
+
+	resp, err := remindersGatewayClient(t).Do(req)
+	if err != nil {
+		t.Logf("cleanup: list reminders request: %v", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Logf("cleanup: list reminders status %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+		return nil
+	}
+
+	decoder := json.NewDecoder(resp.Body)
+	var payloadResponse listRemindersResponse
+	if err := decoder.Decode(&payloadResponse); err != nil {
+		t.Logf("cleanup: decode reminders list: %v", err)
+		return nil
+	}
+
+	return payloadResponse.Reminders
+}
+
 func reminderIDs(reminders []reminderResponse) []string {
 	ids := make([]string, 0, len(reminders))
 	for _, reminder := range reminders {
