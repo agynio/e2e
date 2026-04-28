@@ -1,4 +1,4 @@
-//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || smoke)
+//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_gateway || svc_reminders || smoke)
 
 package tests
 
@@ -36,9 +36,6 @@ const (
 	tracingDiscoverTimeout = 2 * time.Minute
 	tracingSummaryTimeout  = 2 * time.Minute
 	tracingStartTimeBuffer = 30 * time.Second
-
-	testLLMEndpointCodex = "https://testllm.dev/v1/org/agynio/suite/codex/responses"
-	testLLMEndpointAgn   = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
 
 	labelManagedBy = "managed-by"
 	labelAgentID   = "agent-id"

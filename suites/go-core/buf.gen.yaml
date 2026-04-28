@@ -10,6 +10,7 @@ inputs:
   - module: buf.build/agynio/api
     paths:
       - agynio/api/agents/v1
+      - agynio/api/apps/v1
       - agynio/api/authorization/v1
       - agynio/api/files/v1
       - agynio/api/gateway/v1/agents.proto
