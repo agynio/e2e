@@ -66,10 +66,23 @@ func TestAgentExposeAddReachable(t *testing.T) {
 
 	body := fmt.Sprintf("expose-e2e-%s", uuid.NewString())
 	serveDir := "/tmp/expose-e2e"
+	serveScript := fmt.Sprintf(
+		"set -e; mkdir -p %[1]s; printf '%%s' \"$1\" > %[1]s/index.html; "+
+			"busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 & "+
+			"pid=$!; i=0; while [ \"$i\" -lt 20 ]; do "+
+			"if output=$(busybox wget -q -O - http://127.0.0.1:%[2]d/index.html); then "+
+			"if [ \"$output\" = \"$1\" ]; then exit 0; fi; fi; "+
+			"if ! kill -0 \"$pid\" 2>/dev/null; then echo \"httpd exited\"; "+
+			"cat /tmp/expose-httpd.log 2>/dev/null; exit 1; fi; "+
+			"i=$((i+1)); sleep 0.5; done; "+
+			"echo \"httpd not ready\"; cat /tmp/expose-httpd.log 2>/dev/null; exit 1",
+		serveDir,
+		exposePort,
+	)
 	serveCommand := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf("set -e; mkdir -p %s; printf '%%s' \"$1\" > %s/index.html; busybox httpd -f -p %d -h %s >/tmp/expose-httpd.log 2>&1 &", serveDir, serveDir, exposePort, serveDir),
+		serveScript,
 		"expose-httpd",
 		body,
 	}
@@ -163,7 +176,9 @@ func TestAgentExposeAddReachable(t *testing.T) {
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), exposeZitiRequestTimeout)
 		defer cleanupCancel()
-		_, _ = zitiClient.DeleteIdentity(cleanupCtx, &zitimgmtv1.DeleteIdentityRequest{ZitiIdentityId: zitiIdentityID})
+		if _, err := zitiClient.DeleteIdentity(cleanupCtx, &zitimgmtv1.DeleteIdentityRequest{ZitiIdentityId: zitiIdentityID}); err != nil {
+			t.Logf("cleanup: delete ziti identity %s: %v", zitiIdentityID, err)
+		}
 	})
 
 	zitiConfig := &ziti.Config{}
@@ -197,14 +212,15 @@ func TestAgentExposeAddReachable(t *testing.T) {
 		}
 		defer response.Body.Close()
 
-		if response.StatusCode != http.StatusOK {
-			bodyBytes, _ := io.ReadAll(response.Body)
-			return fmt.Errorf("unexpected status %d: %s", response.StatusCode, strings.TrimSpace(string(bodyBytes)))
+		bodyBytes, readErr := io.ReadAll(response.Body)
+		if readErr != nil {
+			if response.StatusCode != http.StatusOK {
+				return fmt.Errorf("unexpected status %d (read body error: %v)", response.StatusCode, readErr)
+			}
+			return fmt.Errorf("read response body: %w", readErr)
 		}
-
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			return fmt.Errorf("read response body: %w", err)
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status %d: %s", response.StatusCode, strings.TrimSpace(string(bodyBytes)))
 		}
 		responseBody := string(bodyBytes)
 		if responseBody != body {
