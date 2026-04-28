@@ -40,4 +40,4 @@ jobs:
         with:
           ref: ${{ github.sha }}
           tag: ${{ inputs.tag }}
-          include-smoke: ${{ inputs.include_smoke }}
+          include_smoke: ${{ inputs.include_smoke }}
