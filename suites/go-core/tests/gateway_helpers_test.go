@@ -30,8 +30,6 @@ const (
 	gatewayAgentInitImageEnvKey = "AGYN_AGENT_INIT_IMAGE"
 	gatewayUsersAddrEnvKey      = "USERS_ADDRESS"
 	defaultGatewayUsersAddr     = "users:50051"
-	zitiManagementAddrEnvKey    = "ZITI_MANAGEMENT_ADDRESS"
-	defaultZitiManagementAddr   = "ziti-management:50051"
 	zitiGatewayBaseURL          = "http://gateway"
 	gatewayRequestTimeout       = 30 * time.Second
 )
@@ -97,11 +95,6 @@ func gatewayAgentInitImage(t *testing.T) string {
 
 func gatewayUsersAddr() string {
 	return envOrDefault(gatewayUsersAddrEnvKey, defaultGatewayUsersAddr)
-}
-
-func zitiManagementAddr(t *testing.T) string {
-	t.Helper()
-	return envOrDefault(zitiManagementAddrEnvKey, defaultZitiManagementAddr)
 }
 
 func gatewayEndpoint(t *testing.T, path string) string {
