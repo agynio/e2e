@@ -172,31 +172,22 @@ runs:
           echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
         fi
 
-        if [ -z "${CODEX_INIT_IMAGE:-}" ]; then
-          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:latest"
-          echo "CODEX_INIT_IMAGE=$CODEX_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${AGYN_AGENT_INIT_IMAGE:-}" ]; then
-          # No agynio/agent-init image exists; default to the codex init image.
-          AGYN_AGENT_INIT_IMAGE="$CODEX_INIT_IMAGE"
-          echo "AGYN_AGENT_INIT_IMAGE=$AGYN_AGENT_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${AGN_INIT_IMAGE:-}" ]; then
-          AGN_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:latest"
-          echo "AGN_INIT_IMAGE=$AGN_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${CLAUDE_INIT_IMAGE:-}" ]; then
-          CLAUDE_INIT_IMAGE="ghcr.io/agynio/agent-init-claude:latest"
-          echo "CLAUDE_INIT_IMAGE=$CLAUDE_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${AGN_EXPOSE_INIT_IMAGE:-}" ]; then
-          AGN_EXPOSE_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:latest"
-          echo "AGN_EXPOSE_INIT_IMAGE=$AGN_EXPOSE_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
+        init_image_defaults=(
+          "AGYN_AGENT_INIT_IMAGE=ghcr.io/agynio/agent-init:latest"
+          "AGN_INIT_IMAGE=ghcr.io/agynio/agent-init-agn:latest"
+          "AGN_EXPOSE_INIT_IMAGE=ghcr.io/agynio/agent-init-agn:latest"
+          "CODEX_INIT_IMAGE=ghcr.io/agynio/agent-init-codex:latest"
+          "CLAUDE_INIT_IMAGE=ghcr.io/agynio/agent-init-claude:latest"
+        )
+        for init_entry in "${init_image_defaults[@]}"; do
+          env_name=${init_entry%%=*}
+          default_value=${init_entry#*=}
+          env_value=${!env_name:-}
+          trimmed_value=$(echo "$env_value" | xargs)
+          if [ -z "$trimmed_value" ]; then
+            echo "${env_name}=${default_value}" >> "$GITHUB_ENV"
+          fi
+        done
 
         if [ -z "${AGYN_MODEL_ID:-}" ]; then
           list_models_payload=$(cat <<EOF
