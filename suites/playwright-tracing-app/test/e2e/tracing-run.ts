@@ -13,9 +13,11 @@ import {
   createThread,
   getIdentityId,
   getTraceSummary,
+  listWorkloadsByThread,
   listSpans,
   sendThreadMessage,
 } from './gateway-api';
+import type { ListSpansResponseWire } from './gateway-api';
 
 const TEST_LLM_ENDPOINTS = {
   agn: 'https://testllm.dev/v1/org/agynio/suite/agn/responses',
@@ -46,6 +48,8 @@ const INIT_IMAGE_ENV_VARS: Record<TraceSdk, string> = {
 const TRACE_DISCOVER_TIMEOUT_MS = 2 * 60_000;
 const TRACE_SUMMARY_TIMEOUT_MS = 2 * 60_000;
 const TRACE_POLL_INTERVAL_MS = 1_000;
+const MCP_READY_TIMEOUT_MS = 90_000;
+const MCP_READY_POLL_INTERVAL_MS = 1_000;
 
 const MEMORY_MCP_COMMAND =
   `npx -y supergateway@3.4.3 --stdio "npx -y @modelcontextprotocol/server-memory@2026.1.26" --outputTransport streamableHttp --port $MCP_PORT --streamableHttpPath /mcp`;
@@ -62,6 +66,8 @@ type TraceCounts = {
   llmCount: number;
   toolCount: number;
 };
+
+type ResourceSpansWire = NonNullable<ListSpansResponseWire['resourceSpans']>[number];
 
 export type FullChainRun = {
   organizationId: string;
@@ -92,9 +98,17 @@ function resolveLlmProtocol(sdk: TraceSdk): string {
   return TEST_LLM_PROTOCOLS[sdk];
 }
 
+function resolveRunnerToken(): string | undefined {
+  const token =
+    process.env.E2E_CLUSTER_ADMIN_TOKEN?.trim() ||
+    process.env.CLUSTER_ADMIN_TOKEN?.trim() ||
+    process.env.AGYN_API_TOKEN?.trim() ||
+    '';
+  return token || undefined;
+}
+
 function buildMcpName(prefix: string): string {
-  const suffix = randomUUID().replace(/-/g, '_');
-  return `${prefix}_${suffix}`;
+  return prefix;
 }
 
 function isHex(value: string): boolean {
@@ -145,13 +159,64 @@ function extractCounts(counts: Record<string, number | string> | undefined): Tra
   };
 }
 
+function extractTraceIdFromSpans(resourceSpans: ResourceSpansWire[] | undefined): string | undefined {
+  for (const resourceSpan of resourceSpans ?? []) {
+    for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
+      for (const span of scopeSpan.spans ?? []) {
+        if (span.traceId) {
+          return decodeTraceId(span.traceId);
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+function isContainerRunning(status: string | number | undefined): boolean {
+  if (typeof status === 'number') {
+    return status === 1;
+  }
+  if (typeof status === 'string') {
+    return status.toUpperCase() === 'CONTAINER_STATUS_RUNNING' || status.toUpperCase() === 'RUNNING';
+  }
+  return false;
+}
+
+async function waitForMcpSidecarsReady(page: Page, params: {
+  threadId: string;
+  agentId: string;
+}): Promise<void> {
+  const start = Date.now();
+  const token = resolveRunnerToken();
+  while (Date.now() - start < MCP_READY_TIMEOUT_MS) {
+    const response = await listWorkloadsByThread(page, {
+      threadId: params.threadId,
+      agentId: params.agentId,
+      token,
+    });
+    const workloads = response.workloads ?? [];
+    for (const workload of workloads) {
+      const containers = workload.containers ?? [];
+      const mcpContainers = containers.filter((container) => container.name?.startsWith('mcp-'));
+      if (mcpContainers.length === 0) {
+        continue;
+      }
+      const allReady = mcpContainers.every((container) => isContainerRunning(container.status));
+      if (allReady) {
+        return;
+      }
+    }
+    await page.waitForTimeout(MCP_READY_POLL_INTERVAL_MS);
+  }
+  throw new Error(`Timed out waiting for MCP sidecars on thread ${params.threadId}.`);
+}
+
 async function waitForTraceIdByMessageId(page: Page, params: {
   organizationId: string;
   messageId: string;
   sdk: TraceSdk;
 }): Promise<string> {
   const start = Date.now();
-  let sawSpans = false;
   while (Date.now() - start < TRACE_DISCOVER_TIMEOUT_MS) {
     const response = await listSpans(page, {
       organizationId: params.organizationId,
@@ -159,26 +224,17 @@ async function waitForTraceIdByMessageId(page: Page, params: {
       pageSize: 1,
       orderBy: ListSpansOrderBy.START_TIME_DESC,
     });
-    for (const resourceSpan of response.resourceSpans ?? []) {
-      for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
-        for (const span of scopeSpan.spans ?? []) {
-          sawSpans = true;
-          if (span.traceId) {
-            return decodeTraceId(span.traceId);
-          }
-        }
-      }
+    const messageTraceId = extractTraceIdFromSpans(response.resourceSpans);
+    if (messageTraceId) {
+      return messageTraceId;
     }
     await page.waitForTimeout(TRACE_POLL_INTERVAL_MS);
   }
-  if (!sawSpans) {
-    const envVar = INIT_IMAGE_ENV_VARS[params.sdk];
-    throw new Error(
-      `ListSpans(filter: { messageId: ${params.messageId} }) returned no spans after ${TRACE_DISCOVER_TIMEOUT_MS / 1000}s. ` +
-        `Check message-id correlation and ensure the ${params.sdk} agent init image is up to date (override via ${envVar}).`,
-    );
-  }
-  throw new Error(`Timed out waiting for trace id for message ${params.messageId}.`);
+  const envVar = INIT_IMAGE_ENV_VARS[params.sdk];
+  throw new Error(
+    `ListSpans(filter: { messageId: ${params.messageId} }) returned no trace id after ${TRACE_DISCOVER_TIMEOUT_MS / 1000}s. ` +
+      `Check message-id correlation and ensure the ${params.sdk} agent init image is up to date (override via ${envVar}).`,
+  );
 }
 
 async function waitForTraceSummary(page: Page, traceId: string): Promise<void> {
@@ -189,19 +245,16 @@ async function waitForTraceSummary(page: Page, traceId: string): Promise<void> {
     const summary = await getTraceSummary(page, encodeTraceId(traceId));
     lastStatus = summary.status;
     lastCounts = extractCounts(summary.countsByName);
-    if (
-      isTraceCompleted(summary.status) &&
-      lastCounts.messageCount >= 1 &&
-      lastCounts.llmCount >= 2 &&
-      lastCounts.toolCount >= 2
-    ) {
-      return;
+    if (isTraceCompleted(summary.status)) {
+      if (lastCounts.messageCount >= 1 && lastCounts.llmCount >= 2 && lastCounts.toolCount >= 2) {
+        return;
+      }
     }
     await page.waitForTimeout(TRACE_POLL_INTERVAL_MS);
   }
   const countsDescription = lastCounts
     ? `message=${lastCounts.messageCount}, llm=${lastCounts.llmCount}, tool=${lastCounts.toolCount}`
-    : 'unavailable';
+    : 'message=0, llm=0, tool=0';
   throw new Error(`Timed out waiting for trace summary. status=${String(lastStatus)} counts=${countsDescription}`);
 }
 
@@ -271,6 +324,8 @@ export async function createFullChainRun(page: Page, options: FullChainRunOption
     senderId: identityId,
     body: MCP_TOOLS_PROMPT,
   });
+
+  await waitForMcpSidecarsReady(page, { threadId, agentId });
 
   const runId = await waitForTraceIdByMessageId(page, { organizationId, messageId, sdk });
   await waitForTraceSummary(page, runId);
