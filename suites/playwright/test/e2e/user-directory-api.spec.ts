@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { ensureMockAuthEmailStrategy, seedOidcSessionViaMockAuth } from './sign-in-helper';
+import { signInViaOidc } from './sign-in-helper';
 import { readOidcSession } from './oidc-helpers';
 
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
@@ -25,7 +25,7 @@ function requireAdminToken(): string {
 }
 
 async function getOidcAccessToken(page: Page, email: string): Promise<string> {
-  await seedOidcSessionViaMockAuth(page, { email, force: true });
+  await signInViaOidc(page, email, { force: true, ensureAdmin: false });
   const session = await readOidcSession(page);
   const token = session?.accessToken;
   if (!token) {
@@ -241,10 +241,6 @@ async function createThreadByNickname(
 }
 
 test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
-  test.beforeEach(async ({ request }) => {
-    await ensureMockAuthEmailStrategy(request);
-  });
-
   test('non-admin SearchUsers redacts profile fields', async ({ request, page }) => {
     const adminToken = requireAdminToken();
     const suffix = randomSuffix();

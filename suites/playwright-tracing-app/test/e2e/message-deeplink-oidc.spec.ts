@@ -1,25 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { readOidcSession } from './oidc-helpers';
-import { clearAuthState, completeMockAuthLogin, ensureMockAuthEmailStrategy } from './sign-in-helper';
+import { clearAuthState, completeOidcLogin, signInViaOidc } from './sign-in-helper';
 import { createFullChainRun } from './tracing-run';
 
 test.describe('message deep link oidc callback', { tag: ['@svc_tracing_app', '@svc_agents_orchestrator'] }, () => {
-  test.beforeAll(async ({ playwright }) => {
-    const request = await playwright.request.newContext();
-    try {
-      await ensureMockAuthEmailStrategy(request);
-    } finally {
-      await request.dispose();
-    }
-  });
-
   test('returns to deep link after login', async ({ page }) => {
     test.setTimeout(8 * 60_000);
 
-    await page.goto('/');
-    const initialCallback = page.waitForURL(/\/callback/, { timeout: 60000 });
-    await completeMockAuthLogin(page);
-    await initialCallback;
+    await signInViaOidc(page);
 
     await expect
       .poll(async () => {
@@ -35,9 +23,11 @@ test.describe('message deep link oidc callback', { tag: ['@svc_tracing_app', '@s
     const messageUrl = `/message/${run.messageId}?orgId=${run.organizationId}`;
     await page.goto(messageUrl);
 
-    const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 });
-    await completeMockAuthLogin(page);
-    await callbackPromise;
+    const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch(() => null);
+    const completed = await completeOidcLogin(page);
+    if (completed) {
+      await callbackPromise;
+    }
 
     const messageUrlPattern = new RegExp(`/message/${run.messageId}\\?orgId=${run.organizationId}$`);
     const runUrlPattern = new RegExp(`/${run.organizationId}/runs/${run.runId}(\\?.*)?$`);
