@@ -119,7 +119,12 @@ export async function signInViaOidc(page: Page, email?: string, options: SignInO
     appReady
       .waitFor({ timeout: 10000 })
       .then(() => 'app' as const)
-      .catch(() => null),
+      .catch((error) => {
+        if (isTimeoutError(error)) {
+          return null;
+        }
+        throw error;
+      }),
     waitForLoginForm(page, 10000).then((ready) => (ready ? ('login' as const) : null)),
   ]);
 
@@ -137,7 +142,12 @@ export async function signInViaOidc(page: Page, email?: string, options: SignInO
     initialState = 'login';
   }
 
-  const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch(() => null);
+  const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch((error) => {
+    if (isTimeoutError(error)) {
+      return null;
+    }
+    throw error;
+  });
   const completed = await completeOidcLogin(page, { email: expectedEmail, onLoginPage: options.onLoginPage });
   if (completed) {
     await callbackPromise;

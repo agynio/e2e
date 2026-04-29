@@ -19,6 +19,10 @@ const CLAUDE_TEST_LLM_ENDPOINT =
 const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:latest';
 const CLAUDE_PROTOCOL = 'PROTOCOL_ANTHROPIC_MESSAGES';
 
+function isTimeoutError(error: unknown): error is Error {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
 type TraceScenario = {
   name: string;
   endpoint: string;
@@ -78,7 +82,12 @@ async function openTraceFromChat(
 
   await tracePage.waitForLoadState('domcontentloaded');
 
-  const callbackPromise = tracePage.waitForURL(/\/callback/, { timeout: 60000 }).catch(() => null);
+  const callbackPromise = tracePage.waitForURL(/\/callback/, { timeout: 60000 }).catch((error) => {
+    if (isTimeoutError(error)) {
+      return null;
+    }
+    throw error;
+  });
   const completed = await completeOidcLogin(tracePage, { timeoutMs: 10000 });
   if (completed) {
     await callbackPromise;

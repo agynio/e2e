@@ -17,14 +17,6 @@ type BrowserLoginOptions = {
   timeoutMs?: number;
 };
 
-function resolveBaseUrl(): string {
-  const baseUrl = process.env.E2E_BASE_URL;
-  if (!baseUrl) {
-    throw new Error('E2E_BASE_URL is required to run e2e tests.');
-  }
-  return baseUrl;
-}
-
 function isTimeoutError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'TimeoutError';
 }
@@ -53,23 +45,11 @@ async function isLocatorVisible(locator: Locator, timeout: number): Promise<bool
 }
 
 export async function clearAuthState(page: Page): Promise<void> {
-  await page.context().clearCookies();
-  const expectedOrigin = new URL(resolveBaseUrl()).origin;
-  const clearedKey = 'e2e:oidc-cleared';
-  const clearStorage = ({ origin, key }: { origin: string; key: string }) => {
-    if (window.location.origin !== origin) return;
-    if (window.sessionStorage.getItem(key)) return;
+  await page.evaluate(() => {
     window.sessionStorage.clear();
     window.localStorage.clear();
-    window.sessionStorage.setItem(key, 'true');
-  };
-
-  await page.addInitScript(clearStorage, { origin: expectedOrigin, key: clearedKey });
-
-  const currentOrigin = new URL(page.url()).origin;
-  if (currentOrigin === expectedOrigin) {
-    await page.evaluate(clearStorage, { origin: expectedOrigin, key: clearedKey });
-  }
+  });
+  await page.context().clearCookies();
 }
 
 async function waitForLoginForm(page: Page, timeoutMs: number): Promise<boolean> {
@@ -150,7 +130,12 @@ export async function signInViaOidc(page: Page, options: SignInOptions = {}): Pr
   }
 
   if (loginReady) {
-    const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch(() => null);
+    const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch((error) => {
+      if (isTimeoutError(error)) {
+        return null;
+      }
+      throw error;
+    });
     const completed = await completeOidcLogin(page, { email: expectedEmail, onLoginPage: options.onLoginPage });
     if (completed) {
       await callbackPromise;

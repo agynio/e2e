@@ -17,14 +17,6 @@ type BrowserLoginOptions = {
   timeoutMs?: number;
 };
 
-function resolveBaseUrl(): string {
-  const baseUrl = process.env.E2E_BASE_URL;
-  if (!baseUrl) {
-    throw new Error('E2E_BASE_URL is required to run e2e tests.');
-  }
-  return baseUrl;
-}
-
 function isTimeoutError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'TimeoutError';
 }
@@ -53,22 +45,22 @@ async function isLocatorVisible(locator: Locator, timeout: number): Promise<bool
 }
 
 async function clearAuthState(page: Page): Promise<void> {
-  await page.context().clearCookies();
-  const expectedOrigin = new URL(resolveBaseUrl()).origin;
-  const clearedKey = 'e2e:oidc-cleared';
-  const clearStorage = ({ origin, key }: { origin: string; key: string }) => {
-    if (window.location.origin !== origin) return;
-    if (window.sessionStorage.getItem(key)) return;
+  await page.evaluate(() => {
     window.sessionStorage.clear();
     window.localStorage.clear();
-    window.sessionStorage.setItem(key, 'true');
-  };
+  });
+  await page.context().clearCookies();
+}
 
-  await page.addInitScript(clearStorage, { origin: expectedOrigin, key: clearedKey });
-
-  const currentOrigin = new URL(page.url()).origin;
-  if (currentOrigin === expectedOrigin) {
-    await page.evaluate(clearStorage, { origin: expectedOrigin, key: clearedKey });
+async function waitForAppReady(appReady: Locator, timeoutMs: number): Promise<'app' | null> {
+  try {
+    await appReady.waitFor({ timeout: timeoutMs });
+    return 'app';
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return null;
+    }
+    throw error;
   }
 }
 
@@ -150,10 +142,7 @@ export async function signInViaOidc(page: Page, email?: string, options: SignInO
   const appReady = pageTitle.or(sidebarNav).or(noAccessState);
 
   let initialState: 'app' | 'login' | null = await Promise.race([
-    appReady
-      .waitFor({ timeout: 10000 })
-      .then(() => 'app' as const)
-      .catch(() => null),
+    waitForAppReady(appReady, 10000),
     waitForLoginForm(page, 10000).then((ready) => (ready ? ('login' as const) : null)),
   ]);
 
@@ -165,7 +154,12 @@ export async function signInViaOidc(page: Page, email?: string, options: SignInO
   }
 
   if (initialState === 'login') {
-    const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch(() => null);
+    const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch((error) => {
+      if (isTimeoutError(error)) {
+        return null;
+      }
+      throw error;
+    });
     const completed = await completeOidcLogin(page, { email: expectedEmail, onLoginPage: options.onLoginPage });
     if (completed) {
       await callbackPromise;
