@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Browser } from '@playwright/test';
 import { signInViaOidc } from './sign-in-helper';
 import { readOidcSession } from './oidc-helpers';
 
@@ -24,14 +24,20 @@ function requireAdminToken(): string {
   return token;
 }
 
-async function getOidcAccessToken(page: Page, email: string): Promise<string> {
-  await signInViaOidc(page, email, { force: true, ensureAdmin: false });
-  const session = await readOidcSession(page);
-  const token = session?.accessToken;
-  if (!token) {
-    throw new Error(`OIDC access token missing for ${email}.`);
+async function getOidcAccessToken(browser: Browser, email: string): Promise<string> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await signInViaOidc(page, email, { ensureAdmin: false });
+    const session = await readOidcSession(page);
+    const token = session?.accessToken;
+    if (!token) {
+      throw new Error(`OIDC access token missing for ${email}.`);
+    }
+    return token;
+  } finally {
+    await context.close();
   }
-  return token;
 }
 
 type UserDirectoryEntry = {
@@ -241,7 +247,7 @@ async function createThreadByNickname(
 }
 
 test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
-  test('non-admin SearchUsers redacts profile fields', async ({ request, page }) => {
+  test('non-admin SearchUsers redacts profile fields', async ({ request, browser }) => {
     const adminToken = requireAdminToken();
     const suffix = randomSuffix();
     const targetUsername = `e2e-search-${suffix}`;
@@ -260,7 +266,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
       username: callerUsername,
     });
 
-    const callerToken = await getOidcAccessToken(page, callerEmail);
+    const callerToken = await getOidcAccessToken(browser, callerEmail);
     const me = await getMe(request, callerToken);
     expect(isClusterAdminRole(me.clusterRole)).toBe(false);
     const results = await searchUsers(request, callerToken, { prefix: targetUsername });
@@ -272,7 +278,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
     expect(entry.photoUrl ?? '').toBe('https://example.com/photo.png');
   });
 
-  test('invite by username seeds org nickname on accept', async ({ request, page }) => {
+  test('invite by username seeds org nickname on accept', async ({ request, browser }) => {
     const adminToken = requireAdminToken();
     const suffix = randomSuffix();
     const inviterUsername = `e2e-inviter-${suffix}`;
@@ -291,7 +297,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
       name: 'Invitee User',
     });
 
-    const inviterToken = await getOidcAccessToken(page, inviterEmail);
+    const inviterToken = await getOidcAccessToken(browser, inviterEmail);
     const organizationId = await createOrganization(request, inviterToken, `e2e-org-${suffix}`);
     const results = await searchUsers(request, inviterToken, { prefix: inviteeUsername });
     expect(results).toHaveLength(1);
@@ -307,7 +313,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
     });
     expect(isPendingMembershipStatus(membership.status)).toBe(true);
 
-    const inviteeToken = await getOidcAccessToken(page, inviteeEmail);
+    const inviteeToken = await getOidcAccessToken(browser, inviteeEmail);
     await acceptMembership(request, inviteeToken, { membershipId: membership.id });
 
     const thread = await createThreadByNickname(request, inviterToken, {
@@ -318,7 +324,7 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
     expect(inviterId).not.toBe(inviteeId);
   });
 
-  test('renaming username does not change existing org nickname', async ({ request, page }) => {
+  test('renaming username does not change existing org nickname', async ({ request, browser }) => {
     const adminToken = requireAdminToken();
     const suffix = randomSuffix();
     const inviterUsername = `e2e-inviter-rename-${suffix}`;
@@ -338,14 +344,14 @@ test.describe('user-directory', { tag: ['@svc_console', '@issue140'] }, () => {
       name: 'Rename User',
     });
 
-    const inviterToken = await getOidcAccessToken(page, inviterEmail);
+    const inviterToken = await getOidcAccessToken(browser, inviterEmail);
     const organizationId = await createOrganization(request, inviterToken, `e2e-org-rename-${suffix}`);
     const membership = await createMembership(request, inviterToken, {
       organizationId,
       identityId: inviteeId,
     });
     expect(isPendingMembershipStatus(membership.status)).toBe(true);
-    const inviteeToken = await getOidcAccessToken(page, inviteeEmail);
+    const inviteeToken = await getOidcAccessToken(browser, inviteeEmail);
     await acceptMembership(request, inviteeToken, { membershipId: membership.id });
 
     await updateUsername(request, inviteeToken, { username: newUsername });
