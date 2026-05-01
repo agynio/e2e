@@ -12,18 +12,20 @@ test.describe('workloads-layout', { tag: ['@svc_console', '@svc_gateway', '@smok
     await header.scrollIntoViewIfNeeded();
 
     const agentHeader = header.getByRole('button', { name: 'Agent' });
-    const durationHeader = header.getByRole('button', { name: 'Duration' });
+    const threadHeader = header.getByRole('button', { name: 'Thread ID' });
+    const statusHeader = header.getByRole('button', { name: 'Status' });
     await expect(agentHeader).toBeVisible();
-    await expect(durationHeader).toBeVisible();
+    await expect(threadHeader).toBeVisible();
+    await expect(statusHeader).toBeVisible();
 
     const agentBox = await agentHeader.boundingBox();
-    const durationBox = await durationHeader.boundingBox();
-    if (!agentBox || !durationBox) {
+    const statusBox = await statusHeader.boundingBox();
+    if (!agentBox || !statusBox) {
       throw new Error('Workloads header bounding boxes missing.');
     }
 
-    const rowOffset = Math.abs(agentBox.y - durationBox.y);
-    expect(rowOffset).toBeLessThan(8);
-    expect(durationBox.x).toBeGreaterThan(agentBox.x + 150);
+    const rowOffset = Math.abs(agentBox.y - statusBox.y);
+    expect(rowOffset).toBeLessThan(24);
+    expect(statusBox.x).toBeGreaterThan(agentBox.x + 120);
   });
 });

@@ -29,12 +29,13 @@ test.describe('organization-threads-smoke', {
     await sendThreadMessage(page, { threadId, senderId: identityId, body: 'Smoke thread message.' });
 
     const threadsLoaded = page.waitForResponse(
-      (resp) => resp.url().includes('ListThreads') && resp.status() === 200,
+      (resp) => resp.url().includes('ListOrganizationThreads'),
       { timeout: 20000 },
     );
 
     await page.goto(`/organizations/${organizationId}/threads`);
-    await threadsLoaded;
+    const threadsResponse = await threadsLoaded;
+    expect(threadsResponse.status()).toBe(200);
     await expect(page.getByTestId('organization-threads-table')).toBeVisible({ timeout: 20000 });
     const rows = page.getByTestId('organization-thread-row');
     const matchingRow = rows.filter({ hasText: threadId });
