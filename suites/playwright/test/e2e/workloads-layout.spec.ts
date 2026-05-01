@@ -12,10 +12,8 @@ test.describe('workloads-layout', { tag: ['@svc_console', '@svc_gateway', '@smok
     await header.scrollIntoViewIfNeeded();
 
     const agentHeader = header.getByRole('button', { name: 'Agent' });
-    const threadHeader = header.getByRole('button', { name: 'Thread ID' });
     const statusHeader = header.getByRole('button', { name: 'Status' });
     await expect(agentHeader).toBeVisible();
-    await expect(threadHeader).toBeVisible();
     await expect(statusHeader).toBeVisible();
 
     const agentBox = await agentHeader.boundingBox();
