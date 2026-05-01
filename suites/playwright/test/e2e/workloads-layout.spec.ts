@@ -1,32 +1,29 @@
 import { test, expect } from './fixtures';
-import { registerRunner } from './console-api';
+import { createOrganization, setSelectedOrganization } from './console-api';
 
 test.describe('workloads-layout', { tag: ['@svc_console', '@svc_gateway', '@smoke'] }, () => {
   test('workloads header lays out across columns', async ({ page }) => {
-    const runnerName = `e2e-workloads-layout-${Date.now()}`;
-    const runner = await registerRunner(page, { name: runnerName, labels: { scope: 'cluster' } });
-    const runnerId = runner.meta?.id;
-    if (!runnerId) {
-      throw new Error('RegisterRunner response missing runner id for workloads layout test.');
-    }
+    const organizationId = await createOrganization(page, `e2e-workloads-layout-${Date.now()}`);
+    await setSelectedOrganization(page, organizationId);
 
-    await page.goto(`/runners/${runnerId}`);
-    const header = page.getByTestId('runner-workloads-header');
+    await page.goto(`/organizations/${organizationId}/activity/workloads`);
+    const header = page.getByTestId('organization-workloads-header');
     await expect(header).toBeVisible({ timeout: 15000 });
+    await header.scrollIntoViewIfNeeded();
 
-    const agentHeader = header.getByText('Agent', { exact: true });
-    const actionHeader = header.getByText('Action', { exact: true });
+    const agentHeader = header.getByRole('button', { name: 'Agent' });
+    const durationHeader = header.getByRole('button', { name: 'Duration' });
     await expect(agentHeader).toBeVisible();
-    await expect(actionHeader).toBeVisible();
+    await expect(durationHeader).toBeVisible();
 
     const agentBox = await agentHeader.boundingBox();
-    const actionBox = await actionHeader.boundingBox();
-    if (!agentBox || !actionBox) {
+    const durationBox = await durationHeader.boundingBox();
+    if (!agentBox || !durationBox) {
       throw new Error('Workloads header bounding boxes missing.');
     }
 
-    const rowOffset = Math.abs(agentBox.y - actionBox.y);
-    expect(rowOffset).toBeLessThan(4);
-    expect(actionBox.x).toBeGreaterThan(agentBox.x + 100);
+    const rowOffset = Math.abs(agentBox.y - durationBox.y);
+    expect(rowOffset).toBeLessThan(8);
+    expect(durationBox.x).toBeGreaterThan(agentBox.x + 150);
   });
 });
