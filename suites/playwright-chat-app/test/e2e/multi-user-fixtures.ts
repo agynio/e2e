@@ -1,6 +1,6 @@
 import type { Browser, Page } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
-import { signInViaMockAuth } from './sign-in-helper';
+import { signInViaOidc } from './sign-in-helper';
 
 const USER_A_EMAIL = 'e2e-user-a@agyn.test';
 const USER_B_EMAIL = 'e2e-user-b@agyn.test';
@@ -19,7 +19,7 @@ async function createUserContext(browser: Browser, email: string) {
   page.on('requestfailed', (request) => {
     console.log(`[request-failed] ${request.url()} — ${request.failure()?.errorText}`);
   });
-  await signInViaMockAuth(page, email);
+  await signInViaOidc(page, email);
   return { page, context };
 }
 

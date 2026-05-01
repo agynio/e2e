@@ -1,33 +1,17 @@
 import type { Page } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
-import { ensureMockAuthEmailStrategy, signInViaMockAuth } from './sign-in-helper';
+import { signInViaOidc } from './sign-in-helper';
 
 export { expect };
 
 type TestFixtures = {};
 
-type WorkerFixtures = {
-  mockAuthReady: void;
-};
-
 async function signInAndLoad(page: Page) {
-  await signInViaMockAuth(page);
+  await signInViaOidc(page);
 }
 
-export const test = base.extend<TestFixtures, WorkerFixtures>({
-  mockAuthReady: [
-    async ({ playwright }, use) => {
-      const request = await playwright.request.newContext();
-      try {
-        await ensureMockAuthEmailStrategy(request);
-        await use();
-      } finally {
-        await request.dispose();
-      }
-    },
-    { scope: 'worker' },
-  ],
-  page: async ({ page, mockAuthReady: _mockAuthReady }, runPage) => {
+export const test = base.extend<TestFixtures>({
+  page: async ({ page }, runPage) => {
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
         console.log('[browser-error]', msg.text());

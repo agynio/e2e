@@ -390,6 +390,10 @@ type CreateAgentOptions = {
 type SetupTestAgentOptions = {
   endpoint: string;
   initImage?: string;
+  protocol?: string;
+  remoteName?: string;
+  token?: string;
+  authMethod?: string;
 };
 
 type CreateTestModelOptions = {
@@ -473,6 +477,10 @@ export async function setupTestAgent(
     organizationId,
     endpoint: opts.endpoint,
     namePrefix: 'e2e-model',
+    protocol: opts.protocol,
+    remoteName: opts.remoteName,
+    token: opts.token,
+    authMethod: opts.authMethod,
   });
 
   const agentName = `e2e-codex-agent-${now}`;

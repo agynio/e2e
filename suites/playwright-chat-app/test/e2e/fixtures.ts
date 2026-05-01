@@ -1,10 +1,10 @@
 import type { Page } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
-import { signInViaMockAuth } from './sign-in-helper';
+import { signInViaOidc } from './sign-in-helper';
 export { expect };
 
 async function signInAndLoad(page: Page) {
-  await signInViaMockAuth(page);
+  await signInViaOidc(page);
 }
 
 export const test = base.extend({

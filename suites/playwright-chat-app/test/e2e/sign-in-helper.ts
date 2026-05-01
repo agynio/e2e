@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 const defaultEmail = 'e2e-tester@agyn.test';
@@ -8,6 +8,39 @@ type SignInOptions = {
   force?: boolean;
 };
 
+type BrowserLoginOptions = {
+  onLoginPage?: (page: Page) => Promise<void>;
+  email?: string;
+  timeoutMs?: number;
+};
+
+function isTimeoutError(error: unknown): error is Error {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
+async function waitForLocator(locator: Locator, timeout: number): Promise<boolean> {
+  try {
+    await locator.waitFor({ timeout });
+    return true;
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function isLocatorVisible(locator: Locator, timeout: number): Promise<boolean> {
+  try {
+    return await locator.isVisible({ timeout });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function clearAuthState(page: Page): Promise<void> {
   await page.evaluate(() => {
     window.sessionStorage.clear();
@@ -16,11 +49,59 @@ async function clearAuthState(page: Page): Promise<void> {
   await page.context().clearCookies();
 }
 
-export async function signInViaMockAuth(
+async function waitForLoginForm(page: Page, timeoutMs: number): Promise<boolean> {
+  const loginHeading = page.getByRole('heading', { level: 1, name: /Log in to/i });
+  const emailInput = page.getByTestId('login-email-input');
+  const usernameInput = page.getByTestId('login-username-input');
+  return Promise.race([
+    waitForLocator(loginHeading, timeoutMs),
+    waitForLocator(emailInput, timeoutMs),
+    waitForLocator(usernameInput, timeoutMs),
+  ]);
+}
+
+async function fillLoginForm(
   page: Page,
-  email?: string,
-  options: SignInOptions = {},
-): Promise<boolean> {
+  expectedEmail: string,
+  onLoginPage?: (page: Page) => Promise<void>,
+): Promise<void> {
+  if (onLoginPage) {
+    await onLoginPage(page);
+  }
+
+  const strategyTabs = page.getByTestId('login-strategy-tabs');
+  if (await isLocatorVisible(strategyTabs, 2000)) {
+    const emailTab = strategyTabs.getByRole('tab', { name: 'Email' });
+    if (await isLocatorVisible(emailTab, 2000)) {
+      await emailTab.click();
+    }
+  }
+
+  const emailInput = page.getByTestId('login-email-input');
+  if ((await emailInput.count()) > 0) {
+    await expect(emailInput).toBeVisible({ timeout: 5000 });
+    await emailInput.fill(expectedEmail);
+  } else {
+    const usernameInput = page.getByTestId('login-username-input');
+    await expect(usernameInput).toBeVisible({ timeout: 5000 });
+    await usernameInput.fill(expectedEmail);
+  }
+
+  await page.getByRole('button', { name: 'Continue' }).click();
+}
+
+export async function completeOidcLogin(page: Page, options: BrowserLoginOptions = {}): Promise<boolean> {
+  const expectedEmail = options.email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+  const timeoutMs = options.timeoutMs ?? 30000;
+  const loginReady = await waitForLoginForm(page, timeoutMs);
+  if (!loginReady) {
+    return false;
+  }
+  await fillLoginForm(page, expectedEmail, options.onLoginPage);
+  return true;
+}
+
+export async function signInViaOidc(page: Page, email?: string, options: SignInOptions = {}): Promise<boolean> {
   const expectedEmail = email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
   const forceLogin = options.force ?? false;
 
@@ -30,54 +111,49 @@ export async function signInViaMockAuth(
     await page.goto('/');
   }
 
-  const loginUrlPattern = /mockauth\.dev\/r\/.*\/oidc/;
   const chatList = page.getByTestId('chat-list');
   const noOrganizationsScreen = page.getByTestId('no-organizations-screen');
   const appReady = chatList.or(noOrganizationsScreen);
 
-  const initialRoute = await Promise.race([
-    page
-      .waitForURL(loginUrlPattern, { timeout: 10000 })
-      .then(() => 'login')
-      .catch(() => null),
+  let initialState: 'app' | 'login' | null = await Promise.race([
     appReady
       .waitFor({ timeout: 10000 })
-      .then(() => 'app')
-      .catch(() => null),
+      .then(() => 'app' as const)
+      .catch((error) => {
+        if (isTimeoutError(error)) {
+          return null;
+        }
+        throw error;
+      }),
+    waitForLoginForm(page, 10000).then((ready) => (ready ? ('login' as const) : null)),
   ]);
 
-  if (initialRoute === 'app' && !forceLogin) {
+  if (initialState === 'app' && !forceLogin) {
     await expect(appReady).toBeVisible({ timeout: 30000 });
     return false;
   }
 
-  if (!initialRoute || (initialRoute === 'app' && forceLogin)) {
-    const loginReached = await page
-      .waitForURL(loginUrlPattern, { timeout: 15000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!loginReached) {
+  if (initialState !== 'login') {
+    const loginReady = await waitForLoginForm(page, 15000);
+    if (!loginReady) {
       await expect(appReady).toBeVisible({ timeout: 30000 });
       return false;
     }
+    initialState = 'login';
   }
 
-  if (options.onLoginPage) {
-    await options.onLoginPage(page);
+  const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch((error) => {
+    if (isTimeoutError(error)) {
+      return null;
+    }
+    throw error;
+  });
+  const completed = await completeOidcLogin(page, { email: expectedEmail, onLoginPage: options.onLoginPage });
+  if (completed) {
+    await callbackPromise;
   }
 
-  const strategyTabs = page.getByTestId('login-strategy-tabs');
-  if (await strategyTabs.isVisible()) {
-    await strategyTabs.getByRole('tab', { name: 'Email' }).click();
-  }
-
-  const emailInput = page.getByTestId('login-email-input');
-  await expect(emailInput).toBeVisible();
-  await emailInput.fill(expectedEmail);
-
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await page.waitForURL(/\/chats/);
+  await page.waitForURL(/\/chats/, { timeout: 60000 });
   await expect(appReady).toBeVisible({ timeout: 30000 });
   return true;
 }
