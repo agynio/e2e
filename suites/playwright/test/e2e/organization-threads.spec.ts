@@ -9,7 +9,7 @@ import {
   setSelectedOrganization,
 } from './console-api';
 
-test.describe('organization-threads', { tag: ['@svc_console'] }, () => {
+test.describe('organization-threads', { tag: ['@svc_console', '@svc_gateway', '@svc_threads', '@svc_identity'] }, () => {
   test('org threads list and detail pagination', async ({ page }) => {
     const organizationId = await createOrganization(page, `e2e-org-threads-${Date.now()}`);
     await setSelectedOrganization(page, organizationId);
