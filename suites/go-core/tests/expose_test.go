@@ -29,11 +29,16 @@ import (
 
 const (
 	exposeTestTimeout         = 8 * time.Minute
+	exposeCommandTimeout      = 2 * time.Minute
+	exposeListTimeout         = 30 * time.Second
+	exposeListEmptyTimeout    = 60 * time.Second
 	exposeReachabilityTimeout = 90 * time.Second
+	exposeUnreachableTimeout  = 90 * time.Second
 	exposeRequestTimeout      = 15 * time.Second
 	exposeZitiRequestTimeout  = 30 * time.Second
 	exposePort                = 3000
 	exposeExpectedResponse    = "Hi! How are you?"
+	exposeStatusActive        = "active"
 )
 
 type exposeWorkloadFixture struct {
@@ -42,7 +47,7 @@ type exposeWorkloadFixture struct {
 	containerName string
 }
 
-type exposeAddResponse struct {
+type exposeEntry struct {
 	ID     string `json:"id"`
 	Port   int    `json:"port"`
 	URL    string `json:"url"`
@@ -52,184 +57,102 @@ type exposeAddResponse struct {
 func TestAgentExposeListExec(t *testing.T) {
 	fixture := setupExposeTestWorkload(t)
 
-	execCtx, execCancel := context.WithTimeout(fixture.ctx, 2*time.Minute)
+	execCtx, execCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
 	defer execCancel()
 
-	result := execPodCommand(t, execCtx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "expose", "list"})
-	if result.exitCode != 0 {
-		t.Fatalf("expected expose list exit code 0, got %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
+	if _, err := execExposeList(t, execCtx, fixture); err != nil {
+		t.Fatalf("expose list: %v", err)
 	}
 }
 
-func TestAgentExposeAddReachable(t *testing.T) {
+func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
 	fixture := setupExposeTestWorkload(t)
 
+	listCtx, listCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
+	defer listCancel()
+	entries, err := execExposeList(t, listCtx, fixture)
+	if err != nil {
+		t.Fatalf("baseline expose list: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("expected empty expose list, got %d", len(entries))
+	}
+
 	body := fmt.Sprintf("expose-e2e-%s", uuid.NewString())
-	serveDir := "/tmp/expose-e2e"
-	serveScript := fmt.Sprintf(
-		"set -e; mkdir -p %[1]s; printf '%%s' \"$1\" > %[1]s/index.html; "+
-			"busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 & "+
-			"pid=$!; i=0; while [ \"$i\" -lt 20 ]; do "+
-			"if output=$(busybox wget -q -O - http://127.0.0.1:%[2]d/index.html); then "+
-			"if [ \"$output\" = \"$1\" ]; then exit 0; fi; fi; "+
-			"if ! kill -0 \"$pid\" 2>/dev/null; then echo \"httpd exited\"; "+
-			"cat /tmp/expose-httpd.log 2>/dev/null; exit 1; fi; "+
-			"i=$((i+1)); sleep 0.5; done; "+
-			"echo \"httpd not ready\"; cat /tmp/expose-httpd.log 2>/dev/null; exit 1",
-		serveDir,
-		exposePort,
-	)
-	serveCommand := []string{
-		"sh",
-		"-c",
-		serveScript,
-		"expose-httpd",
-		body,
-	}
-
-	serveCtx, serveCancel := context.WithTimeout(fixture.ctx, 2*time.Minute)
+	serveCtx, serveCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
 	defer serveCancel()
-	serveResult := execPodCommand(t, serveCtx, workloadNamespace(t), fixture.podName, fixture.containerName, serveCommand)
-	if serveResult.exitCode != 0 {
-		t.Fatalf("start http server exit code %d stdout=%q stderr=%q", serveResult.exitCode, serveResult.stdout, serveResult.stderr)
+	if err := startExposeHTTPServer(t, serveCtx, fixture, body); err != nil {
+		t.Fatalf("start http server: %v", err)
 	}
 
-	addCtx, addCancel := context.WithTimeout(fixture.ctx, 2*time.Minute)
+	addCtx, addCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
 	defer addCancel()
-	addResult := execPodCommand(t, addCtx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "--output", "json", "expose", "add", fmt.Sprintf("%d", exposePort)})
-	if addResult.exitCode != 0 {
-		t.Fatalf("expose add exit code %d stdout=%q stderr=%q", addResult.exitCode, addResult.stdout, addResult.stderr)
+	addEntry, err := execExposeAdd(t, addCtx, fixture, exposePort)
+	if err != nil {
+		t.Fatalf("expose add: %v", err)
 	}
-
-	addResponse := parseExposeAddResponse(t, addResult.stdout)
-	if addResponse.ID == "" {
+	if addEntry.ID == "" {
 		t.Fatal("expose add missing id")
 	}
-	if addResponse.Port != exposePort {
-		t.Fatalf("expose add port mismatch: got %d want %d", addResponse.Port, exposePort)
+	if addEntry.Port != exposePort {
+		t.Fatalf("expose add port mismatch: got %d want %d", addEntry.Port, exposePort)
 	}
-	expectedURL := fmt.Sprintf("http://exposed-%s.ziti:%d", addResponse.ID, exposePort)
-	if addResponse.URL != expectedURL {
-		t.Fatalf("expose add url mismatch: got %q want %q", addResponse.URL, expectedURL)
+	expectedURL := fmt.Sprintf("http://exposed-%s.ziti:%d", addEntry.ID, exposePort)
+	if addEntry.URL != expectedURL {
+		t.Fatalf("expose add url mismatch: got %q want %q", addEntry.URL, expectedURL)
 	}
-	if addResponse.Status == "" {
-		t.Fatal("expose add status missing")
+	if addEntry.Status != exposeStatusActive {
+		t.Fatalf("expose add status mismatch: got %q want %q", addEntry.Status, exposeStatusActive)
 	}
 
 	t.Cleanup(func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), exposeCommandTimeout)
 		defer cleanupCancel()
-		removeResult := execPodCommand(t, cleanupCtx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "expose", "remove", fmt.Sprintf("%d", exposePort)})
-		if removeResult.exitCode != 0 {
-			t.Logf("cleanup: expose remove exit code %d stdout=%q stderr=%q", removeResult.exitCode, removeResult.stdout, removeResult.stderr)
+		if err := execExposeRemove(t, cleanupCtx, fixture, exposePort); err != nil {
+			t.Logf("cleanup: expose remove: %v", err)
 		}
 	})
 
-	parsedURL, err := url.Parse(addResponse.URL)
+	listPollCtx, listPollCancel := context.WithTimeout(fixture.ctx, exposeListTimeout)
+	defer listPollCancel()
+	listedEntry, err := waitForExposeListed(t, listPollCtx, fixture, addEntry.ID)
 	if err != nil {
-		t.Fatalf("parse expose url: %v", err)
+		t.Fatalf("wait for expose list entry: %v", err)
 	}
-	if parsedURL.Scheme != "http" {
-		t.Fatalf("expected expose url scheme http, got %q", parsedURL.Scheme)
+	if listedEntry.Port != exposePort {
+		t.Fatalf("expose list port mismatch: got %d want %d", listedEntry.Port, exposePort)
 	}
-	if parsedURL.Port() != fmt.Sprintf("%d", exposePort) {
-		t.Fatalf("expected expose url port %d, got %q", exposePort, parsedURL.Port())
-	}
-	host := strings.TrimSpace(parsedURL.Hostname())
-	if host == "" {
-		t.Fatal("expose url host missing")
-	}
-	serviceName := strings.TrimSuffix(host, ".ziti")
-	if serviceName == host {
-		t.Fatalf("expected expose url host to end with .ziti, got %q", host)
-	}
-	serviceName = strings.TrimSpace(serviceName)
-	if serviceName == "" {
-		t.Fatal("expose service name missing")
+	if listedEntry.URL != addEntry.URL {
+		t.Fatalf("expose list url mismatch: got %q want %q", listedEntry.URL, addEntry.URL)
 	}
 
+	serviceName := exposeServiceName(t, addEntry.URL)
 	exposedURL := fmt.Sprintf("http://%s:%d/index.html", serviceName, exposePort)
 
-	zitiConn := dialGRPC(t, zitiManagementAddr(t))
-	zitiClient := zitimgmtv1.NewZitiManagementServiceClient(zitiConn)
+	httpClient := createZitiHTTPClient(t)
 
-	zitiCtx, zitiCancel := context.WithTimeout(context.Background(), exposeZitiRequestTimeout)
-	defer zitiCancel()
-	createResp, err := zitiClient.CreateAppIdentity(zitiCtx, &zitimgmtv1.CreateAppIdentityRequest{
-		IdentityId: uuid.NewString(),
-		Slug:       fmt.Sprintf("e2e-expose-%s", uuid.NewString()),
-	})
-	if err != nil {
-		t.Fatalf("create ziti identity: %v", err)
-	}
-	if createResp == nil {
-		t.Fatal("create ziti identity: missing response")
-	}
-	zitiIdentityID := strings.TrimSpace(createResp.GetZitiIdentityId())
-	if zitiIdentityID == "" {
-		t.Fatal("create ziti identity: missing id")
-	}
-	if len(createResp.GetIdentityJson()) == 0 {
-		t.Fatal("create ziti identity: missing identity json")
-	}
-
-	t.Cleanup(func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), exposeZitiRequestTimeout)
-		defer cleanupCancel()
-		if _, err := zitiClient.DeleteIdentity(cleanupCtx, &zitimgmtv1.DeleteIdentityRequest{ZitiIdentityId: zitiIdentityID}); err != nil {
-			t.Logf("cleanup: delete ziti identity %s: %v", zitiIdentityID, err)
-		}
-	})
-
-	zitiConfig := &ziti.Config{}
-	if err := json.Unmarshal(createResp.GetIdentityJson(), zitiConfig); err != nil {
-		t.Fatalf("parse ziti identity json: %v", err)
-	}
-
-	zitiContext, err := ziti.NewContext(zitiConfig)
-	if err != nil {
-		t.Fatalf("create ziti context: %v", err)
-	}
-	t.Cleanup(func() { zitiContext.Close() })
-
-	httpClient := sdk.NewHttpClient(zitiContext, nil)
-	httpClient.Timeout = exposeRequestTimeout
-
-	pollCtx, pollCancel := context.WithTimeout(fixture.ctx, exposeReachabilityTimeout)
-	defer pollCancel()
-	err = pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
-		requestCtx, requestCancel := context.WithTimeout(ctx, exposeRequestTimeout)
-		defer requestCancel()
-
-		request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, exposedURL, nil)
-		if err != nil {
-			return fmt.Errorf("build request: %w", err)
-		}
-
-		response, err := httpClient.Do(request)
-		if err != nil {
-			return fmt.Errorf("dial exposed service: %w", err)
-		}
-		defer response.Body.Close()
-
-		bodyBytes, readErr := io.ReadAll(response.Body)
-		if readErr != nil {
-			if response.StatusCode != http.StatusOK {
-				return fmt.Errorf("unexpected status %d (read body error: %v)", response.StatusCode, readErr)
-			}
-			return fmt.Errorf("read response body: %w", readErr)
-		}
-		if response.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status %d: %s", response.StatusCode, strings.TrimSpace(string(bodyBytes)))
-		}
-		responseBody := string(bodyBytes)
-		if responseBody != body {
-			return fmt.Errorf("unexpected body %q (expected %q)", responseBody, body)
-		}
-		return nil
-	})
-	if err != nil {
+	reachCtx, reachCancel := context.WithTimeout(fixture.ctx, exposeReachabilityTimeout)
+	defer reachCancel()
+	if err := waitForExposeReachable(t, reachCtx, httpClient, exposedURL, body); err != nil {
 		t.Fatalf("wait for exposed service: %v", err)
+	}
+
+	removeCtx, removeCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
+	defer removeCancel()
+	if err := execExposeRemove(t, removeCtx, fixture, exposePort); err != nil {
+		t.Fatalf("expose remove: %v", err)
+	}
+
+	emptyCtx, emptyCancel := context.WithTimeout(fixture.ctx, exposeListEmptyTimeout)
+	defer emptyCancel()
+	if err := waitForExposeListEmpty(t, emptyCtx, fixture); err != nil {
+		t.Fatalf("wait for empty expose list: %v", err)
+	}
+
+	unreachableCtx, unreachableCancel := context.WithTimeout(fixture.ctx, exposeUnreachableTimeout)
+	defer unreachableCancel()
+	if err := waitForExposeUnreachable(t, unreachableCtx, httpClient, exposedURL); err != nil {
+		t.Fatalf("wait for exposed service to become unreachable: %v", err)
 	}
 }
 
@@ -321,7 +244,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 		t.Fatal("expected workload id")
 	}
 
-	execCtx, execCancel := context.WithTimeout(ctx, 2*time.Minute)
+	execCtx, execCancel := context.WithTimeout(ctx, exposeCommandTimeout)
 	defer execCancel()
 	podName, containerName, err := waitForWorkloadAgentContainerReady(t, execCtx, workloadIDs[0])
 	if err != nil {
@@ -335,20 +258,288 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	}
 }
 
-func parseExposeAddResponse(t *testing.T, output string) exposeAddResponse {
+func startExposeHTTPServer(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, body string) error {
 	t.Helper()
+	serveDir := "/tmp/expose-e2e"
+	serveScript := fmt.Sprintf(
+		"set -e; mkdir -p %[1]s; printf '%%s' \"$1\" > %[1]s/index.html; "+
+			"busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 & "+
+			"pid=$!; i=0; while [ \"$i\" -lt 20 ]; do "+
+			"if output=$(busybox wget -q -O - http://127.0.0.1:%[2]d/index.html); then "+
+			"if [ \"$output\" = \"$1\" ]; then exit 0; fi; fi; "+
+			"if ! kill -0 \"$pid\" 2>/dev/null; then echo \"httpd exited\"; "+
+			"cat /tmp/expose-httpd.log 2>/dev/null; exit 1; fi; "+
+			"i=$((i+1)); sleep 0.5; done; "+
+			"echo \"httpd not ready\"; cat /tmp/expose-httpd.log 2>/dev/null; exit 1",
+		serveDir,
+		exposePort,
+	)
+	serveCommand := []string{
+		"sh",
+		"-c",
+		serveScript,
+		"expose-httpd",
+		body,
+	}
+	serveResult := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, serveCommand)
+	if serveResult.exitCode != 0 {
+		return fmt.Errorf("http server exit code %d stdout=%q stderr=%q", serveResult.exitCode, serveResult.stdout, serveResult.stderr)
+	}
+	return nil
+}
+
+func execExposeList(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture) ([]exposeEntry, error) {
+	t.Helper()
+	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "--output", "json", "expose", "list"})
+	if result.exitCode != 0 {
+		return nil, fmt.Errorf("expose list exit code %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
+	}
+	entries, err := parseExposeList(result.stdout)
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func execExposeAdd(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, port int) (exposeEntry, error) {
+	t.Helper()
+	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "--output", "json", "expose", "add", fmt.Sprintf("%d", port)})
+	if result.exitCode != 0 {
+		return exposeEntry{}, fmt.Errorf("expose add exit code %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
+	}
+	entry, err := parseExposeAddResponse(result.stdout)
+	if err != nil {
+		return exposeEntry{}, err
+	}
+	return entry, nil
+}
+
+func execExposeRemove(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, port int) error {
+	t.Helper()
+	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "expose", "remove", fmt.Sprintf("%d", port)})
+	if result.exitCode != 0 {
+		return fmt.Errorf("expose remove exit code %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
+	}
+	return nil
+}
+
+func parseExposeList(output string) ([]exposeEntry, error) {
 	trimmed := strings.TrimSpace(output)
 	if trimmed == "" {
-		t.Fatal("expose add output is empty")
+		return nil, fmt.Errorf("expose list output is empty")
 	}
-	var response exposeAddResponse
+	var entries []exposeEntry
+	if err := json.Unmarshal([]byte(trimmed), &entries); err != nil {
+		return nil, fmt.Errorf("parse expose list output: %w stdout=%q", err, trimmed)
+	}
+	for i, entry := range entries {
+		entries[i] = normalizeExposeEntry(entry)
+	}
+	return entries, nil
+}
+
+func parseExposeAddResponse(output string) (exposeEntry, error) {
+	trimmed := strings.TrimSpace(output)
+	if trimmed == "" {
+		return exposeEntry{}, fmt.Errorf("expose add output is empty")
+	}
+	var response exposeEntry
 	if err := json.Unmarshal([]byte(trimmed), &response); err != nil {
-		t.Fatalf("parse expose add output: %v stdout=%q", err, trimmed)
+		return exposeEntry{}, fmt.Errorf("parse expose add output: %w stdout=%q", err, trimmed)
 	}
-	response.ID = strings.TrimSpace(response.ID)
-	response.URL = strings.TrimSpace(response.URL)
-	response.Status = strings.TrimSpace(response.Status)
-	return response
+	return normalizeExposeEntry(response), nil
+}
+
+func normalizeExposeEntry(entry exposeEntry) exposeEntry {
+	entry.ID = strings.TrimSpace(entry.ID)
+	entry.URL = strings.TrimSpace(entry.URL)
+	entry.Status = strings.TrimSpace(entry.Status)
+	return entry
+}
+
+func waitForExposeListed(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, exposeID string) (exposeEntry, error) {
+	t.Helper()
+	var listedEntry exposeEntry
+	err := pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+		entries, err := execExposeList(t, ctx, fixture)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if entry.ID == exposeID {
+				if entry.Status != exposeStatusActive {
+					return fmt.Errorf("expose %s status %q", exposeID, entry.Status)
+				}
+				listedEntry = entry
+				return nil
+			}
+		}
+		return fmt.Errorf("expose %s not listed", exposeID)
+	})
+	if err != nil {
+		return exposeEntry{}, err
+	}
+	return listedEntry, nil
+}
+
+func waitForExposeListEmpty(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture) error {
+	t.Helper()
+	return pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+		entries, err := execExposeList(t, ctx, fixture)
+		if err != nil {
+			return err
+		}
+		if len(entries) != 0 {
+			return fmt.Errorf("expected empty expose list, got %d", len(entries))
+		}
+		return nil
+	})
+}
+
+func waitForExposeReachable(t *testing.T, ctx context.Context, client *http.Client, exposedURL, expectedBody string) error {
+	t.Helper()
+	return pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+		requestCtx, requestCancel := context.WithTimeout(ctx, exposeRequestTimeout)
+		defer requestCancel()
+
+		request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, exposedURL, nil)
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
+		}
+		request.Close = true
+
+		response, err := client.Do(request)
+		if err != nil {
+			return fmt.Errorf("dial exposed service: %w", err)
+		}
+		defer response.Body.Close()
+
+		bodyBytes, readErr := io.ReadAll(response.Body)
+		if readErr != nil {
+			if response.StatusCode != http.StatusOK {
+				return fmt.Errorf("unexpected status %d (read body error: %v)", response.StatusCode, readErr)
+			}
+			return fmt.Errorf("read response body: %w", readErr)
+		}
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status %d: %s", response.StatusCode, strings.TrimSpace(string(bodyBytes)))
+		}
+		if string(bodyBytes) != expectedBody {
+			return fmt.Errorf("unexpected body %q (expected %q)", string(bodyBytes), expectedBody)
+		}
+		return nil
+	})
+}
+
+func waitForExposeUnreachable(t *testing.T, ctx context.Context, client *http.Client, exposedURL string) error {
+	t.Helper()
+	return pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+		requestCtx, requestCancel := context.WithTimeout(ctx, exposeRequestTimeout)
+		defer requestCancel()
+
+		request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, exposedURL, nil)
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
+		}
+		request.Close = true
+
+		response, err := client.Do(request)
+		if err != nil {
+			return nil
+		}
+		defer response.Body.Close()
+
+		bodyBytes, readErr := io.ReadAll(response.Body)
+		if response.StatusCode != http.StatusOK {
+			if readErr != nil {
+				return nil
+			}
+			return nil
+		}
+		if readErr != nil {
+			return fmt.Errorf("read response body after removal: %w", readErr)
+		}
+		if len(bodyBytes) > 0 {
+			return fmt.Errorf("exposed service still reachable: %s", strings.TrimSpace(string(bodyBytes)))
+		}
+		return fmt.Errorf("exposed service still reachable")
+	})
+}
+
+func exposeServiceName(t *testing.T, exposeURL string) string {
+	t.Helper()
+	parsedURL, err := url.Parse(exposeURL)
+	if err != nil {
+		t.Fatalf("parse expose url: %v", err)
+	}
+	if parsedURL.Scheme != "http" {
+		t.Fatalf("expected expose url scheme http, got %q", parsedURL.Scheme)
+	}
+	if parsedURL.Port() != fmt.Sprintf("%d", exposePort) {
+		t.Fatalf("expected expose url port %d, got %q", exposePort, parsedURL.Port())
+	}
+	host := strings.TrimSpace(parsedURL.Hostname())
+	if host == "" {
+		t.Fatal("expose url host missing")
+	}
+	serviceName := strings.TrimSuffix(host, ".ziti")
+	if serviceName == host {
+		t.Fatalf("expected expose url host to end with .ziti, got %q", host)
+	}
+	serviceName = strings.TrimSpace(serviceName)
+	if serviceName == "" {
+		t.Fatal("expose service name missing")
+	}
+	return serviceName
+}
+
+func createZitiHTTPClient(t *testing.T) *http.Client {
+	t.Helper()
+	conn := dialGRPC(t, zitiManagementAddr(t))
+	client := zitimgmtv1.NewZitiManagementServiceClient(conn)
+
+	createCtx, createCancel := context.WithTimeout(context.Background(), exposeZitiRequestTimeout)
+	defer createCancel()
+	createResp, err := client.CreateAppIdentity(createCtx, &zitimgmtv1.CreateAppIdentityRequest{
+		IdentityId: uuid.NewString(),
+		Slug:       fmt.Sprintf("e2e-expose-%s", uuid.NewString()),
+	})
+	if err != nil {
+		t.Fatalf("create ziti identity: %v", err)
+	}
+	if createResp == nil {
+		t.Fatal("create ziti identity: missing response")
+	}
+	zitiIdentityID := strings.TrimSpace(createResp.GetZitiIdentityId())
+	if zitiIdentityID == "" {
+		t.Fatal("create ziti identity: missing id")
+	}
+	if len(createResp.GetIdentityJson()) == 0 {
+		t.Fatal("create ziti identity: missing identity json")
+	}
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), exposeZitiRequestTimeout)
+		defer cleanupCancel()
+		if _, err := client.DeleteIdentity(cleanupCtx, &zitimgmtv1.DeleteIdentityRequest{ZitiIdentityId: zitiIdentityID}); err != nil {
+			t.Logf("cleanup: delete ziti identity %s: %v", zitiIdentityID, err)
+		}
+	})
+
+	zitiConfig := &ziti.Config{}
+	if err := json.Unmarshal(createResp.GetIdentityJson(), zitiConfig); err != nil {
+		t.Fatalf("parse ziti identity json: %v", err)
+	}
+
+	zitiContext, err := ziti.NewContext(zitiConfig)
+	if err != nil {
+		t.Fatalf("create ziti context: %v", err)
+	}
+	t.Cleanup(func() { zitiContext.Close() })
+
+	httpClient := sdk.NewHttpClient(zitiContext, nil)
+	httpClient.Timeout = exposeRequestTimeout
+	return httpClient
 }
 
 func waitForWorkloadAgentContainerReady(t *testing.T, ctx context.Context, workloadID string) (string, string, error) {
