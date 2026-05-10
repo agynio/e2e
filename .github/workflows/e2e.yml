@@ -4,6 +4,17 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Suite tag to run (e.g. svc_reminders)"
+        required: false
+        type: string
+      include_smoke:
+        description: "Include smoke suites"
+        required: false
+        default: true
+        type: boolean
 
 concurrency:
   group: e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
@@ -15,12 +26,6 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    env:
-      AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
-      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13
-      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
-      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1
-      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,3 +39,5 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           ref: ${{ github.sha }}
+          tag: ${{ inputs.tag }}
+          include_smoke: ${{ inputs.include_smoke }}

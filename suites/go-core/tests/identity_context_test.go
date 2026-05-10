@@ -1,4 +1,4 @@
-//go:build e2e && svc_runners && !smoke
+//go:build e2e
 
 package tests
 

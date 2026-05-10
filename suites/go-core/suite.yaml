@@ -8,7 +8,7 @@ required_env:
   - CODEX_INIT_IMAGE
   - AGN_EXPOSE_INIT_IMAGE
 select: |
-  suite_tags=("svc_agents_orchestrator" "svc_runners" "svc_metering" "svc_k8s_runner" "svc_organizations" "svc_files" "svc_gateway" "svc_media_proxy" "smoke")
+  suite_tags=("svc_agents_orchestrator" "svc_runners" "svc_metering" "svc_k8s_runner" "svc_organizations" "svc_files" "svc_gateway" "svc_reminders" "svc_media_proxy" "smoke")
 
   if [ -z "${TAGS:-}" ]; then
     echo "smoke"
