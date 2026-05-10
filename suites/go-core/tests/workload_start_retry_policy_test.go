@@ -89,7 +89,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	}
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
 
-	sentMessage := sendMessage(t, threadsCtx, threadsClient, threadID, identityID, "e2e workload start retry")
+	sentMessage := sendMessage(t, threadsCtx, threadsClient, threadID, identityID, "hello")
 	sentMessageTime := messageCreatedAt(t, sentMessage)
 
 	labels := map[string]string{
