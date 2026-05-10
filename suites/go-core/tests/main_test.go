@@ -136,28 +136,65 @@ func createModel(t *testing.T, ctx context.Context, client llmv1.LLMServiceClien
 
 func createAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, initImage string) *agentsv1.Agent {
 	t.Helper()
-	return createAgentWithIdleTimeout(t, ctx, client, name, model, organizationID, initImage, "")
+	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
+		Name:           name,
+		Model:          model,
+		OrganizationID: organizationID,
+		InitImage:      initImage,
+	})
+}
+
+func createAgentWithNickname(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, nickname, model, organizationID, initImage string) *agentsv1.Agent {
+	t.Helper()
+	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
+		Name:           name,
+		Nickname:       nickname,
+		Model:          model,
+		OrganizationID: organizationID,
+		InitImage:      initImage,
+	})
 }
 
 func createAgentWithIdleTimeout(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, initImage, idleTimeout string) *agentsv1.Agent {
 	t.Helper()
-	if strings.TrimSpace(initImage) == "" {
+	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
+		Name:           name,
+		Model:          model,
+		OrganizationID: organizationID,
+		InitImage:      initImage,
+		IdleTimeout:    idleTimeout,
+	})
+}
+
+type agentCreateOptions struct {
+	Name           string
+	Nickname       string
+	Model          string
+	OrganizationID string
+	InitImage      string
+	IdleTimeout    string
+}
+
+func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, opts agentCreateOptions) *agentsv1.Agent {
+	t.Helper()
+	if strings.TrimSpace(opts.InitImage) == "" {
 		t.Fatal("create agent: init image is required")
 	}
 	request := &agentsv1.CreateAgentRequest{
-		Name:           name,
+		Name:           opts.Name,
+		Nickname:       opts.Nickname,
 		Role:           "assistant",
-		Model:          model,
+		Model:          opts.Model,
 		Image:          "alpine:3.21",
-		InitImage:      initImage,
-		OrganizationId: organizationID,
+		InitImage:      opts.InitImage,
+		OrganizationId: opts.OrganizationID,
 	}
-	if idleTimeout != "" {
-		request.IdleTimeout = &idleTimeout
+	if opts.IdleTimeout != "" {
+		request.IdleTimeout = &opts.IdleTimeout
 	}
 	resp, err := client.CreateAgent(ctx, request)
 	if err != nil {
-		t.Fatalf("create agent %q: %v", name, err)
+		t.Fatalf("create agent %q: %v", opts.Name, err)
 	}
 	agent := resp.GetAgent()
 	if agent == nil || agent.GetMeta() == nil {
@@ -639,7 +676,7 @@ func pollForAgentResponse(
 			agentBody = agentMessage
 			return nil
 		}
-		if logDiagnostics {
+		if logDiagnostics && runnerClient != nil && len(labels) > 0 {
 			ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
 			if err != nil {
 				t.Logf("diagnostics: find workloads: %v", err)
