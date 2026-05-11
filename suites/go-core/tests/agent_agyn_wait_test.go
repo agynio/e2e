@@ -12,6 +12,7 @@ import (
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
+	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
@@ -28,12 +29,14 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 
 	agentsConn := dialGRPC(t, agentsAddr)
 	threadsConn := dialGRPC(t, threadsAddr)
+	runnerConn := dialRunnerGRPC(t, runnerAddr)
 	usersConn := dialGRPC(t, usersAddr)
 	orgsConn := dialGRPC(t, orgsAddr)
 	llmConn := dialGRPC(t, llmAddr)
 
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
+	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 	usersClient := usersv1.NewUsersServiceClient(usersConn)
 	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
 	llmClient := llmv1.NewLLMServiceClient(llmConn)
@@ -52,12 +55,12 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	agentBModel := createModel(t, ctx, llmClient, "e2e-agyn-wait-agent-b-model-"+uuid.NewString(), providerID, "agyn-wait-agent-b-reply", orgID)
 
 	agentBNickname := "e2e-agyn-wait-b-fixed"
-	agentB := createAgentWithNickname(t, ctx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModel.GetMeta().GetId(), orgID, agnInitImage)
+	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModel.GetMeta().GetId(), orgID, agnInitImage)
 	agentBID := agentB.GetMeta().GetId()
 	if agentBID == "" {
 		t.Fatal("create agent B: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentBID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentBID) })
 
 	agentA := createAgent(t, ctx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModel.GetMeta().GetId(), orgID, agnInitImage)
 	agentAID := agentA.GetMeta().GetId()
@@ -83,21 +86,36 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	)
 	sentMessage := sendMessage(t, threadsCtx, threadsClient, threadAID, identityID, prompt)
 	sentMessageTime := messageCreatedAt(t, sentMessage)
+	labels := map[string]string{
+		"label." + labelManagedBy: managedByValue,
+		"label." + labelAgentID:   agentAID,
+		"label." + labelThreadID:  threadAID,
+	}
+	t.Cleanup(func() {
+		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+		if err != nil {
+			t.Logf("cleanup: find workloads: %v", err)
+			return
+		}
+		for _, workloadID := range ids {
+			cleanupWorkload(t, ctx, runnerClient, workloadID)
+		}
+	})
 
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
 	defer pollCancel()
-	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, nil, threadAID, agentAID, nil, sentMessageTime, agynWaitAgentAResponse)
+	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, threadAID, agentAID, labels, sentMessageTime, agynWaitAgentAResponse)
 	if err != nil {
-		logAgynWaitDiagnostics(t, ctx, threadsClient, orgID, threadAID, agentAID, agentBID)
+		logAgynWaitDiagnostics(t, threadsCtx, threadsClient, orgID, threadAID, agentAID, agentBID)
 		t.Fatalf("wait for agent A agyn --wait response: %v", err)
 	}
 	if strings.Contains(agentABody, "notification stream closed") {
 		t.Fatalf("agent A response contains notification stream failure: %q", agentABody)
 	}
 
-	threadB, messagesB, err := findThreadWithParticipantsAndMessage(ctx, threadsClient, orgID, agentAID, agentBID, sentinel)
+	threadB, messagesB, err := findThreadWithParticipantsAndMessage(threadsCtx, threadsClient, orgID, agentAID, agentBID, sentinel)
 	if err != nil {
-		logAgynWaitDiagnostics(t, ctx, threadsClient, orgID, threadAID, agentAID, agentBID)
+		logAgynWaitDiagnostics(t, threadsCtx, threadsClient, orgID, threadAID, agentAID, agentBID)
 		t.Fatalf("find agent A to agent B thread: %v", err)
 	}
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadB.GetId()) })
