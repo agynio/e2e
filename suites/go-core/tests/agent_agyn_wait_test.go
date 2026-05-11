@@ -52,7 +52,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	agentBModel := createModel(t, ctx, llmClient, "e2e-agyn-wait-agent-b-model-"+uuid.NewString(), providerID, "agyn-wait-agent-b-reply", orgID)
 
 	agentBNickname := "e2e-agyn-wait-b-fixed"
-	agentB := createAgentWithNickname(t, ctx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModel.GetMeta().GetId(), orgID, agnInitImage)
+	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModel.GetMeta().GetId(), orgID, agnInitImage)
 	agentBID := agentB.GetMeta().GetId()
 	if agentBID == "" {
 		t.Fatal("create agent B: missing id")
