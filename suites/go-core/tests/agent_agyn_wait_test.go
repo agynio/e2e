@@ -87,9 +87,9 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	sentMessage := sendMessage(t, threadsCtx, threadsClient, threadAID, identityID, prompt)
 	sentMessageTime := messageCreatedAt(t, sentMessage)
 	labels := map[string]string{
-		labelManagedBy: managedByValue,
-		labelAgentID:   agentAID,
-		labelThreadID:  threadAID,
+		"label." + labelManagedBy: managedByValue,
+		"label." + labelAgentID:   agentAID,
+		"label." + labelThreadID:  threadAID,
 	}
 	t.Cleanup(func() {
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
