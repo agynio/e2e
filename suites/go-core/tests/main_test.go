@@ -40,9 +40,9 @@ const (
 	testLLMEndpointCodex = "https://testllm.dev/v1/org/agynio/suite/codex/responses"
 	testLLMEndpointAgn   = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
 
-	labelManagedBy = "label.managed-by"
-	labelAgentID   = "label.agent-id"
-	labelThreadID  = "label.thread-id"
+	labelManagedBy = "managed-by"
+	labelAgentID   = "agent-id"
+	labelThreadID  = "thread-id"
 	managedByValue = "agents-orchestrator"
 )
 
