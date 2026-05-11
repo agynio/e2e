@@ -262,15 +262,31 @@ func startExposeHTTPServer(t *testing.T, ctx context.Context, fixture exposeWork
 	t.Helper()
 	serveDir := "/tmp/expose-e2e"
 	serveScript := fmt.Sprintf(
-		"set -e; mkdir -p %[1]s; printf '%%s' \"$1\" > %[1]s/index.html; "+
-			"busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 & "+
-			"pid=$!; i=0; while [ \"$i\" -lt 20 ]; do "+
-			"if output=$(busybox wget -q -O - http://127.0.0.1:%[2]d/index.html); then "+
-			"if [ \"$output\" = \"$1\" ]; then exit 0; fi; fi; "+
-			"if ! kill -0 \"$pid\" 2>/dev/null; then echo \"httpd exited\"; "+
-			"cat /tmp/expose-httpd.log 2>/dev/null; exit 1; fi; "+
-			"i=$((i+1)); sleep 0.5; done; "+
-			"echo \"httpd not ready\"; cat /tmp/expose-httpd.log 2>/dev/null; exit 1",
+		`set -e
+mkdir -p %[1]s
+printf '%%s' "$1" > %[1]s/index.html
+if command -v python3 >/dev/null 2>&1; then
+  (cd %[1]s && python3 -m http.server %[2]d --bind 127.0.0.1 >/tmp/expose-httpd.log 2>&1) &
+else
+  busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 &
+fi
+pid=$!
+i=0
+while [ "$i" -lt 20 ]; do
+  if output=$(busybox wget -q -O - http://127.0.0.1:%[2]d/index.html); then
+    if [ "$output" = "$1" ]; then exit 0; fi
+  fi
+  if ! kill -0 "$pid" 2>/dev/null; then
+    echo "http server exited"
+    cat /tmp/expose-httpd.log 2>/dev/null
+    exit 1
+  fi
+  i=$((i+1))
+  sleep 0.5
+done
+echo "http server not ready"
+cat /tmp/expose-httpd.log 2>/dev/null
+exit 1`,
 		serveDir,
 		exposePort,
 	)
