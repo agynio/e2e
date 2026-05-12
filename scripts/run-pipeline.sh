@@ -10,6 +10,7 @@ diagnostics_root="$repo_root/.diagnostics/suites"
 
 tags="${TAGS:-}"
 namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
+suites_filter="${E2E_SUITES:-}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "ERROR: kubectl not found in PATH" >&2
@@ -29,6 +30,34 @@ if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
 fi
 
 mapfile -t suite_files < <(find "$suites_dir" -mindepth 2 -maxdepth 2 -name suite.yaml | sort)
+
+if [ -n "$suites_filter" ]; then
+  read -r -a requested_suites <<< "$suites_filter"
+  filtered_suite_files=()
+  missing_suites=()
+
+  for requested_suite in "${requested_suites[@]}"; do
+    found_suite=0
+    for suite_file in "${suite_files[@]}"; do
+      suite_name=$(basename "$(dirname "$suite_file")")
+      if [ "$suite_name" = "$requested_suite" ]; then
+        filtered_suite_files+=("$suite_file")
+        found_suite=1
+        break
+      fi
+    done
+    if [ "$found_suite" -ne 1 ]; then
+      missing_suites+=("$requested_suite")
+    fi
+  done
+
+  if [ "${#missing_suites[@]}" -gt 0 ]; then
+    printf 'ERROR: unknown E2E_SUITES entries: %s\n' "${missing_suites[*]}" >&2
+    exit 1
+  fi
+
+  suite_files=("${filtered_suite_files[@]}")
+fi
 
 if [ "${#suite_files[@]}" -eq 0 ]; then
   echo "ERROR: No suites found under $suites_dir" >&2
