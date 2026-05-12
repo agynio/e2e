@@ -37,8 +37,9 @@ const (
 	tracingSummaryTimeout  = 2 * time.Minute
 	tracingStartTimeBuffer = 30 * time.Second
 
-	testLLMEndpointCodex = "https://testllm.dev/v1/org/agynio/suite/codex/responses"
-	testLLMEndpointAgn   = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
+	testLLMEndpointCodex  = "https://testllm.dev/v1/org/agynio/suite/codex/responses"
+	testLLMEndpointAgn    = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
+	testLLMEndpointClaude = "https://testllm.dev/v1/org/agynio/suite/claude/messages"
 
 	labelManagedBy = "managed-by"
 	labelAgentID   = "agent-id"
@@ -47,18 +48,19 @@ const (
 )
 
 var (
-	agentsAddr     = envOrDefault("AGENTS_ADDRESS", "agents:50051")
-	threadsAddr    = envOrDefault("THREADS_ADDRESS", "threads:50051")
-	llmAddr        = envOrDefault("LLM_ADDRESS", "llm:50051")
-	meteringAddr   = envOrDefault("METERING_ADDRESS", "metering:50051")
-	usersAddr      = envOrDefault("USERS_ADDRESS", "users:50051")
-	orgsAddr       = envOrDefault("ORGANIZATIONS_ADDRESS", "organizations:50051")
-	runnerAddr     = envOrDefault("RUNNER_ADDRESS", "k8s-runner:50051")
-	runnersAddr    = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
-	secretsAddr    = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
-	tracingAddr    = envOrDefault("TRACING_ADDRESS", "tracing:50051")
-	codexInitImage = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:latest")
-	agnInitImage   = envOrDefault("AGN_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:latest")
+	agentsAddr      = envOrDefault("AGENTS_ADDRESS", "agents:50051")
+	threadsAddr     = envOrDefault("THREADS_ADDRESS", "threads:50051")
+	llmAddr         = envOrDefault("LLM_ADDRESS", "llm:50051")
+	meteringAddr    = envOrDefault("METERING_ADDRESS", "metering:50051")
+	usersAddr       = envOrDefault("USERS_ADDRESS", "users:50051")
+	orgsAddr        = envOrDefault("ORGANIZATIONS_ADDRESS", "organizations:50051")
+	runnerAddr      = envOrDefault("RUNNER_ADDRESS", "k8s-runner:50051")
+	runnersAddr     = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
+	secretsAddr     = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
+	tracingAddr     = envOrDefault("TRACING_ADDRESS", "tracing:50051")
+	codexInitImage  = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:latest")
+	agnInitImage    = envOrDefault("AGN_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:latest")
+	claudeInitImage = envOrDefault("CLAUDE_INIT_IMAGE", "ghcr.io/agynio/agent-init-claude:latest")
 )
 
 type pipelineRun struct {
@@ -98,11 +100,17 @@ func newUserID() string {
 
 func createLLMProvider(t *testing.T, ctx context.Context, client llmv1.LLMServiceClient, endpoint, orgID string) *llmv1.LLMProvider {
 	t.Helper()
+	return createLLMProviderWithProtocol(t, ctx, client, endpoint, orgID, llmv1.Protocol_PROTOCOL_RESPONSES)
+}
+
+func createLLMProviderWithProtocol(t *testing.T, ctx context.Context, client llmv1.LLMServiceClient, endpoint, orgID string, protocol llmv1.Protocol) *llmv1.LLMProvider {
+	t.Helper()
 	resp, err := client.CreateLLMProvider(ctx, &llmv1.CreateLLMProviderRequest{
 		Endpoint:       endpoint,
 		AuthMethod:     llmv1.AuthMethod_AUTH_METHOD_BEARER,
 		Token:          "test-token",
 		OrganizationId: orgID,
+		Protocol:       protocol,
 	})
 	if err != nil {
 		t.Fatalf("create llm provider: %v", err)
