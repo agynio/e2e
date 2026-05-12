@@ -199,6 +199,8 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	}
 	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
 	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	createAgentEnv(t, ctx, agentsClient, agentID, "HOME", "/tmp")
+	createAgentEnv(t, ctx, agentsClient, agentID, "AGYN_GATEWAY_URL", "http://gateway:8080")
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
