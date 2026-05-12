@@ -46,7 +46,13 @@ run: |
 
   tmp_json=$(mktemp)
   set +e
-  go test -count=1 -tags "${tag_args}" -json ./tests/... 2>&1 | tee "${tmp_json}"
+  go_test_args=(-count=1 -tags "${tag_args}")
+  if [ -n "${E2E_GO_TEST_RUN:-}" ]; then
+    go_test_args+=(-run "${E2E_GO_TEST_RUN}")
+  fi
+  go_test_args+=(-json ./tests/...)
+
+  go test "${go_test_args[@]}" 2>&1 | tee "${tmp_json}"
   status=${PIPESTATUS[0]}
   set -e
 
