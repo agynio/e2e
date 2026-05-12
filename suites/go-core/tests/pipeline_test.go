@@ -25,7 +25,16 @@ func TestFullPipelineAgnMessageResponse(t *testing.T) {
 	runFullPipelineMessageResponse(t, testLLMEndpointAgn, agnInitImage, "hi", "Hi! How are you?")
 }
 
+func TestFullPipelineClaudeMessageResponse(t *testing.T) {
+	runFullPipelineMessageResponseWithProtocol(t, testLLMEndpointClaude, claudeInitImage, llmv1.Protocol_PROTOCOL_ANTHROPIC_MESSAGES, "hello", "Hi! How are you?")
+}
+
 func runFullPipelineMessageResponse(t *testing.T, llmEndpoint, initImage, message, expectedResponse string) pipelineRun {
+	t.Helper()
+	return runFullPipelineMessageResponseWithProtocol(t, llmEndpoint, initImage, llmv1.Protocol_PROTOCOL_RESPONSES, message, expectedResponse)
+}
+
+func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initImage string, protocol llmv1.Protocol, message, expectedResponse string) pipelineRun {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
@@ -50,7 +59,7 @@ func runFullPipelineMessageResponse(t *testing.T, llmEndpoint, initImage, messag
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
-	provider := createLLMProvider(t, ctx, llmClient, llmEndpoint, orgID)
+	provider := createLLMProviderWithProtocol(t, ctx, llmClient, llmEndpoint, orgID, protocol)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
