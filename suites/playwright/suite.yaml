@@ -37,10 +37,15 @@ run: |
   fi
 
   set +e
+  test_args=()
+  if [ -n "${E2E_PLAYWRIGHT_TEST_ARGS:-}" ]; then
+    read -r -a test_args <<< "${E2E_PLAYWRIGHT_TEST_ARGS}"
+  fi
+
   if [ -n "$grep_tags" ]; then
-    CI=true npx playwright test --grep "$grep_tags"
+    CI=true npx playwright test "${test_args[@]}" --grep "$grep_tags"
   else
-    CI=true npx playwright test
+    CI=true npx playwright test "${test_args[@]}"
   fi
   status=$?
   set -e

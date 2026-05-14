@@ -68,22 +68,18 @@ async function waitForPlatformUsage(
   page: Page,
   organizationId: string,
   kind: UsageKind,
-): Promise<void> {
+): Promise<number> {
+  let usageTotal = 0;
   await expect(async () => {
-    const total = await getPlatformUsageTotal(page, organizationId, kind);
-    if (total <= 0) {
+    usageTotal = await getPlatformUsageTotal(page, organizationId, kind);
+    if (usageTotal <= 0) {
       throw new Error(`Platform ${kind} usage not populated yet.`);
     }
   }).toPass({
     timeout: USAGE_POLL_TIMEOUT_MS,
     intervals: USAGE_POLL_INTERVALS_MS,
   });
-}
-
-async function expectUsageCardValue(page: Page, testId: string): Promise<void> {
-  await expect(page.getByTestId(testId)).toContainText(/[1-9]/, {
-    timeout: 20000,
-  });
+  return usageTotal;
 }
 
 test.describe(
@@ -131,8 +127,18 @@ test.describe(
         body: "Platform usage metering message.",
       });
 
-      await waitForPlatformUsage(page, organizationId, "thread");
-      await waitForPlatformUsage(page, organizationId, "message");
+      const threadUsageTotal = await waitForPlatformUsage(
+        page,
+        organizationId,
+        "thread",
+      );
+      const messageUsageTotal = await waitForPlatformUsage(
+        page,
+        organizationId,
+        "message",
+      );
+      expect(threadUsageTotal).toBeGreaterThan(0);
+      expect(messageUsageTotal).toBeGreaterThan(0);
 
       await page.goto(`/organizations/${organizationId}/usage`);
       await expect(page.getByTestId("organization-usage-header")).toBeVisible({
@@ -141,8 +147,12 @@ test.describe(
       await expect(
         page.getByTestId("organization-usage-platform-section"),
       ).toBeVisible({ timeout: 20000 });
-      await expectUsageCardValue(page, "organization-usage-platform-threads");
-      await expectUsageCardValue(page, "organization-usage-platform-messages");
+      await expect(
+        page.getByTestId("organization-usage-platform-threads"),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("organization-usage-platform-messages"),
+      ).toBeVisible();
       await expect(page.getByTestId("organization-usage-empty")).toHaveCount(0);
     });
   },

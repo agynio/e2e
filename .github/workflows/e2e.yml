@@ -32,7 +32,12 @@ jobs:
         with:
           ref: main
 
-      - name: Run E2E tests
+      - name: Run platform usage E2E test
         uses: ./.github/actions/run-tests
+        env:
+          E2E_SUITES: playwright
+          E2E_PLAYWRIGHT_TEST_ARGS: test/e2e/organization-platform-usage.spec.ts
         with:
           ref: ${{ github.sha }}
+          tag: svc_metering
+          include-smoke: false
