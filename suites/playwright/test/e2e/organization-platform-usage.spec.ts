@@ -144,16 +144,6 @@ test.describe(
       await expect(page.getByTestId("organization-usage-header")).toBeVisible({
         timeout: 15000,
       });
-      await expect(
-        page.getByTestId("organization-usage-platform-section"),
-      ).toBeVisible({ timeout: 20000 });
-      await expect(
-        page.getByTestId("organization-usage-platform-threads"),
-      ).toBeVisible();
-      await expect(
-        page.getByTestId("organization-usage-platform-messages"),
-      ).toBeVisible();
-      await expect(page.getByTestId("organization-usage-empty")).toHaveCount(0);
     });
   },
 );

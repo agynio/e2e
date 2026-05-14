@@ -40,4 +40,4 @@ jobs:
         with:
           ref: ${{ github.sha }}
           tag: svc_metering
-          include-smoke: false
+          include_smoke: false
