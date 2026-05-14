@@ -1,7 +1,7 @@
 image: ghcr.io/agynio/e2e/playwright:v1.59.1-noble
 workdir: /opt/app/data
 select: |
-  suite_tags=("svc_console" "svc_gateway" "svc_threads" "svc_identity" "smoke")
+  suite_tags=("svc_console" "svc_gateway" "svc_threads" "svc_metering" "svc_identity" "smoke")
 
   if [ -z "${TAGS:-}" ]; then
     echo "playwright"
@@ -37,10 +37,15 @@ run: |
   fi
 
   set +e
+  test_args=()
+  if [ -n "${E2E_PLAYWRIGHT_TEST_ARGS:-}" ]; then
+    read -r -a test_args <<< "${E2E_PLAYWRIGHT_TEST_ARGS}"
+  fi
+
   if [ -n "$grep_tags" ]; then
-    CI=true npx playwright test --grep "$grep_tags"
+    CI=true npx playwright test "${test_args[@]}" --grep "$grep_tags"
   else
-    CI=true npx playwright test
+    CI=true npx playwright test "${test_args[@]}"
   fi
   status=$?
   set -e
