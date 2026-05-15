@@ -33,4 +33,6 @@ Example runs:
 TAGS=smoke devspace run test-e2e
 TAGS=svc_tracing_app devspace run test-e2e
 TAGS=svc_agents_orchestrator devspace run test-e2e
+TAGS=svc_llm devspace run test-e2e
+TAGS=svc_llm_proxy devspace run test-e2e
 ```

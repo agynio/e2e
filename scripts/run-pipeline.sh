@@ -12,11 +12,6 @@ tags="${TAGS:-}"
 namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
 suites_filter="${E2E_SUITES:-}"
 
-if ! command -v kubectl >/dev/null 2>&1; then
-  echo "ERROR: kubectl not found in PATH" >&2
-  exit 1
-fi
-
 if [ ! -d "$suites_dir" ]; then
   echo "ERROR: suites directory not found at $suites_dir" >&2
   exit 1
@@ -24,10 +19,6 @@ fi
 
 rm -rf "$artifacts_dir" "$diagnostics_root"
 mkdir -p "$artifacts_dir" "$diagnostics_root"
-
-if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
-  kubectl create namespace "$namespace"
-fi
 
 mapfile -t suite_files < <(find "$suites_dir" -mindepth 2 -maxdepth 2 -name suite.yaml | sort)
 
@@ -62,6 +53,69 @@ fi
 if [ "${#suite_files[@]}" -eq 0 ]; then
   echo "ERROR: No suites found under $suites_dir" >&2
   exit 1
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "ERROR: python3 not found in PATH" >&2
+  exit 1
+fi
+
+if ! python3 -c 'import yaml' >/dev/null 2>&1; then
+  echo "ERROR: PyYAML is required for suite parsing. Install with: python3 -m pip install pyyaml" >&2
+  exit 1
+fi
+
+matched_suite_count=0
+selected_suite_files=()
+
+for suite_file in "${suite_files[@]}"; do
+  suite_dir=$(dirname "$suite_file")
+  suite_name=$(basename "$suite_dir")
+  tmp_dir=$(mktemp -d)
+
+  if ! python3 "$parse_script" "$suite_file" "$tmp_dir"; then
+    rm -rf "$tmp_dir"
+    echo "ERROR: failed to parse suite $suite_name" >&2
+    exit 1
+  fi
+
+  if ! select_output=$(
+    cd "$suite_dir"
+    export TAGS="$tags"
+    bash -s < "$tmp_dir/select"
+  ); then
+    rm -rf "$tmp_dir"
+    echo "ERROR: select failed for suite $suite_name" >&2
+    exit 1
+  fi
+
+  rm -rf "$tmp_dir"
+
+  if [ -n "$(echo "$select_output" | tr -d '[:space:]')" ]; then
+    selected_suite_files+=("$suite_file")
+    matched_suite_count=$((matched_suite_count + 1))
+  fi
+done
+
+if [ "$matched_suite_count" -eq 0 ] && [ -n "$(echo "$tags" | tr -d '[:space:]')" ]; then
+  echo "ERROR: TAGS matched zero suites: $tags" >&2
+  exit 1
+fi
+
+suite_files=("${selected_suite_files[@]}")
+
+if [ "${#suite_files[@]}" -eq 0 ]; then
+  echo "No suites selected."
+  exit 0
+fi
+
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "ERROR: kubectl not found in PATH" >&2
+  exit 1
+fi
+
+if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
+  kubectl create namespace "$namespace"
 fi
 
 overall_exit=0
@@ -102,6 +156,7 @@ for doc in docs:
 PY
     }
 
+    # shellcheck disable=SC2329
     cleanup() {
       local exit_code=$?
       set +e
@@ -171,20 +226,6 @@ PY
       exit 1
     fi
 
-    if ! select_output=$(
-      cd "$suite_dir"
-      export TAGS="$tags"
-      bash -s < "$select_file"
-    ); then
-      echo "ERROR: select failed for suite $suite_name" >&2
-      exit 1
-    fi
-
-    if [ -z "$(echo "$select_output" | tr -d '[:space:]')" ]; then
-      echo "Skipping suite $suite_name (no matching tests)."
-      exit 0
-    fi
-
     required_envs=()
     if [ -s "$required_env_file" ]; then
       while IFS= read -r env_name || [ -n "$env_name" ]; do
@@ -252,7 +293,7 @@ PY
 
     if [ -n "$service_account" ]; then
       service_account_ready=0
-      for attempt in $(seq 1 30); do
+      for _ in $(seq 1 30); do
         if kubectl get serviceaccount "$service_account" -n "$namespace" >/dev/null 2>&1; then
           service_account_ready=1
           break
