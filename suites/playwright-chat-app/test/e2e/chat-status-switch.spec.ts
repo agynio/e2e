@@ -1,7 +1,7 @@
 import { argosScreenshot } from '@argos-ci/playwright';
 import { test, expect } from './multi-user-fixtures';
-import { createChat, createOrganization, resolveIdentityId, updateChatStatus } from './chat-api';
-import { setSelectedOrganization } from './organization-helpers';
+import { createChat, createOrganization, resolveIdentityId, updateChatStatus, waitForChatInList } from './chat-api';
+import { setSelectedOrganization, waitForChatList } from './organization-helpers';
 
 test.describe('chat-status-switch', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations'] }, () => {
   test('switches from open to closed chat status', async ({ userAPage, userBPage }) => {
@@ -9,6 +9,7 @@ test.describe('chat-status-switch', { tag: ['@svc_chat_app', '@svc_gateway', '@s
     const userBId = await resolveIdentityId(userBPage);
     const chatId = await createChat(userAPage, organizationId, userBId);
     await updateChatStatus(userAPage, chatId, 'closed');
+    await waitForChatInList(userAPage, organizationId, chatId);
     await setSelectedOrganization(userAPage, organizationId);
 
     const messagesLoaded = userAPage.waitForResponse(
@@ -16,6 +17,7 @@ test.describe('chat-status-switch', { tag: ['@svc_chat_app', '@svc_gateway', '@s
       { timeout: 15000 },
     );
     await userAPage.goto(`/chats/${encodeURIComponent(chatId)}`);
+    await waitForChatList(userAPage, organizationId);
     await messagesLoaded;
 
     await expect(userAPage.getByRole('button', { name: 'Chat status: Resolved' })).toBeVisible({ timeout: 15000 });

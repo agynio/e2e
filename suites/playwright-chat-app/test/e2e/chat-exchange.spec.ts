@@ -7,6 +7,7 @@ import {
   createOrganization,
   resolveIdentityId,
   sendChatMessage,
+  waitForChatInList,
 } from './chat-api';
 import { setSelectedOrganization, waitForChatList } from './organization-helpers';
 
@@ -81,6 +82,7 @@ test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_or
     await acceptMembership(userBPage, membershipId);
     const chatId = await createChat(userAPage, organizationId, userBId);
     await sendChatMessage(userAPage, chatId, messageFromA);
+    await waitForChatInList(userBPage, organizationId, chatId);
     await setSelectedOrganization(userBPage, organizationId);
 
     await userBPage.goto('/chats');

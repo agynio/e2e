@@ -82,6 +82,16 @@ type Message = {
   body?: string;
 };
 
+type ChatSummary = {
+  id?: string;
+  status?: string;
+};
+
+type GetChatsResponseWire = {
+  chats?: ChatSummary[];
+  nextPageToken?: string;
+};
+
 type MembershipRoleValue = 'MEMBERSHIP_ROLE_OWNER' | 'MEMBERSHIP_ROLE_MEMBER';
 
 type GetMessagesResponseWire = {
@@ -544,6 +554,39 @@ export async function listAgents(
     pageToken = response.nextPageToken;
   } while (pageToken && pageToken !== previousToken);
   return agents;
+}
+
+export async function listChats(page: Page, organizationId: string): Promise<ChatSummary[]> {
+  const chats: ChatSummary[] = [];
+  let pageToken: string | undefined;
+  let previousToken: string | undefined;
+  do {
+    const response = await postConnect<GetChatsResponseWire>(page, CHAT_GATEWAY_PATH, 'GetChats', {
+      organizationId,
+      pageSize: 200,
+      pageToken,
+    });
+    chats.push(...(response.chats ?? []));
+    previousToken = pageToken;
+    pageToken = response.nextPageToken;
+  } while (pageToken && pageToken !== previousToken);
+  return chats;
+}
+
+export async function waitForChatInList(
+  page: Page,
+  organizationId: string,
+  chatId: string,
+  timeoutMs = 30000,
+): Promise<ChatSummary> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const chats = await listChats(page, organizationId);
+    const chat = chats.find((item) => item.id === chatId);
+    if (chat) return chat;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Chat ${chatId} did not appear in organization ${organizationId} list within ${timeoutMs}ms`);
 }
 
 export async function getMessages(page: Page, chatId: string): Promise<Message[]> {

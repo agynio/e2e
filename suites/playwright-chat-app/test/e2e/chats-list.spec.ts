@@ -9,6 +9,7 @@ import {
   DEFAULT_TEST_AGENT_IMAGE,
   resolveIdentityId,
   resolveCodexInitImage,
+  waitForChatInList,
 } from './chat-api';
 import { setSelectedOrganization, waitForChatList } from './organization-helpers';
 
@@ -84,6 +85,7 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
     const organizationId = await createOrganization(userAPage, `e2e-org-detail-${now}`);
     const userBId = await resolveIdentityId(userBPage);
     const chatId = await createChat(userAPage, organizationId, userBId);
+    await waitForChatInList(userAPage, organizationId, chatId);
     await setSelectedOrganization(userAPage, organizationId);
 
     await userAPage.goto('/chats');
