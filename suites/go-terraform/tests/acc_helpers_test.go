@@ -14,12 +14,13 @@ func testAccAgynAgentResourceBlock(t *testing.T, organizationID, name, descripti
 	return fmt.Sprintf(`
 resource "agyn_agent" "test" {
 	  organization_id = %s
-	  name        = %q
-	  description = %q
-	  role        = %q
-	  model       = %q
-	  image       = %q
-	  init_image  = %q
+	  name         = %q
+	  description  = %q
+	  role         = %q
+	  model        = %q
+	  image        = %q
+	  init_image   = %q
+	  availability = "internal"
 }
 `, organizationID, name, description, role, env.ModelID, env.AgentImage, env.AgentInitImage)
 }
