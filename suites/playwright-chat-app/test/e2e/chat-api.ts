@@ -13,7 +13,8 @@ export const DEFAULT_TEST_INIT_IMAGE =
   process.env.E2E_AGENT_INIT_IMAGE?.trim() ||
   process.env.CODEX_INIT_IMAGE?.trim() ||
   'ghcr.io/agynio/agent-init-codex:latest';
-export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
+export const DEFAULT_TEST_AGENT_IMAGE =
+  process.env.AGYN_AGENT_IMAGE?.trim() || 'ghcr.io/agynio/agent-runtime:v1.0.0';
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
