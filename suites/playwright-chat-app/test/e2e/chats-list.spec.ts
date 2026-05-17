@@ -10,7 +10,7 @@ import {
   resolveIdentityId,
   resolveCodexInitImage,
 } from './chat-api';
-import { setSelectedOrganization } from './organization-helpers';
+import { setSelectedOrganization, waitForChatList } from './organization-helpers';
 
 const defaultTestLlmEndpoint = 'https://test-llm.agyn.dev';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
@@ -24,12 +24,8 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
   test('renders chat list on load', async ({ userAPage }) => {
     const organizationId = await createOrganization(userAPage, `e2e-org-list-${Date.now()}`);
     await setSelectedOrganization(userAPage, organizationId);
-    const chatsLoaded = userAPage.waitForResponse(
-      (resp) => resp.url().includes('GetChats') && resp.status() === 200,
-      { timeout: 15000 },
-    );
     await userAPage.goto('/chats');
-    await chatsLoaded;
+    await waitForChatList(userAPage, organizationId);
 
     await expectChatListVisible(userAPage);
     await argosScreenshot(userAPage, 'chats-list-loaded');
@@ -58,12 +54,8 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
         image: DEFAULT_TEST_AGENT_IMAGE,
         initImage: resolveCodexInitImage(process.env.E2E_AGENT_INIT_IMAGE),
       });
-      const chatsLoaded = userAPage.waitForResponse(
-        (resp) => resp.url().includes('GetChats') && resp.status() === 200,
-        { timeout: 15000 },
-      );
       await userAPage.goto('/chats');
-      await chatsLoaded;
+      await waitForChatList(userAPage, organizationId);
 
       await expectChatListVisible(userAPage);
 
@@ -94,12 +86,8 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
     const chatId = await createChat(userAPage, organizationId, userBId);
     await setSelectedOrganization(userAPage, organizationId);
 
-    const chatsLoaded = userAPage.waitForResponse(
-      (resp) => resp.url().includes('GetChats') && resp.status() === 200,
-      { timeout: 15000 },
-    );
     await userAPage.goto('/chats');
-    await chatsLoaded;
+    await waitForChatList(userAPage, organizationId);
 
     const chatList = userAPage.getByTestId('chat-list');
     await expect(chatList).toBeVisible({ timeout: 15000 });
