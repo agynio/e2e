@@ -1,5 +1,6 @@
 import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
+import { AgentAvailability, AgentAvailabilitySchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -13,8 +14,7 @@ export const DEFAULT_TEST_INIT_IMAGE =
   process.env.E2E_AGENT_INIT_IMAGE?.trim() ||
   process.env.CODEX_INIT_IMAGE?.trim() ||
   'ghcr.io/agynio/agent-init-codex:latest';
-export const DEFAULT_TEST_AGENT_IMAGE =
-  process.env.AGYN_AGENT_IMAGE?.trim() || 'ghcr.io/agynio/agent-runtime:v1.0.0';
+export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
@@ -112,6 +112,8 @@ const CHAT_STATUS_MAP = {
   open: enumName(ChatStatusSchema, ChatStatus.OPEN),
   closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
 } satisfies Record<'open' | 'closed', string>;
+
+const AGENT_AVAILABILITY_INTERNAL = enumName(AgentAvailabilitySchema, AgentAvailability.INTERNAL);
 
 const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
@@ -386,6 +388,7 @@ type CreateAgentOptions = {
   configuration: string;
   image: string;
   initImage: string;
+  availability?: string;
 };
 
 type SetupTestAgentOptions = {
@@ -426,7 +429,11 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   if (!trimmedInitImage) {
     throw new Error('initImage is required to create chat agents.');
   }
-  const payload = { ...rest, initImage: trimmedInitImage };
+  const payload = {
+    ...rest,
+    initImage: trimmedInitImage,
+    availability: opts.availability ?? AGENT_AVAILABILITY_INTERNAL,
+  };
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
@@ -553,19 +560,12 @@ export async function waitForAgentReply(
   timeoutMs = 120000,
   intervalMs = 3000,
 ): Promise<Message> {
-  const initialMessages = await getMessages(page, chatId);
-  const seenMessageIds = new Set(
-    initialMessages
-      .map((message) => message.id)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0),
-  );
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const messages = await getMessages(page, chatId);
     const agentMsg = messages.find((message) => {
       if (!message.body) return false;
       if (message.senderId === senderIdToExclude) return false;
-      if (message.id && seenMessageIds.has(message.id)) return false;
       return true;
     });
     if (agentMsg) return agentMsg;
