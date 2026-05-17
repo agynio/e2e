@@ -21,11 +21,24 @@ import (
 )
 
 const (
-	llmProxyURLDefault      = "http://llm-proxy:8080"
+	llmProxyURLDefault      = "https://llm.agyn.dev:2496"
 	llmProxyRequestTimeout  = 45 * time.Second
 	llmGatewayServicePath   = "agynio.api.gateway.v1.LLMGateway"
 	llmProviderTestEndpoint = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
 )
+
+func TestLLMProxyURLDefaultUsesIngress(t *testing.T) {
+	t.Setenv("E2E_DOMAIN", "e2e.agyn.dev")
+	t.Setenv("E2E_INGRESS_PORT", "30443")
+
+	require.Equal(t, "https://llm.e2e.agyn.dev:30443", llmProxyBaseURL())
+}
+
+func TestLLMProxyURLExplicitOverride(t *testing.T) {
+	t.Setenv("LLM_PROXY_URL", "https://custom.example.test:9443")
+
+	require.Equal(t, "https://custom.example.test:9443", llmProxyBaseURL())
+}
 
 func TestLLMGatewayConnectEndpointPath(t *testing.T) {
 	t.Setenv(gatewayBaseURLEnvKey, "http://gateway-gateway.platform.svc.cluster.local:8080")
@@ -201,7 +214,7 @@ func postLLMProxyResponses(t *testing.T, token string, payload llmProxyResponses
 	ctx, cancel := context.WithTimeout(context.Background(), llmProxyRequestTimeout)
 	defer cancel()
 
-	endpoint := strings.TrimRight(envOrDefault("LLM_PROXY_URL", llmProxyURLDefault), "/") + "/v1/responses"
+	endpoint := llmProxyBaseURL() + "/v1/responses"
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("build llm-proxy request: %v", err)
@@ -220,4 +233,16 @@ func postLLMProxyResponses(t *testing.T, token string, payload llmProxyResponses
 		t.Fatalf("read llm-proxy response: %v", err)
 	}
 	return strings.TrimSpace(string(responseBody)), response.StatusCode
+}
+
+func llmProxyBaseURL() string {
+	if explicitURL := strings.TrimSpace(envOrDefault("LLM_PROXY_URL", "")); explicitURL != "" {
+		return strings.TrimRight(explicitURL, "/")
+	}
+	domain := envOrDefault("E2E_DOMAIN", envOrDefault("DOMAIN", "agyn.dev"))
+	port := envOrDefault("E2E_INGRESS_PORT", envOrDefault("INGRESS_PORT", envOrDefault("PORT", "2496")))
+	if strings.TrimSpace(domain) == "agyn.dev" && strings.TrimSpace(port) == "2496" {
+		return llmProxyURLDefault
+	}
+	return strings.TrimRight(fmt.Sprintf("https://llm.%s:%s", domain, port), "/")
 }
