@@ -23,8 +23,19 @@ import (
 const (
 	llmProxyURLDefault      = "http://llm-proxy:8080"
 	llmProxyRequestTimeout  = 45 * time.Second
+	llmGatewayServicePath   = "agynio.api.gateway.v1.LLMGateway"
 	llmProviderTestEndpoint = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
 )
+
+func TestLLMGatewayConnectEndpointPath(t *testing.T) {
+	t.Setenv(gatewayBaseURLEnvKey, "http://gateway-gateway.platform.svc.cluster.local:8080")
+
+	require.Equal(
+		t,
+		"http://gateway-gateway.platform.svc.cluster.local:8080/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider",
+		gatewayLLMConnectEndpoint(t, "CreateLLMProvider"),
+	)
+}
 
 func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
@@ -143,10 +154,7 @@ func postGatewayConnectRaw(t *testing.T, ctx context.Context, token string, meth
 		t.Fatalf("marshal gateway %s request: %v", method, err)
 	}
 
-	endpoint, err := url.JoinPath(gatewayBaseURL(t), "api/agynio.api.gateway.v1.LLMGateway", method)
-	if err != nil {
-		t.Fatalf("build gateway %s url: %v", method, err)
-	}
+	endpoint := gatewayLLMConnectEndpoint(t, method)
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
@@ -167,6 +175,15 @@ func postGatewayConnectRaw(t *testing.T, ctx context.Context, token string, meth
 		t.Fatalf("read gateway %s response: %v", method, err)
 	}
 	return strings.TrimSpace(string(responseBody)), response.StatusCode
+}
+
+func gatewayLLMConnectEndpoint(t *testing.T, method string) string {
+	t.Helper()
+	endpoint, err := url.JoinPath(gatewayBaseURL(t), llmGatewayServicePath, method)
+	if err != nil {
+		t.Fatalf("build gateway %s url: %v", method, err)
+	}
+	return endpoint
 }
 
 type llmProxyResponsesRequest struct {
