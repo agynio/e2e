@@ -1,6 +1,5 @@
-import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
-import { AgentAvailability, AgentAvailabilitySchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import { enumToJson } from '@bufbuild/protobuf';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -123,7 +122,7 @@ const CHAT_STATUS_MAP = {
   closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
 } satisfies Record<'open' | 'closed', string>;
 
-const AGENT_AVAILABILITY_INTERNAL = enumName(AgentAvailabilitySchema, AgentAvailability.INTERNAL);
+const AGENT_AVAILABILITY_INTERNAL = 'internal';
 
 const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
