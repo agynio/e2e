@@ -64,6 +64,18 @@ type CreateAgentResponseWire = {
   agent?: { meta?: { id?: string } };
 };
 
+type CreateAgentDebugRequest = {
+  name: string;
+  role: string;
+  model: string;
+  description: string;
+  configuration: string;
+  image: string;
+  initImage: string;
+  organizationId: string;
+  availability: string;
+};
+
 type CreateEnvResponseWire = {
   env?: { meta?: { id?: string } };
 };
@@ -444,6 +456,7 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
     initImage: trimmedInitImage,
     availability: opts.availability ?? AGENT_AVAILABILITY_INTERNAL,
   };
+  console.log(`CreateAgent request: ${JSON.stringify(payload satisfies CreateAgentDebugRequest)}`);
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
