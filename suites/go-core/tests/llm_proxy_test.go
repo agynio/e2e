@@ -14,10 +14,14 @@ import (
 	"testing"
 	"time"
 
+	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -25,6 +29,13 @@ const (
 	llmProxyRequestTimeout  = 45 * time.Second
 	llmGatewayServicePath   = "agynio.api.gateway.v1.LLMGateway"
 	llmProviderTestEndpoint = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
+	llmProxyIdentityType    = "user"
+	llmProxyAuthzAddr       = "authorization:50051"
+	llmProxyIdentityKey     = "x-identity-id"
+	llmProxyIdentityTypeKey = "x-identity-type"
+	llmProxyModelRelation   = "org"
+	llmProxyModelPrefix     = "model:"
+	llmProxyOrgPrefix       = "organization:"
 )
 
 func TestLLMProxyURLDefaultUsesIngress(t *testing.T) {
@@ -58,6 +69,7 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	orgsConn := dialGRPC(t, orgsAddr)
 	usersClient := usersv1.NewUsersServiceClient(usersConn)
 	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
+	authzClient := newLLMProxyAuthorizationClient(t)
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	apiToken := createAPIToken(t, ctx, usersClient, identityID)
@@ -71,10 +83,12 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create llm model through gateway: %v", err)
 	}
+	ensureLLMProxyModelAccess(t, ctx, authzClient, identityID, modelID, organizationID)
 
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), llmProxyRequestTimeout)
 		defer cleanupCancel()
+		deleteLLMProxyModelAccess(t, cleanupCtx, authzClient, identityID, modelID, organizationID)
 		postGatewayConnectBestEffort(t, cleanupCtx, apiToken, "DeleteModel", map[string]string{"id": modelID})
 		postGatewayConnectBestEffort(t, cleanupCtx, apiToken, "DeleteLLMProvider", map[string]string{"id": providerID})
 		_, _ = orgsClient.DeleteOrganization(withIdentity(cleanupCtx, identityID), &organizationsv1.DeleteOrganizationRequest{Id: organizationID})
@@ -86,6 +100,50 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	require.NotEqual(t, http.StatusForbidden, statusCode, "llm-proxy unexpectedly rejected model access: %s", responseBody)
 	require.Equal(t, http.StatusOK, statusCode, "llm-proxy request failed: %s", responseBody)
 	require.Contains(t, responseBody, "Hi! How are you?")
+}
+
+func ensureLLMProxyModelAccess(t *testing.T, ctx context.Context, client authorizationv1.AuthorizationServiceClient, identityID string, modelID string, organizationID string) {
+	t.Helper()
+	tuple := llmProxyModelAccessTuple(modelID, organizationID)
+	_, err := client.Write(llmProxyAdminContext(ctx), &authorizationv1.WriteRequest{Writes: []*authorizationv1.TupleKey{tuple}})
+	if err == nil {
+		return
+	}
+	statusErr, ok := status.FromError(err)
+	if ok && statusErr.Code() == codes.InvalidArgument && strings.Contains(statusErr.Message(), "already exists") {
+		return
+	}
+	t.Fatalf("authorization write failed: %v", err)
+}
+
+func deleteLLMProxyModelAccess(t *testing.T, ctx context.Context, client authorizationv1.AuthorizationServiceClient, identityID string, modelID string, organizationID string) {
+	t.Helper()
+	tuple := llmProxyModelAccessTuple(modelID, organizationID)
+	_, err := client.Write(llmProxyAdminContext(ctx), &authorizationv1.WriteRequest{Deletes: []*authorizationv1.TupleKey{tuple}})
+	if err != nil {
+		t.Logf("cleanup: authorization delete failed for identity %s model %s: %v", identityID, modelID, err)
+	}
+}
+
+func llmProxyModelAccessTuple(modelID string, organizationID string) *authorizationv1.TupleKey {
+	return &authorizationv1.TupleKey{
+		User:     llmProxyOrgPrefix + organizationID,
+		Relation: llmProxyModelRelation,
+		Object:   llmProxyModelPrefix + modelID,
+	}
+}
+
+func newLLMProxyAuthorizationClient(t *testing.T) authorizationv1.AuthorizationServiceClient {
+	t.Helper()
+	conn := dialGRPC(t, envOrDefault("AUTHORIZATION_ADDRESS", llmProxyAuthzAddr))
+	return authorizationv1.NewAuthorizationServiceClient(conn)
+}
+
+func llmProxyAdminContext(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		llmProxyIdentityKey, clusterAdminIdentityID,
+		llmProxyIdentityTypeKey, llmProxyIdentityType,
+	))
 }
 
 func createGatewayLLMProvider(t *testing.T, ctx context.Context, token string, organizationID string) (string, error) {
