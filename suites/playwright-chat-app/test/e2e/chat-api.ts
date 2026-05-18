@@ -122,7 +122,7 @@ const CHAT_STATUS_MAP = {
   closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
 } satisfies Record<'open' | 'closed', string>;
 
-const AGENT_AVAILABILITY_INTERNAL = 'internal';
+const AGENT_AVAILABILITY_INTERNAL = 'AGENT_AVAILABILITY_INTERNAL';
 
 const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
