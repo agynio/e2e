@@ -1,5 +1,6 @@
-import { enumToJson } from '@bufbuild/protobuf';
+import { create, enumToJson, toJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
+import { AgentAvailability, AgentAvailabilitySchema, CreateAgentRequestSchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -79,6 +80,16 @@ type Message = {
   id?: string;
   senderId?: string;
   body?: string;
+};
+
+type ChatSummary = {
+  id?: string;
+  status?: string;
+};
+
+type GetChatsResponseWire = {
+  chats?: ChatSummary[];
+  nextPageToken?: string;
 };
 
 type MembershipRoleValue = 'MEMBERSHIP_ROLE_OWNER' | 'MEMBERSHIP_ROLE_MEMBER';
@@ -385,6 +396,7 @@ type CreateAgentOptions = {
   configuration: string;
   image: string;
   initImage: string;
+  availability?: AgentAvailability;
 };
 
 type SetupTestAgentOptions = {
@@ -425,7 +437,12 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   if (!trimmedInitImage) {
     throw new Error('initImage is required to create chat agents.');
   }
-  const payload = { ...rest, initImage: trimmedInitImage };
+  const request = create(CreateAgentRequestSchema, {
+    ...rest,
+    initImage: trimmedInitImage,
+    availability: opts.availability ?? AgentAvailability.INTERNAL,
+  });
+  const payload = toJson(CreateAgentRequestSchema, request);
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
@@ -538,6 +555,39 @@ export async function listAgents(
   return agents;
 }
 
+export async function listChats(page: Page, organizationId: string): Promise<ChatSummary[]> {
+  const chats: ChatSummary[] = [];
+  let pageToken: string | undefined;
+  let previousToken: string | undefined;
+  do {
+    const response = await postConnect<GetChatsResponseWire>(page, CHAT_GATEWAY_PATH, 'GetChats', {
+      organizationId,
+      pageSize: 200,
+      pageToken,
+    });
+    chats.push(...(response.chats ?? []));
+    previousToken = pageToken;
+    pageToken = response.nextPageToken;
+  } while (pageToken && pageToken !== previousToken);
+  return chats;
+}
+
+export async function waitForChatInList(
+  page: Page,
+  organizationId: string,
+  chatId: string,
+  timeoutMs = 30000,
+): Promise<ChatSummary> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const chats = await listChats(page, organizationId);
+    const chat = chats.find((item) => item.id === chatId);
+    if (chat) return chat;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Chat ${chatId} did not appear in organization ${organizationId} list within ${timeoutMs}ms`);
+}
+
 export async function getMessages(page: Page, chatId: string): Promise<Message[]> {
   const response = await postConnect<GetMessagesResponseWire>(page, CHAT_GATEWAY_PATH, 'GetMessages', {
     chatId,
@@ -552,19 +602,12 @@ export async function waitForAgentReply(
   timeoutMs = 120000,
   intervalMs = 3000,
 ): Promise<Message> {
-  const initialMessages = await getMessages(page, chatId);
-  const seenMessageIds = new Set(
-    initialMessages
-      .map((message) => message.id)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0),
-  );
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const messages = await getMessages(page, chatId);
     const agentMsg = messages.find((message) => {
       if (!message.body) return false;
       if (message.senderId === senderIdToExclude) return false;
-      if (message.id && seenMessageIds.has(message.id)) return false;
       return true;
     });
     if (agentMsg) return agentMsg;

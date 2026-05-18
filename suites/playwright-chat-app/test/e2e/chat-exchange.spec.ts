@@ -7,8 +7,9 @@ import {
   createOrganization,
   resolveIdentityId,
   sendChatMessage,
+  waitForChatInList,
 } from './chat-api';
-import { setSelectedOrganization } from './organization-helpers';
+import { setSelectedOrganization, waitForChatList } from './organization-helpers';
 
 test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organizations'] }, () => {
   test('two users exchange messages in a shared chat', async ({ userAPage, userBPage }) => {
@@ -24,31 +25,23 @@ test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_or
     const userBOrganizationId = await createOrganization(userBPage, `e2e-org-exchange-b-${Date.now()}`);
     await setSelectedOrganization(userBPage, userBOrganizationId);
 
-    const userAChatsLoaded = userAPage.waitForResponse(
-      (resp) => resp.url().includes('GetChats') && resp.status() === 200,
-      { timeout: 15000 },
-    );
     const userAMessagesLoaded = userAPage.waitForResponse(
       (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
       { timeout: 15000 },
     );
     await userAPage.goto(`/chats/${encodeURIComponent(chatId)}`);
-    await userAChatsLoaded;
+    await waitForChatList(userAPage, organizationId);
     await userAMessagesLoaded;
     await expect(userAPage.getByTestId('chat-message').filter({ hasText: messageFromA })).toBeVisible({
       timeout: 15000,
     });
 
-    const userBChatsLoaded = userBPage.waitForResponse(
-      (resp) => resp.url().includes('GetChats') && resp.status() === 200,
-      { timeout: 15000 },
-    );
     const userBMessagesLoaded = userBPage.waitForResponse(
       (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
       { timeout: 15000 },
     );
     await userBPage.goto(`/chats/${encodeURIComponent(chatId)}`);
-    await userBChatsLoaded;
+    await waitForChatList(userBPage, userBOrganizationId);
     await userBMessagesLoaded;
     await expect(userBPage.getByTestId('chat-message').filter({ hasText: messageFromA })).toBeVisible({
       timeout: 15000,
@@ -89,6 +82,7 @@ test.describe('chat-exchange', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_or
     await acceptMembership(userBPage, membershipId);
     const chatId = await createChat(userAPage, organizationId, userBId);
     await sendChatMessage(userAPage, chatId, messageFromA);
+    await waitForChatInList(userBPage, organizationId, chatId);
     await setSelectedOrganization(userBPage, organizationId);
 
     await userBPage.goto('/chats');
