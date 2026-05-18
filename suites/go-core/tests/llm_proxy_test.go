@@ -14,18 +14,42 @@ import (
 	"testing"
 	"time"
 
+	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
-	llmProxyURLDefault      = "http://llm-proxy:8080"
+	llmProxyURLDefault      = "https://llm.agyn.dev:2496"
 	llmProxyRequestTimeout  = 45 * time.Second
 	llmGatewayServicePath   = "agynio.api.gateway.v1.LLMGateway"
 	llmProviderTestEndpoint = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
+	llmProxyIdentityType    = "user"
+	llmProxyAuthzAddr       = "authorization:50051"
+	llmProxyIdentityKey     = "x-identity-id"
+	llmProxyIdentityTypeKey = "x-identity-type"
+	llmProxyModelRelation   = "org"
+	llmProxyModelPrefix     = "model:"
+	llmProxyOrgPrefix       = "organization:"
 )
+
+func TestLLMProxyURLDefaultUsesIngress(t *testing.T) {
+	t.Setenv("E2E_DOMAIN", "e2e.agyn.dev")
+	t.Setenv("E2E_INGRESS_PORT", "30443")
+
+	require.Equal(t, "https://llm.e2e.agyn.dev:30443", llmProxyBaseURL())
+}
+
+func TestLLMProxyURLExplicitOverride(t *testing.T) {
+	t.Setenv("LLM_PROXY_URL", "https://custom.example.test:9443")
+
+	require.Equal(t, "https://custom.example.test:9443", llmProxyBaseURL())
+}
 
 func TestLLMGatewayConnectEndpointPath(t *testing.T) {
 	t.Setenv(gatewayBaseURLEnvKey, "http://gateway-gateway.platform.svc.cluster.local:8080")
@@ -45,6 +69,7 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	orgsConn := dialGRPC(t, orgsAddr)
 	usersClient := usersv1.NewUsersServiceClient(usersConn)
 	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
+	authzClient := newLLMProxyAuthorizationClient(t)
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	apiToken := createAPIToken(t, ctx, usersClient, identityID)
@@ -58,10 +83,12 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create llm model through gateway: %v", err)
 	}
+	ensureLLMProxyModelAccess(t, ctx, authzClient, identityID, modelID, organizationID)
 
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), llmProxyRequestTimeout)
 		defer cleanupCancel()
+		deleteLLMProxyModelAccess(t, cleanupCtx, authzClient, identityID, modelID, organizationID)
 		postGatewayConnectBestEffort(t, cleanupCtx, apiToken, "DeleteModel", map[string]string{"id": modelID})
 		postGatewayConnectBestEffort(t, cleanupCtx, apiToken, "DeleteLLMProvider", map[string]string{"id": providerID})
 		_, _ = orgsClient.DeleteOrganization(withIdentity(cleanupCtx, identityID), &organizationsv1.DeleteOrganizationRequest{Id: organizationID})
@@ -73,6 +100,50 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	require.NotEqual(t, http.StatusForbidden, statusCode, "llm-proxy unexpectedly rejected model access: %s", responseBody)
 	require.Equal(t, http.StatusOK, statusCode, "llm-proxy request failed: %s", responseBody)
 	require.Contains(t, responseBody, "Hi! How are you?")
+}
+
+func ensureLLMProxyModelAccess(t *testing.T, ctx context.Context, client authorizationv1.AuthorizationServiceClient, identityID string, modelID string, organizationID string) {
+	t.Helper()
+	tuple := llmProxyModelAccessTuple(modelID, organizationID)
+	_, err := client.Write(llmProxyAdminContext(ctx), &authorizationv1.WriteRequest{Writes: []*authorizationv1.TupleKey{tuple}})
+	if err == nil {
+		return
+	}
+	statusErr, ok := status.FromError(err)
+	if ok && statusErr.Code() == codes.InvalidArgument && strings.Contains(statusErr.Message(), "already exists") {
+		return
+	}
+	t.Fatalf("authorization write failed: %v", err)
+}
+
+func deleteLLMProxyModelAccess(t *testing.T, ctx context.Context, client authorizationv1.AuthorizationServiceClient, identityID string, modelID string, organizationID string) {
+	t.Helper()
+	tuple := llmProxyModelAccessTuple(modelID, organizationID)
+	_, err := client.Write(llmProxyAdminContext(ctx), &authorizationv1.WriteRequest{Deletes: []*authorizationv1.TupleKey{tuple}})
+	if err != nil {
+		t.Logf("cleanup: authorization delete failed for identity %s model %s: %v", identityID, modelID, err)
+	}
+}
+
+func llmProxyModelAccessTuple(modelID string, organizationID string) *authorizationv1.TupleKey {
+	return &authorizationv1.TupleKey{
+		User:     llmProxyOrgPrefix + organizationID,
+		Relation: llmProxyModelRelation,
+		Object:   llmProxyModelPrefix + modelID,
+	}
+}
+
+func newLLMProxyAuthorizationClient(t *testing.T) authorizationv1.AuthorizationServiceClient {
+	t.Helper()
+	conn := dialGRPC(t, envOrDefault("AUTHORIZATION_ADDRESS", llmProxyAuthzAddr))
+	return authorizationv1.NewAuthorizationServiceClient(conn)
+}
+
+func llmProxyAdminContext(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		llmProxyIdentityKey, clusterAdminIdentityID,
+		llmProxyIdentityTypeKey, llmProxyIdentityType,
+	))
 }
 
 func createGatewayLLMProvider(t *testing.T, ctx context.Context, token string, organizationID string) (string, error) {
@@ -201,7 +272,7 @@ func postLLMProxyResponses(t *testing.T, token string, payload llmProxyResponses
 	ctx, cancel := context.WithTimeout(context.Background(), llmProxyRequestTimeout)
 	defer cancel()
 
-	endpoint := strings.TrimRight(envOrDefault("LLM_PROXY_URL", llmProxyURLDefault), "/") + "/v1/responses"
+	endpoint := llmProxyBaseURL() + "/v1/responses"
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("build llm-proxy request: %v", err)
@@ -220,4 +291,16 @@ func postLLMProxyResponses(t *testing.T, token string, payload llmProxyResponses
 		t.Fatalf("read llm-proxy response: %v", err)
 	}
 	return strings.TrimSpace(string(responseBody)), response.StatusCode
+}
+
+func llmProxyBaseURL() string {
+	if explicitURL := strings.TrimSpace(envOrDefault("LLM_PROXY_URL", "")); explicitURL != "" {
+		return strings.TrimRight(explicitURL, "/")
+	}
+	domain := envOrDefault("E2E_DOMAIN", envOrDefault("DOMAIN", "agyn.dev"))
+	port := envOrDefault("E2E_INGRESS_PORT", envOrDefault("INGRESS_PORT", envOrDefault("PORT", "2496")))
+	if strings.TrimSpace(domain) == "agyn.dev" && strings.TrimSpace(port) == "2496" {
+		return llmProxyURLDefault
+	}
+	return strings.TrimRight(fmt.Sprintf("https://llm.%s:%s", domain, port), "/")
 }

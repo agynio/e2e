@@ -17,7 +17,9 @@ Optional OIDC overrides:
 
 Optional domain override:
 
-- `E2E_DOMAIN`
+- `E2E_DOMAIN` (falls back to `DOMAIN`, then `agyn.dev`)
+- `E2E_INGRESS_PORT` (falls back to `INGRESS_PORT`, then `PORT`, then `2496`; used for runner-reachable ingress URLs such as `LLM_PROXY_URL`)
+- `LLM_PROXY_URL` (default `https://llm.${E2E_DOMAIN:-agyn.dev}:${E2E_INGRESS_PORT:-2496}`)
 
 Full-chain tests use `AGN_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-agn:latest`) for agn,
 `CODEX_INIT_IMAGE` (default `ghcr.io/agynio/agent-init-codex:latest`) for codex,

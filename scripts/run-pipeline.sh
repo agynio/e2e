@@ -11,6 +11,8 @@ diagnostics_root="$repo_root/.diagnostics/suites"
 tags="${TAGS:-}"
 namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
 suites_filter="${E2E_SUITES:-}"
+e2e_domain="${E2E_DOMAIN:-${DOMAIN:-agyn.dev}}"
+e2e_ingress_port="${E2E_INGRESS_PORT:-${INGRESS_PORT:-${PORT:-2496}}}"
 
 if [ ! -d "$suites_dir" ]; then
   echo "ERROR: suites directory not found at $suites_dir" >&2
@@ -349,6 +351,12 @@ EOF
       exec_env+=("AGYN_BASE_URL=${AGYN_BASE_URL}")
     else
       exec_env+=("AGYN_BASE_URL=${gateway_internal_url}")
+    fi
+
+    if [ -n "${LLM_PROXY_URL:-}" ]; then
+      exec_env+=("LLM_PROXY_URL=${LLM_PROXY_URL}")
+    else
+      exec_env+=("LLM_PROXY_URL=https://llm.${e2e_domain}:${e2e_ingress_port}")
     fi
 
     for env_name in AGYN_MODEL_ID AGYN_AGENT_IMAGE AGYN_AGENT_INIT_IMAGE AGYN_API_TOKEN AGYN_ORGANIZATION_ID; do
