@@ -1,5 +1,6 @@
-import type { Page } from '@playwright/test';
 import { enumToJson } from '@bufbuild/protobuf';
+import type { Page } from '@playwright/test';
+import { AgentAvailability, AgentAvailabilitySchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -121,6 +122,8 @@ const CHAT_STATUS_MAP = {
   open: enumName(ChatStatusSchema, ChatStatus.OPEN),
   closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
 } satisfies Record<'open' | 'closed', string>;
+
+const AGENT_AVAILABILITY_INTERNAL = enumName(AgentAvailabilitySchema, AgentAvailability.INTERNAL);
 
 const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
@@ -395,7 +398,7 @@ type CreateAgentOptions = {
   configuration: string;
   image: string;
   initImage: string;
-  availability?: number;
+  availability?: string;
 };
 
 type SetupTestAgentOptions = {
@@ -439,7 +442,7 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   const payload = {
     ...rest,
     initImage: trimmedInitImage,
-    availability: opts.availability ?? 1,
+    availability: opts.availability ?? AGENT_AVAILABILITY_INTERNAL,
   };
   const response = await postConnect<CreateAgentResponseWire>(
     page,
