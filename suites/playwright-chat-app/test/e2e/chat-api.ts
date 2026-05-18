@@ -122,8 +122,6 @@ const CHAT_STATUS_MAP = {
   closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
 } satisfies Record<'open' | 'closed', string>;
 
-const AGENT_AVAILABILITY_INTERNAL = 'INTERNAL';
-
 const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
   MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
@@ -397,7 +395,6 @@ type CreateAgentOptions = {
   configuration: string;
   image: string;
   initImage: string;
-  availability?: string;
 };
 
 type SetupTestAgentOptions = {
@@ -441,7 +438,6 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   const payload = {
     ...rest,
     initImage: trimmedInitImage,
-    availability: opts.availability ?? AGENT_AVAILABILITY_INTERNAL,
   };
   const response = await postConnect<CreateAgentResponseWire>(
     page,
