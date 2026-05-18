@@ -395,6 +395,7 @@ type CreateAgentOptions = {
   configuration: string;
   image: string;
   initImage: string;
+  availability?: number;
 };
 
 type SetupTestAgentOptions = {
@@ -438,6 +439,7 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   const payload = {
     ...rest,
     initImage: trimmedInitImage,
+    availability: opts.availability ?? 1,
   };
   const response = await postConnect<CreateAgentResponseWire>(
     page,
