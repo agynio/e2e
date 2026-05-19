@@ -116,7 +116,7 @@ async function openTraceFromChat(
 }
 
 test.describe('chat trace link', {
-  tag: ['@svc_chat_app', '@svc_tracing_app', '@svc_agents_orchestrator', '@svc_gateway', '@svc_organizations'],
+  tag: ['@svc_chat_app', '@svc_tracing_app', '@svc_agents_orchestrator', '@svc_organizations'],
 }, () => {
   for (const scenario of TRACE_SCENARIOS) {
     test(`view trace opens tracing run (${scenario.name})`, async ({ page }) => {

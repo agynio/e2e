@@ -1,11 +1,16 @@
 import { createClient } from '@connectrpc/connect';
 import { createGrpcTransport } from '@connectrpc/connect-node';
-import { create } from '@bufbuild/protobuf';
+import { create, toJson } from '@bufbuild/protobuf';
 import { TimestampSchema, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { randomUUID } from 'crypto';
 import type { Page } from '@playwright/test';
-import { MeteringService, UsageRecordSchema } from '../../src/gen/agynio/api/metering/v1/metering_pb';
-import type { Unit } from '../../src/gen/agynio/api/metering/v1/metering_pb';
+import {
+  Granularity,
+  MeteringService,
+  QueryUsageRequestSchema,
+  Unit,
+  UsageRecordSchema,
+} from '../../src/gen/agynio/api/metering/v1/metering_pb';
 import { readOidcSession } from './oidc-helpers';
 
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
@@ -269,6 +274,14 @@ type UsageRecordInput = {
   idempotencyKey?: string;
 };
 
+type UsageUnitValue = 'UNIT_TOKENS' | 'UNIT_CORE_SECONDS' | 'UNIT_GB_SECONDS' | 'UNIT_COUNT';
+type UsageGranularityValue =
+  | 'GRANULARITY_TOTAL'
+  | 'GRANULARITY_DAY'
+  | 'GRANULARITY_FIVE_MINUTES'
+  | 'GRANULARITY_HOUR'
+  | 'GRANULARITY_SIX_HOURS';
+
 type MembershipRoleValue = 'MEMBERSHIP_ROLE_UNSPECIFIED' | 'MEMBERSHIP_ROLE_OWNER' | 'MEMBERSHIP_ROLE_MEMBER';
 type MembershipStatusValue =
   | 'MEMBERSHIP_STATUS_UNSPECIFIED'
@@ -292,6 +305,34 @@ function toProtoTimestamp(date: Date): Timestamp {
     seconds: BigInt(Math.floor(date.getTime() / 1000)),
     nanos: 0,
   });
+}
+
+function parseUsageUnit(unit: UsageUnitValue): Unit {
+  switch (unit) {
+    case 'UNIT_TOKENS':
+      return Unit.TOKENS;
+    case 'UNIT_CORE_SECONDS':
+      return Unit.CORE_SECONDS;
+    case 'UNIT_GB_SECONDS':
+      return Unit.GB_SECONDS;
+    case 'UNIT_COUNT':
+      return Unit.COUNT;
+  }
+}
+
+function parseUsageGranularity(granularity: UsageGranularityValue): Granularity {
+  switch (granularity) {
+    case 'GRANULARITY_TOTAL':
+      return Granularity.TOTAL;
+    case 'GRANULARITY_DAY':
+      return Granularity.DAY;
+    case 'GRANULARITY_FIVE_MINUTES':
+      return Granularity.FIVE_MINUTES;
+    case 'GRANULARITY_HOUR':
+      return Granularity.HOUR;
+    case 'GRANULARITY_SIX_HOURS':
+      return Granularity.SIX_HOURS;
+  }
 }
 
 function findEntityId(entities: EntityWithId[] | undefined): string {
@@ -1015,21 +1056,23 @@ export async function queryUsage(
     organizationId: string;
     start: string;
     end: string;
-    unit: string;
-    granularity: string;
+    unit: UsageUnitValue;
+    granularity: UsageGranularityValue;
     groupBy?: string;
     labelFilters?: Record<string, string>;
   },
 ): Promise<QueryUsageResponseWire> {
-  return postConnect<QueryUsageResponseWire>(page, METERING_GATEWAY_PATH, 'QueryUsage', {
+  const request = create(QueryUsageRequestSchema, {
     orgId: opts.organizationId,
-    start: opts.start,
-    end: opts.end,
-    unit: opts.unit,
-    granularity: opts.granularity,
+    start: toProtoTimestamp(new Date(opts.start)),
+    end: toProtoTimestamp(new Date(opts.end)),
+    unit: parseUsageUnit(opts.unit),
+    granularity: parseUsageGranularity(opts.granularity),
     groupBy: opts.groupBy ?? '',
     labelFilters: opts.labelFilters ?? {},
   });
+  const payload = toJson(QueryUsageRequestSchema, request) as Record<string, unknown>;
+  return postConnect<QueryUsageResponseWire>(page, METERING_GATEWAY_PATH, 'QueryUsage', payload);
 }
 
 export async function createDevice(page: Page, opts: { name: string }): Promise<CreateDeviceResponseWire> {

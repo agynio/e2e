@@ -13,7 +13,7 @@ const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/re
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
 test.describe('chat-with-agent', {
-  tag: ['@svc_chat_app', '@svc_gateway', '@svc_agents_orchestrator', '@svc_organizations'],
+  tag: ['@svc_chat_app', '@svc_agents_orchestrator', '@svc_organizations'],
 }, () => {
   test('chat with agent and receive reply', async ({ page }) => {
     test.setTimeout(180_000);

@@ -51,11 +51,11 @@ async function openChat(page: Page, message: string): Promise<void> {
   await chatLoaded;
 }
 
-function mermaidMessage(source: string) {
+function mermaidMessage(source: string): string {
   return `\`\`\`mermaid\n${source}\n\`\`\``;
 }
 
-function vegaMessage(source: string) {
+function vegaMessage(source: string): string {
   return `\`\`\`vega-lite\n${source}\n\`\`\``;
 }
 
@@ -73,8 +73,7 @@ test.describe('inline-media', {
     test.setTimeout(180_000);
     await openChat(page, mermaidMessage(mermaidSource));
 
-    const mermaidCanvas = page.getByTestId('markdown-mermaid');
-    await expect(mermaidCanvas).toBeVisible({ timeout: 120000 });
+    await expect(page.getByTestId('markdown-mermaid')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-mermaid');
   });
 
@@ -82,8 +81,7 @@ test.describe('inline-media', {
     test.setTimeout(180_000);
     await openChat(page, vegaMessage(vegaLiteSource));
 
-    const chart = page.getByTestId('markdown-vega-lite');
-    await expect(chart).toBeVisible({ timeout: 120000 });
+    await expect(page.getByTestId('markdown-vega-lite')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-vega-lite');
   });
 
@@ -102,7 +100,7 @@ test.describe('inline-media', {
     const invalidVegaSource = '{"data":{"values":[{"x":1,"y":2}]},"mark":"bar"}';
     await openChat(page, vegaMessage(invalidVegaSource));
 
-    await expect(page.getByTestId('markdown-vega-lite')).toBeVisible({ timeout: 120000 });
+    await expect(page.getByText('Vega-Lite render failed')).toBeVisible({ timeout: 120000 });
     await argosScreenshot(page, 'inline-vega-lite-invalid');
   });
 
