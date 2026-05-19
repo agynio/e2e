@@ -178,6 +178,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -215,13 +216,13 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 		labelThreadID:  threadID,
 	}
 	t.Cleanup(func() {
-		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+		ids, err := findWorkloadsByLabels(runnerCtx, runnerClient, labels)
 		if err != nil {
 			t.Logf("cleanup: find workloads: %v", err)
 			return
 		}
 		for _, workloadID := range ids {
-			cleanupWorkload(t, ctx, runnerClient, workloadID)
+			cleanupWorkload(t, runnerCtx, runnerClient, workloadID)
 		}
 	})
 
@@ -238,7 +239,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 		t.Fatalf("expected agent response %q, got %q", exposeExpectedResponse, agentBody)
 	}
 
-	workloadIDs, err := findWorkloadsByLabels(ctx, runnerClient, labels)
+	workloadIDs, err := findWorkloadsByLabels(runnerCtx, runnerClient, labels)
 	if err != nil {
 		t.Fatalf("find workloads: %v", err)
 	}

@@ -37,6 +37,7 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
+	runnerCtx := withIdentity(ctx, identityID)
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
@@ -74,7 +75,7 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 		labelThreadID:  threadID,
 	}
 
-	pollCtx, pollCancel := context.WithTimeout(ctx, 90*time.Second)
+	pollCtx, pollCancel := context.WithTimeout(runnerCtx, 90*time.Second)
 	defer pollCancel()
 	workloadID := ""
 	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
@@ -91,9 +92,9 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 		t.Fatalf("wait for workload: %v", err)
 	}
 
-	t.Cleanup(func() { cleanupWorkload(t, ctx, runnerClient, workloadID) })
+	t.Cleanup(func() { cleanupWorkload(t, runnerCtx, runnerClient, workloadID) })
 
-	labelsResp, err := getWorkloadLabels(ctx, runnerClient, workloadID)
+	labelsResp, err := getWorkloadLabels(runnerCtx, runnerClient, workloadID)
 	if err != nil {
 		t.Fatalf("get workload labels: %v", err)
 	}
