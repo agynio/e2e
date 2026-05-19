@@ -287,9 +287,9 @@ type MembershipStatusValue =
   | 'MEMBERSHIP_STATUS_UNSPECIFIED'
   | 'MEMBERSHIP_STATUS_PENDING'
   | 'MEMBERSHIP_STATUS_ACTIVE';
-type AgentAvailabilityValue = 'AGENT_AVAILABILITY_INTERNAL' | 'AGENT_AVAILABILITY_PRIVATE';
+type AgentAvailabilityValue = 'internal' | 'private';
 
-const DEFAULT_AGENT_AVAILABILITY: AgentAvailabilityValue = 'AGENT_AVAILABILITY_INTERNAL';
+const DEFAULT_AGENT_AVAILABILITY: AgentAvailabilityValue = 'internal';
 
 type CreateAgentOptions = {
   organizationId: string;

@@ -12,7 +12,7 @@ test.describe('console api helpers', () => {
     );
 
     expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
-      availability: 'AGENT_AVAILABILITY_INTERNAL',
+      availability: 'internal',
     });
   });
 
@@ -21,13 +21,13 @@ test.describe('console api helpers', () => {
       {
         organizationId: 'organization-id',
         name: 'agent-name',
-        availability: 'AGENT_AVAILABILITY_PRIVATE',
+        availability: 'private',
       },
       'model-id',
     );
 
     expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
-      availability: 'AGENT_AVAILABILITY_PRIVATE',
+      availability: 'private',
     });
   });
 });
