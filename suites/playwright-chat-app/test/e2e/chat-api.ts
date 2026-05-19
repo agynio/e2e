@@ -1,5 +1,7 @@
+import { create, fromBinary, toBinary, toJson } from '@bufbuild/protobuf';
+import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
-import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import { AgentAvailability, CreateAgentRequestSchema, CreateAgentResponseSchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 
 const CHAT_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ChatGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
@@ -13,8 +15,13 @@ export const DEFAULT_TEST_INIT_IMAGE =
   'ghcr.io/agynio/agent-init-codex:latest';
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
-const CONNECT_HEADERS = {
+const CONNECT_JSON_HEADERS = {
   'Content-Type': 'application/json',
+  'Connect-Protocol-Version': '1',
+};
+
+const CONNECT_PROTO_HEADERS = {
+  'Content-Type': 'application/proto',
   'Connect-Protocol-Version': '1',
 };
 
@@ -137,6 +144,12 @@ type OidcStorageSnapshot = {
   accessToken: string | null;
 };
 
+type PostConnectProtoOptions<InputSchema extends DescMessage, OutputSchema extends DescMessage> = {
+  encoding: 'proto';
+  inputSchema: InputSchema;
+  outputSchema: OutputSchema;
+};
+
 function redactPayload(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((entry) => redactPayload(entry));
@@ -186,10 +199,31 @@ async function postConnect<T>(
   servicePath: string,
   method: string,
   payload: unknown,
+  options?: PostConnectProtoOptions<DescMessage, DescMessage>,
 ): Promise<T> {
   const session = await readOidcSession(page);
   const token = session?.accessToken ?? null;
-  const headers = token ? { ...CONNECT_HEADERS, Authorization: `Bearer ${token}` } : CONNECT_HEADERS;
+  if (options?.encoding === 'proto') {
+    const headers = token ? { ...CONNECT_PROTO_HEADERS, Authorization: `Bearer ${token}` } : CONNECT_PROTO_HEADERS;
+    const message = payload as MessageShape<typeof options.inputSchema>;
+    const requestBody = Buffer.from(toBinary(options.inputSchema, message));
+    const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
+      data: requestBody,
+      headers,
+    });
+    if (!response.ok()) {
+      const body = await response.text();
+      if (method === 'CreateAgent') {
+        console.error(`ConnectRPC ${method} request JSON: ${formatDebugPayload(toJson(options.inputSchema, message))}`);
+        console.error(`ConnectRPC ${method} request proto hex: ${requestBody.toString('hex')}`);
+      }
+      throw new Error(`ConnectRPC ${method} failed with status ${response.status()}: ${body}`);
+    }
+    const responseBody = Buffer.from(await response.body());
+    return fromBinary(options.outputSchema, responseBody) as T;
+  }
+
+  const headers = token ? { ...CONNECT_JSON_HEADERS, Authorization: `Bearer ${token}` } : CONNECT_JSON_HEADERS;
   const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
     data: payload,
     headers,
@@ -415,7 +449,7 @@ type CreateAgentOptions = {
 };
 
 type CreateAgentPayload = Omit<CreateAgentOptions, 'availability'> & {
-  availability?: number;
+  availability: AgentAvailability.INTERNAL | AgentAvailability.PRIVATE;
 };
 
 type SetupTestAgentOptions = {
@@ -457,14 +491,22 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
     throw new Error('initImage is required to create chat agents.');
   }
   const payload = buildCreateAgentPayload({ ...rest, initImage: trimmedInitImage });
+  const request = create(CreateAgentRequestSchema, payload);
   if (DEBUG_CREATE_AGENT_PAYLOAD) {
-    console.info(`ConnectRPC CreateAgent request JSON: ${formatDebugPayload(payload)}`);
+    const requestBody = Buffer.from(buildCreateAgentRequestBytes(payload));
+    console.info(`ConnectRPC CreateAgent request JSON: ${formatDebugPayload(toJson(CreateAgentRequestSchema, request))}`);
+    console.info(`ConnectRPC CreateAgent request proto hex: ${requestBody.toString('hex')}`);
   }
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
     'CreateAgent',
-    payload,
+    request,
+    {
+      encoding: 'proto',
+      inputSchema: CreateAgentRequestSchema,
+      outputSchema: CreateAgentResponseSchema,
+    },
   );
   if (!response.agent?.meta?.id) {
     throw new Error('CreateAgent response missing agent id.');
@@ -479,10 +521,15 @@ export function buildCreateAgentPayload(opts: CreateAgentOptions): CreateAgentPa
   if (availability !== AgentAvailability.INTERNAL && availability !== AgentAvailability.PRIVATE) {
     throw new Error(`Unsupported agent availability: ${availability}`);
   }
-  if (availability === AgentAvailability.INTERNAL) {
-    return rest;
-  }
   return { ...rest, availability };
+}
+
+export function buildCreateAgentRequestJson(opts: CreateAgentOptions): unknown {
+  return toJson(CreateAgentRequestSchema, create(CreateAgentRequestSchema, buildCreateAgentPayload(opts)));
+}
+
+export function buildCreateAgentRequestBytes(opts: CreateAgentOptions): Uint8Array {
+  return toBinary(CreateAgentRequestSchema, create(CreateAgentRequestSchema, buildCreateAgentPayload(opts)));
 }
 
 export async function createTestModel(
