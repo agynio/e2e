@@ -24,6 +24,10 @@ const CONNECT_HEADERS = {
   'Connect-Protocol-Version': '1',
 };
 
+const DEBUG_CREATE_AGENT_PAYLOAD = process.env.E2E_DEBUG_CREATE_AGENT_PAYLOAD === 'true';
+const REDACTED_VALUE = '<redacted>';
+const SENSITIVE_KEY_PATTERN = /token|secret|password|authorization|credential/i;
+
 export function resolveCodexInitImage(override?: string): string {
   if (override !== undefined) {
     const trimmed = override.trim();
@@ -152,6 +156,24 @@ type OidcStorageSnapshot = {
   accessToken: string | null;
 };
 
+function redactPayload(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactPayload(entry));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const redacted: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    redacted[key] = SENSITIVE_KEY_PATTERN.test(key) ? REDACTED_VALUE : redactPayload(entry);
+  }
+  return redacted;
+}
+
+function formatDebugPayload(payload: unknown): string {
+  return JSON.stringify(redactPayload(payload));
+}
+
 async function readOidcSession(page: Page): Promise<OidcStorageSnapshot | null> {
   return page.evaluate(() => {
     let storageKey: string | null = null;
@@ -193,6 +215,10 @@ async function postConnect<T>(
   });
   if (!response.ok()) {
     const body = await response.text();
+    if (method === 'CreateAgent') {
+      const formattedPayload = formatDebugPayload(payload);
+      console.error(`ConnectRPC ${method} request JSON: ${formattedPayload}`);
+    }
     throw new Error(`ConnectRPC ${method} failed with status ${response.status()}: ${body}`);
   }
   return (await response.json()) as T;
@@ -450,6 +476,9 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
     throw new Error('initImage is required to create chat agents.');
   }
   const payload = buildCreateAgentPayload({ ...rest, initImage: trimmedInitImage });
+  if (DEBUG_CREATE_AGENT_PAYLOAD) {
+    console.info(`ConnectRPC CreateAgent request JSON: ${formatDebugPayload(payload)}`);
+  }
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
