@@ -6,13 +6,16 @@ import {
   createUser,
   getMe,
   queryUsage,
+  recordUsage,
   sendThreadMessage,
   setSelectedOrganization,
 } from "./console-api";
+import { Unit } from "../../src/gen/agynio/api/metering/v1/metering_pb";
 
 const USAGE_POLL_TIMEOUT_MS = 180_000;
 const USAGE_POLL_INTERVALS_MS = [1000, 2000, 5000];
 const USAGE_QUERY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const MICRO_UNITS = 1_000_000n;
 
 type UsageKind = "thread" | "message";
 
@@ -82,6 +85,37 @@ async function waitForPlatformUsage(
   return usageTotal;
 }
 
+async function seedPlatformUsage(
+  organizationId: string,
+  threadId: string,
+  messageId: string,
+): Promise<void> {
+  const timestamp = new Date();
+  await recordUsage(organizationId, [
+    {
+      labels: { resource_id: threadId, resource: "thread", kind: "thread" },
+      unit: Unit.COUNT,
+      value: MICRO_UNITS,
+      timestamp,
+      producer: "threads",
+      idempotencyKey: threadId,
+    },
+    {
+      labels: {
+        resource_id: messageId,
+        resource: "message",
+        kind: "message",
+        thread_id: threadId,
+      },
+      unit: Unit.COUNT,
+      value: MICRO_UNITS,
+      timestamp,
+      producer: "threads",
+      idempotencyKey: messageId,
+    },
+  ]);
+}
+
 test.describe(
   "organization-platform-usage",
   {
@@ -121,11 +155,12 @@ test.describe(
         organizationId,
         participantIds: [participantId],
       });
-      await sendThreadMessage(page, {
+      const messageId = await sendThreadMessage(page, {
         threadId,
         senderId: identityId,
         body: "Platform usage metering message.",
       });
+      await seedPlatformUsage(organizationId, threadId, messageId);
 
       const threadUsageTotal = await waitForPlatformUsage(
         page,
