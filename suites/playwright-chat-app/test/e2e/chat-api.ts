@@ -1,11 +1,5 @@
-import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
-import {
-  AgentAvailability,
-  AgentAvailabilitySchema,
-} from '../../src/gen/agynio/api/agents/v1/agents_pb';
-import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
-import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
+import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 
 const CHAT_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ChatGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
@@ -23,6 +17,21 @@ const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
   'Connect-Protocol-Version': '1',
 };
+
+const CHAT_STATUS_MAP = {
+  open: 'CHAT_STATUS_OPEN',
+  closed: 'CHAT_STATUS_CLOSED',
+} satisfies Record<'open' | 'closed', string>;
+
+const MEMBERSHIP_ROLE_MAP = {
+  MEMBERSHIP_ROLE_OWNER: 'MEMBERSHIP_ROLE_OWNER',
+  MEMBERSHIP_ROLE_MEMBER: 'MEMBERSHIP_ROLE_MEMBER',
+} satisfies Record<MembershipRoleValue, string>;
+
+const AGENT_AVAILABILITY_MAP = {
+  [AgentAvailability.INTERNAL]: 'internal',
+  [AgentAvailability.PRIVATE]: 'private',
+} satisfies Record<AgentAvailability.INTERNAL | AgentAvailability.PRIVATE, string>;
 
 const DEBUG_CREATE_AGENT_PAYLOAD = process.env.E2E_DEBUG_CREATE_AGENT_PAYLOAD === 'true';
 const REDACTED_VALUE = '<redacted>';
@@ -116,29 +125,6 @@ type BatchGetUsersResponseWire = {
 
 const CHAT_ORG_STORAGE_KEY = 'ui.organization.chat-map';
 const CHAT_ORG_STORAGE_VERSION = 1;
-
-function enumName(schema: Parameters<typeof enumToJson>[0], value: number): string {
-  const jsonValue = enumToJson(schema, value as never);
-  if (typeof jsonValue !== 'string') {
-    throw new Error(`Expected enum ${schema.typeName} to serialize as string.`);
-  }
-  return jsonValue;
-}
-
-const CHAT_STATUS_MAP = {
-  open: enumName(ChatStatusSchema, ChatStatus.OPEN),
-  closed: enumName(ChatStatusSchema, ChatStatus.CLOSED),
-} satisfies Record<'open' | 'closed', string>;
-
-const MEMBERSHIP_ROLE_MAP = {
-  MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
-  MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
-} satisfies Record<MembershipRoleValue, string>;
-
-const AGENT_AVAILABILITY_MAP = {
-  [AgentAvailability.INTERNAL]: enumName(AgentAvailabilitySchema, AgentAvailability.INTERNAL),
-  [AgentAvailability.PRIVATE]: enumName(AgentAvailabilitySchema, AgentAvailability.PRIVATE),
-} satisfies Record<AgentAvailability.INTERNAL | AgentAvailability.PRIVATE, string>;
 
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;

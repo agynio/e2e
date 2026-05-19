@@ -3,7 +3,7 @@ import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb'
 import { buildCreateAgentPayload } from './chat-api';
 
 test.describe('chat api helpers', () => {
-  test('CreateAgent payload serializes availability as ConnectRPC enum name', () => {
+  test('CreateAgent payload serializes availability as backend value', () => {
     const payload = buildCreateAgentPayload({
       organizationId: 'organization-id',
       name: 'agent-name',
@@ -24,11 +24,11 @@ test.describe('chat api helpers', () => {
       configuration: '{}',
       image: 'alpine:3.21',
       initImage: 'ghcr.io/agynio/agent-init-codex:latest',
-      availability: 'AGENT_AVAILABILITY_INTERNAL',
+      availability: 'internal',
     });
   });
 
-  test('CreateAgent payload serializes private availability as ConnectRPC enum name', () => {
+  test('CreateAgent payload serializes private availability as backend value', () => {
     const payload = buildCreateAgentPayload({
       organizationId: 'organization-id',
       name: 'agent-name',
@@ -42,7 +42,7 @@ test.describe('chat api helpers', () => {
     });
 
     expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
-      availability: 'AGENT_AVAILABILITY_PRIVATE',
+      availability: 'private',
     });
   });
 });
