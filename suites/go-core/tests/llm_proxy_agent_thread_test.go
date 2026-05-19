@@ -63,8 +63,8 @@ func TestAgentRespondsToThreadMessageViaLLMProxy(t *testing.T) {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_BASE_URL", "http://llm-proxy-llm-proxy.platform.svc.cluster.local:8080/v1")
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", apiToken)
-	createAgentEnv(t, threadsCtx, agentsClient, agentID, "OPENAI_API_KEY", apiToken)
 
 	thread := createThread(t, threadsCtx, threadsClient, organizationID, []string{identityID, agentID})
 	threadID := thread.GetId()
