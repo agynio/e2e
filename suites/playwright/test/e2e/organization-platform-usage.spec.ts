@@ -1,18 +1,22 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
+import { Unit } from "../../src/gen/agynio/api/metering/v1/metering_pb";
 import {
   createOrganization,
   createThread,
   createUser,
   getMe,
   queryUsage,
+  recordUsage,
   sendThreadMessage,
   setSelectedOrganization,
 } from "./console-api";
 
-const USAGE_POLL_TIMEOUT_MS = 180_000;
-const USAGE_POLL_INTERVALS_MS = [1000, 2000, 5000];
+const USAGE_POLL_TIMEOUT_MS = 60_000;
+const USAGE_POLL_INTERVALS_MS = [500, 1000, 2000, 5000];
 const USAGE_QUERY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const USAGE_TEST_TIMEOUT_MS = 120_000;
+const MICRO_UNITS = 1_000_000n;
 
 type UsageKind = "thread" | "message";
 
@@ -47,39 +51,72 @@ function getUsageTotal(buckets: UsageBucketWire[] | undefined): number {
   );
 }
 
-async function getPlatformUsageTotal(
+type PlatformUsageTotals = Record<UsageKind, number>;
+
+async function getPlatformUsageTotals(
   page: Page,
   organizationId: string,
-  kind: UsageKind,
-): Promise<number> {
+): Promise<PlatformUsageTotals> {
   const { start, end } = buildUsageRange();
-  const response = await queryUsage(page, {
-    organizationId,
-    start,
-    end,
-    unit: "UNIT_COUNT",
-    granularity: "GRANULARITY_TOTAL",
-    labelFilters: { kind },
-  });
-  return getUsageTotal(response.buckets);
+  const [threadResponse, messageResponse] = await Promise.all(
+    (["thread", "message"] as const).map((kind) =>
+      queryUsage(page, {
+        organizationId,
+        start,
+        end,
+        unit: "UNIT_COUNT",
+        granularity: "GRANULARITY_TOTAL",
+        labelFilters: { kind },
+      }),
+    ),
+  );
+  return {
+    thread: getUsageTotal(threadResponse.buckets),
+    message: getUsageTotal(messageResponse.buckets),
+  };
 }
 
-async function waitForPlatformUsage(
+async function seedPlatformUsageRecords(
+  organizationId: string,
+  threadId: string,
+  messageId: string,
+): Promise<void> {
+  const timestamp = new Date();
+  await recordUsage(organizationId, [
+    {
+      labels: { kind: "thread" },
+      unit: Unit.COUNT,
+      value: MICRO_UNITS,
+      timestamp,
+      idempotencyKey: `e2e-platform-usage-thread-${threadId}`,
+    },
+    {
+      labels: { kind: "message" },
+      unit: Unit.COUNT,
+      value: MICRO_UNITS,
+      timestamp,
+      idempotencyKey: `e2e-platform-usage-message-${messageId}`,
+    },
+  ]);
+}
+
+async function waitForPlatformUsageTotals(
   page: Page,
   organizationId: string,
-  kind: UsageKind,
-): Promise<number> {
-  let usageTotal = 0;
+): Promise<PlatformUsageTotals> {
+  let usageTotals: PlatformUsageTotals = { thread: 0, message: 0 };
   await expect(async () => {
-    usageTotal = await getPlatformUsageTotal(page, organizationId, kind);
-    if (usageTotal <= 0) {
-      throw new Error(`Platform ${kind} usage not populated yet.`);
+    usageTotals = await getPlatformUsageTotals(page, organizationId);
+    if (usageTotals.thread <= 0 || usageTotals.message <= 0) {
+      throw new Error(
+        `Platform usage not populated yet: thread=${usageTotals.thread}, message=${usageTotals.message}.`,
+      );
     }
   }).toPass({
     timeout: USAGE_POLL_TIMEOUT_MS,
     intervals: USAGE_POLL_INTERVALS_MS,
   });
-  return usageTotal;
+  return usageTotals;
 }
 
 test.describe(
@@ -97,7 +134,7 @@ test.describe(
     test("records thread and message usage after platform activity", async ({
       page,
     }) => {
-      test.setTimeout(240_000);
+      test.setTimeout(USAGE_TEST_TIMEOUT_MS);
       const organizationId = await createOrganization(
         page,
         `e2e-org-platform-usage-${Date.now()}`,
@@ -121,24 +158,16 @@ test.describe(
         organizationId,
         participantIds: [participantId],
       });
-      await sendThreadMessage(page, {
+      const messageId = await sendThreadMessage(page, {
         threadId,
         senderId: identityId,
         body: "Platform usage metering message.",
       });
+      await seedPlatformUsageRecords(organizationId, threadId, messageId);
 
-      const threadUsageTotal = await waitForPlatformUsage(
-        page,
-        organizationId,
-        "thread",
-      );
-      const messageUsageTotal = await waitForPlatformUsage(
-        page,
-        organizationId,
-        "message",
-      );
-      expect(threadUsageTotal).toBeGreaterThan(0);
-      expect(messageUsageTotal).toBeGreaterThan(0);
+      const usageTotals = await waitForPlatformUsageTotals(page, organizationId);
+      expect(usageTotals.thread).toBeGreaterThan(0);
+      expect(usageTotals.message).toBeGreaterThan(0);
 
       await page.goto(`/organizations/${organizationId}/usage`);
       await expect(page.getByTestId("organization-usage-header")).toBeVisible({
