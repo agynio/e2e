@@ -65,7 +65,6 @@ async function expectInlineMedia(page: Page, testId: string): Promise<void> {
 test.describe('inline-media', {
   tag: [
     '@svc_chat_app',
-    '@svc_gateway',
     '@svc_agents_orchestrator',
     '@svc_organizations',
     '@svc_files',
