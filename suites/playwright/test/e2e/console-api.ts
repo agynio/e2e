@@ -1,6 +1,7 @@
 import { createClient } from '@connectrpc/connect';
 import { createGrpcTransport } from '@connectrpc/connect-node';
-import { create, toJson } from '@bufbuild/protobuf';
+import { create, fromBinary, toBinary, toJson } from '@bufbuild/protobuf';
+import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 import { TimestampSchema, type Timestamp } from '@bufbuild/protobuf/wkt';
 import { randomUUID } from 'crypto';
 import type { Page } from '@playwright/test';
@@ -11,6 +12,11 @@ import {
   Unit,
   UsageRecordSchema,
 } from '../../src/gen/agynio/api/metering/v1/metering_pb';
+import {
+  AgentAvailability,
+  CreateAgentRequestSchema,
+  CreateAgentResponseSchema,
+} from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { readOidcSession } from './oidc-helpers';
 
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
@@ -24,6 +30,11 @@ const METERING_GATEWAY_PATH = '/api/agynio.api.gateway.v1.MeteringGateway';
 
 const CONNECT_HEADERS = {
   'Content-Type': 'application/json',
+  'Connect-Protocol-Version': '1',
+};
+
+const CONNECT_PROTO_HEADERS = {
+  'Content-Type': 'application/proto',
   'Connect-Protocol-Version': '1',
 };
 
@@ -287,9 +298,9 @@ type MembershipStatusValue =
   | 'MEMBERSHIP_STATUS_UNSPECIFIED'
   | 'MEMBERSHIP_STATUS_PENDING'
   | 'MEMBERSHIP_STATUS_ACTIVE';
-type AgentAvailabilityValue = 'internal' | 'private';
+type AgentAvailabilityValue = AgentAvailability.INTERNAL | AgentAvailability.PRIVATE;
 
-const DEFAULT_AGENT_AVAILABILITY: AgentAvailabilityValue = 'internal';
+const DEFAULT_AGENT_AVAILABILITY: AgentAvailabilityValue = AgentAvailability.INTERNAL;
 
 type CreateAgentOptions = {
   organizationId: string;
@@ -383,14 +394,45 @@ function isClusterAdminRole(role: ClusterRoleWire): boolean {
   return role === 'CLUSTER_ROLE_ADMIN';
 }
 
+type PostConnectProtoOptions<InputSchema extends DescMessage, OutputSchema extends DescMessage> = {
+  encoding: 'proto';
+  inputSchema: InputSchema;
+  outputSchema: OutputSchema;
+};
+
+function formatCreateAgentDebugPayload(payload: unknown): string {
+  return JSON.stringify(payload);
+}
+
 async function postConnect<T>(
   page: Page,
   servicePath: string,
   method: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown> | MessageShape<DescMessage>,
+  options?: PostConnectProtoOptions<DescMessage, DescMessage>,
 ): Promise<T> {
   const session = await readOidcSession(page);
   const token = session?.accessToken ?? null;
+  if (options?.encoding === 'proto') {
+    const headers = token ? { ...CONNECT_PROTO_HEADERS, Authorization: `Bearer ${token}` } : CONNECT_PROTO_HEADERS;
+    const message = payload as MessageShape<typeof options.inputSchema>;
+    const requestBody = Buffer.from(toBinary(options.inputSchema, message));
+    const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
+      data: requestBody,
+      headers,
+    });
+    if (!response.ok()) {
+      const body = await response.text();
+      if (method === 'CreateAgent') {
+        console.error(`ConnectRPC ${method} request JSON: ${formatCreateAgentDebugPayload(toJson(options.inputSchema, message))}`);
+        console.error(`ConnectRPC ${method} request proto hex: ${requestBody.toString('hex')}`);
+      }
+      throw new Error(`ConnectRPC ${method} failed with status ${response.status()}: ${body}`);
+    }
+    const responseBody = Buffer.from(await response.body());
+    return fromBinary(options.outputSchema, responseBody) as T;
+  }
+
   const headers = token ? { ...CONNECT_HEADERS, Authorization: `Bearer ${token}` } : CONNECT_HEADERS;
   const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
     data: payload,
@@ -398,6 +440,9 @@ async function postConnect<T>(
   });
   if (!response.ok()) {
     const body = await response.text();
+    if (method === 'CreateAgent') {
+      console.error(`ConnectRPC ${method} request JSON: ${formatCreateAgentDebugPayload(payload)}`);
+    }
     throw new Error(`ConnectRPC ${method} failed with status ${response.status()}: ${body}`);
   }
   return (await response.json()) as T;
@@ -899,6 +944,14 @@ export function buildCreateAgentPayload(opts: CreateAgentOptions, modelId: strin
   };
 }
 
+export function buildCreateAgentRequestJson(opts: CreateAgentOptions, modelId: string): unknown {
+  return toJson(CreateAgentRequestSchema, create(CreateAgentRequestSchema, buildCreateAgentPayload(opts, modelId)));
+}
+
+export function buildCreateAgentRequestBytes(opts: CreateAgentOptions, modelId: string): Uint8Array {
+  return toBinary(CreateAgentRequestSchema, create(CreateAgentRequestSchema, buildCreateAgentPayload(opts, modelId)));
+}
+
 export async function createAgent(page: Page, opts: CreateAgentOptions): Promise<string> {
   let modelId = opts.model?.trim() ?? '';
   if (!modelId) {
@@ -909,7 +962,18 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   if (trimmedNickname) {
     payload.nickname = trimmedNickname;
   }
-  const response = await postConnect<CreateAgentResponseWire>(page, AGENTS_GATEWAY_PATH, 'CreateAgent', payload);
+  const request = create(CreateAgentRequestSchema, payload);
+  const response = await postConnect<CreateAgentResponseWire>(
+    page,
+    AGENTS_GATEWAY_PATH,
+    'CreateAgent',
+    request,
+    {
+      encoding: 'proto',
+      inputSchema: CreateAgentRequestSchema,
+      outputSchema: CreateAgentResponseSchema,
+    },
+  );
   const agentId = response.agent?.meta?.id;
   if (!agentId) {
     throw new Error('CreateAgent response missing agent id.');
