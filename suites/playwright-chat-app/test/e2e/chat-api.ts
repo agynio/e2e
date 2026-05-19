@@ -1,5 +1,6 @@
 import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
+import { AgentAvailability, AgentAvailabilitySchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -116,6 +117,11 @@ const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
   MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
 } satisfies Record<MembershipRoleValue, string>;
+
+const DEFAULT_AGENT_AVAILABILITY = enumName(
+  AgentAvailabilitySchema,
+  AgentAvailability.INTERNAL,
+);
 
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;
@@ -425,7 +431,11 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   if (!trimmedInitImage) {
     throw new Error('initImage is required to create chat agents.');
   }
-  const payload = { ...rest, initImage: trimmedInitImage };
+  const payload = {
+    ...rest,
+    initImage: trimmedInitImage,
+    availability: DEFAULT_AGENT_AVAILABILITY,
+  };
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
