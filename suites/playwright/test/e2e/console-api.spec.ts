@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { buildCreateAgentPayload } from './console-api';
+import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import { buildCreateAgentPayload, buildCreateAgentRequestBytes, buildCreateAgentRequestJson } from './console-api';
 
 test.describe('console api helpers', () => {
   test('CreateAgent payload defaults availability to internal', () => {
@@ -12,7 +13,7 @@ test.describe('console api helpers', () => {
     );
 
     expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
-      availability: 'internal',
+      availability: AgentAvailability.INTERNAL,
     });
   });
 
@@ -21,13 +22,41 @@ test.describe('console api helpers', () => {
       {
         organizationId: 'organization-id',
         name: 'agent-name',
-        availability: 'private',
+        availability: AgentAvailability.PRIVATE,
       },
       'model-id',
     );
 
     expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
-      availability: 'private',
+      availability: AgentAvailability.PRIVATE,
     });
+  });
+
+  test('CreateAgent ConnectRPC JSON uses protobuf enum name', () => {
+    const payload = buildCreateAgentRequestJson(
+      {
+        organizationId: 'organization-id',
+        name: 'agent-name',
+      },
+      'model-id',
+    );
+
+    expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
+      availability: 'AGENT_AVAILABILITY_INTERNAL',
+    });
+  });
+
+  test('CreateAgent ConnectRPC proto bytes include availability value', () => {
+    const payload = buildCreateAgentRequestBytes(
+      {
+        organizationId: 'organization-id',
+        name: 'agent-name',
+      },
+      'model-id',
+    );
+
+    expect(Buffer.from(payload).toString('hex')).toBe(
+      '0a0a6167656e742d6e616d651209617373697374616e741a086d6f64656c2d6964420f6f7267616e697a6174696f6e2d69646801',
+    );
   });
 });
