@@ -287,6 +287,35 @@ type MembershipStatusValue =
   | 'MEMBERSHIP_STATUS_UNSPECIFIED'
   | 'MEMBERSHIP_STATUS_PENDING'
   | 'MEMBERSHIP_STATUS_ACTIVE';
+type AgentAvailabilityValue = 'AGENT_AVAILABILITY_INTERNAL' | 'AGENT_AVAILABILITY_PRIVATE';
+
+const DEFAULT_AGENT_AVAILABILITY: AgentAvailabilityValue = 'AGENT_AVAILABILITY_INTERNAL';
+
+type CreateAgentOptions = {
+  organizationId: string;
+  name: string;
+  nickname?: string;
+  role?: string;
+  model?: string;
+  description?: string;
+  configuration?: string;
+  image?: string;
+  initImage?: string;
+  availability?: AgentAvailabilityValue;
+};
+
+type CreateAgentPayload = {
+  name: string;
+  nickname?: string;
+  role: string;
+  model: string;
+  description: string;
+  configuration: string;
+  image: string;
+  initImage: string;
+  organizationId: string;
+  availability: AgentAvailabilityValue;
+};
 
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;
@@ -856,35 +885,8 @@ export async function createImagePullSecret(
   return secretId;
 }
 
-export async function createAgent(
-  page: Page,
-  opts: {
-    organizationId: string;
-    name: string;
-    nickname?: string;
-    role?: string;
-    model?: string;
-    description?: string;
-    configuration?: string;
-    image?: string;
-    initImage?: string;
-  },
-): Promise<string> {
-  let modelId = opts.model?.trim() ?? '';
-  if (!modelId) {
-    modelId = await ensureModelId(page, opts.organizationId);
-  }
-  const payload: {
-    name: string;
-    nickname?: string;
-    role: string;
-    model: string;
-    description: string;
-    configuration: string;
-    image: string;
-    initImage: string;
-    organizationId: string;
-  } = {
+export function buildCreateAgentPayload(opts: CreateAgentOptions, modelId: string): CreateAgentPayload {
+  return {
     name: opts.name,
     role: opts.role ?? 'assistant',
     model: modelId,
@@ -893,7 +895,16 @@ export async function createAgent(
     image: opts.image ?? '',
     initImage: opts.initImage ?? '',
     organizationId: opts.organizationId,
+    availability: opts.availability ?? DEFAULT_AGENT_AVAILABILITY,
   };
+}
+
+export async function createAgent(page: Page, opts: CreateAgentOptions): Promise<string> {
+  let modelId = opts.model?.trim() ?? '';
+  if (!modelId) {
+    modelId = await ensureModelId(page, opts.organizationId);
+  }
+  const payload = buildCreateAgentPayload(opts, modelId);
   const trimmedNickname = opts.nickname?.trim();
   if (trimmedNickname) {
     payload.nickname = trimmedNickname;
