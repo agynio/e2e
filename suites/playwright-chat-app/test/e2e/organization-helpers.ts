@@ -23,4 +23,20 @@ export async function setSelectedOrganization(page: Page, organizationId: string
   await page.waitForSelector('[data-testid="chat-list"], [data-testid="no-organizations-screen"]', {
     timeout: 30000,
   });
+
+  await page.waitForFunction(
+    (orgId) => window.localStorage.getItem('ui.organization.selected') === orgId,
+    organizationId,
+    { timeout: 30000 },
+  );
+}
+
+export async function waitForChatList(page: Page, organizationId?: string): Promise<void> {
+  await page.waitForSelector('[data-testid="chat-list"]', { timeout: 30000 });
+  if (!organizationId) return;
+  await page.waitForFunction(
+    (orgId) => window.localStorage.getItem('ui.organization.selected') === orgId,
+    organizationId,
+    { timeout: 30000 },
+  );
 }
