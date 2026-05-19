@@ -60,13 +60,13 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		t.Fatal("create model: missing id")
 	}
 
-	agent := createAgent(t, ctx, agentsClient, "e2e-mcp-tools-"+uuid.NewString(), modelID, orgID, initImage)
+	agent := createAgent(t, threadsCtx, agentsClient, "e2e-mcp-tools-"+uuid.NewString(), modelID, orgID, initImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 	memoryMCP := createMCP(
 		t,
 		ctx,

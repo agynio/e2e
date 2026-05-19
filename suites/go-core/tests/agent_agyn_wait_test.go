@@ -62,12 +62,12 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	}
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentBID) })
 
-	agentA := createAgent(t, ctx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModel.GetMeta().GetId(), orgID, agnInitImage)
+	agentA := createAgent(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModel.GetMeta().GetId(), orgID, agnInitImage)
 	agentAID := agentA.GetMeta().GetId()
 	if agentAID == "" {
 		t.Fatal("create agent A: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentAID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentAID) })
 
 	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
 	threadAID := threadA.GetId()

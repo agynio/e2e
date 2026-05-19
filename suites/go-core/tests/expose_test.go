@@ -192,15 +192,15 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 		t.Fatal("create model: missing id")
 	}
 
-	agent := createAgent(t, ctx, agentsClient, fmt.Sprintf("e2e-expose-%s", uuid.NewString()), modelID, orgID, exposeInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-expose-%s", uuid.NewString()), modelID, orgID, exposeInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
-	createAgentEnv(t, ctx, agentsClient, agentID, "HOME", "/tmp")
-	createAgentEnv(t, ctx, agentsClient, agentID, "AGYN_GATEWAY_URL", "http://gateway:8080")
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "HOME", "/tmp")
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "AGYN_GATEWAY_URL", "http://gateway:8080")
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()

@@ -61,13 +61,13 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 	}
 
 	idleTimeout := "15s"
-	agent := createAgentWithIdleTimeout(t, ctx, agentsClient, fmt.Sprintf("e2e-test-agent-idle-%s", uuid.NewString()), modelID, orgID, codexInitImage, idleTimeout)
+	agent := createAgentWithIdleTimeout(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-idle-%s", uuid.NewString()), modelID, orgID, codexInitImage, idleTimeout)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	agentThreadsCtx := withIdentity(ctx, agentID)
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 	agentInfoResp, err := agentsClient.GetAgent(ctx, &agentsv1.GetAgentRequest{Id: agentID})
 	if err != nil {
 		t.Fatalf("get agent %s: %v", agentID, err)
@@ -81,7 +81,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 	} else {
 		t.Logf("diagnostics: agent idle_timeout=%q", agentInfo.GetIdleTimeout())
 	}
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
