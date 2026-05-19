@@ -262,6 +262,7 @@ export async function createAgent(page: Page, params: {
     model: params.model,
     image: params.image,
     initImage,
+    availability: 'AGENT_AVAILABILITY_INTERNAL',
     role: params.role ?? 'assistant',
   };
   if (params.description !== undefined) {

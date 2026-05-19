@@ -44,6 +44,7 @@ func TestAgentsGateway_CreateAndDeleteAgent(t *testing.T) {
 		Image:          gatewayAgentImage(t),
 		InitImage:      gatewayAgentInitImage(t),
 		OrganizationId: gatewayOrganizationID(t),
+		Availability:   agentsv1.AgentAvailability_AGENT_AVAILABILITY_INTERNAL,
 	}
 	createResp, err := client.CreateAgent(ctx, connect.NewRequest(createReq))
 	require.NoError(t, err)
@@ -108,6 +109,7 @@ func createGatewayAgent(t *testing.T, client gatewayv1connect.AgentsGatewayClien
 		Image:          gatewayAgentImage(t),
 		InitImage:      gatewayAgentInitImage(t),
 		OrganizationId: gatewayOrganizationID(t),
+		Availability:   agentsv1.AgentAvailability_AGENT_AVAILABILITY_INTERNAL,
 	}))
 	require.NoError(t, err)
 	require.NotNil(t, resp)

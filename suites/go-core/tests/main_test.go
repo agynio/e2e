@@ -196,6 +196,7 @@ func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.A
 		Image:          "alpine:3.21",
 		InitImage:      opts.InitImage,
 		OrganizationId: opts.OrganizationID,
+		Availability:   agentsv1.AgentAvailability_AGENT_AVAILABILITY_INTERNAL,
 	}
 	if opts.IdleTimeout != "" {
 		request.IdleTimeout = &opts.IdleTimeout

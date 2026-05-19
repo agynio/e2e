@@ -51,17 +51,17 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 		t.Fatal("create model: missing id")
 	}
 
-	agentA := createAgent(t, ctx, agentsClient, fmt.Sprintf("e2e-test-agent-multi-a-%s", uuid.NewString()), modelID, orgID, codexInitImage)
-	agentB := createAgent(t, ctx, agentsClient, fmt.Sprintf("e2e-test-agent-multi-b-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agentA := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-multi-a-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agentB := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-multi-b-%s", uuid.NewString()), modelID, orgID, codexInitImage)
 	agentAID := agentA.GetMeta().GetId()
 	agentBID := agentB.GetMeta().GetId()
 	if agentAID == "" || agentBID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentAID) })
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentBID) })
-	createAgentEnv(t, ctx, agentsClient, agentAID, "LLM_API_TOKEN", token)
-	createAgentEnv(t, ctx, agentsClient, agentBID, "LLM_API_TOKEN", token)
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentAID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentBID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentAID, "LLM_API_TOKEN", token)
+	createAgentEnv(t, threadsCtx, agentsClient, agentBID, "LLM_API_TOKEN", token)
 
 	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
 	threadB := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentBID})
@@ -186,13 +186,13 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 		t.Fatal("create model: missing id")
 	}
 
-	agent := createAgent(t, ctx, agentsClient, fmt.Sprintf("e2e-test-agent-multi-thread-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-multi-thread-%s", uuid.NewString()), modelID, orgID, codexInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
 	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadB := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})

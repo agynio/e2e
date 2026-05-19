@@ -22,14 +22,14 @@ import (
 )
 
 const (
-	startRetryTestTimeout  = 8 * time.Minute
-	failedWorkloadTimeout  = 3 * time.Minute
-	fastRetryTimeout       = 40 * time.Second
-	fastRetryWindow        = 30 * time.Second
-	responseWaitTimeout    = 3 * time.Minute
-	runnerCleanupTimeout   = 90 * time.Second
-	invalidInitImage       = "INVALID_IMAGE_NAME:latest"
-	expectedAgentResponse  = "Hi! How are you?"
+	startRetryTestTimeout = 8 * time.Minute
+	failedWorkloadTimeout = 3 * time.Minute
+	fastRetryTimeout      = 40 * time.Second
+	fastRetryWindow       = 30 * time.Second
+	responseWaitTimeout   = 3 * time.Minute
+	runnerCleanupTimeout  = 90 * time.Second
+	invalidInitImage      = "INVALID_IMAGE_NAME:latest"
+	expectedAgentResponse = "Hi! How are you?"
 )
 
 var configInvalidContainerReasons = map[string]struct{}{
@@ -74,13 +74,13 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 		t.Fatal("create model: missing id")
 	}
 
-	agent := createAgent(t, ctx, agentsClient, fmt.Sprintf("e2e-start-retry-%s", uuid.NewString()), modelID, orgID, invalidInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-start-retry-%s", uuid.NewString()), modelID, orgID, invalidInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()

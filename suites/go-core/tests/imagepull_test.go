@@ -80,13 +80,13 @@ func TestImagePullSecretAttachedToPod(t *testing.T) {
 	}
 	t.Cleanup(func() { deleteImagePullSecret(t, ctx, secretsClient, imagePullSecretID) })
 
-	agent := createAgent(t, ctx, agentsClient, "e2e-image-pull-"+uuid.NewString(), modelID, orgID, codexInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, "e2e-image-pull-"+uuid.NewString(), modelID, orgID, codexInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
 	attachment := createImagePullSecretAttachment(t, ctx, agentsClient, imagePullSecretID, agentID)
 	attachmentID := attachment.GetMeta().GetId()
