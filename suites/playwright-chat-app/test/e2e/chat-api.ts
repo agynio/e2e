@@ -1,6 +1,9 @@
 import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
-import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import {
+  AgentAvailability,
+  AgentAvailabilitySchema,
+} from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -127,6 +130,11 @@ const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_OWNER: enumName(MembershipRoleSchema, MembershipRole.OWNER),
   MEMBERSHIP_ROLE_MEMBER: enumName(MembershipRoleSchema, MembershipRole.MEMBER),
 } satisfies Record<MembershipRoleValue, string>;
+
+const AGENT_AVAILABILITY_MAP = {
+  [AgentAvailability.INTERNAL]: enumName(AgentAvailabilitySchema, AgentAvailability.INTERNAL),
+  [AgentAvailability.PRIVATE]: enumName(AgentAvailabilitySchema, AgentAvailability.PRIVATE),
+} satisfies Record<AgentAvailability.INTERNAL | AgentAvailability.PRIVATE, string>;
 
 function resolveBaseUrl(): string {
   const baseUrl = process.env.E2E_BASE_URL;
@@ -400,7 +408,7 @@ type CreateAgentOptions = {
 };
 
 type CreateAgentPayload = Omit<CreateAgentOptions, 'availability'> & {
-  availability: AgentAvailability;
+  availability: string;
 };
 
 type SetupTestAgentOptions = {
@@ -458,9 +466,12 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
 
 export function buildCreateAgentPayload(opts: CreateAgentOptions): CreateAgentPayload {
   const { availability = AgentAvailability.INTERNAL, ...rest } = opts;
+  if (availability !== AgentAvailability.INTERNAL && availability !== AgentAvailability.PRIVATE) {
+    throw new Error(`Unsupported agent availability: ${availability}`);
+  }
   return {
     ...rest,
-    availability,
+    availability: AGENT_AVAILABILITY_MAP[availability],
   };
 }
 
