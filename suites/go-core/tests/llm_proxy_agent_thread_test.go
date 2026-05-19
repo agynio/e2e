@@ -57,13 +57,13 @@ func TestAgentRespondsToThreadMessageViaLLMProxy(t *testing.T) {
 		t.Fatal("create model: missing id")
 	}
 
-	agent := createAgent(t, ctx, agentsClient, fmt.Sprintf("%s-%s", llmProxyAgentThreadTestName, uuid.NewString()), modelID, organizationID, agnInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("%s-%s", llmProxyAgentThreadTestName, uuid.NewString()), modelID, organizationID, agnInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, ctx, agentsClient, agentID) })
-	createAgentEnv(t, ctx, agentsClient, agentID, "LLM_API_TOKEN", apiToken)
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", apiToken)
 
 	thread := createThread(t, threadsCtx, threadsClient, organizationID, []string{identityID, agentID})
 	threadID := thread.GetId()
