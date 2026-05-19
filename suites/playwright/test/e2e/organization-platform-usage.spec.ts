@@ -12,10 +12,11 @@ import {
   setSelectedOrganization,
 } from "./console-api";
 
-const USAGE_POLL_TIMEOUT_MS = 60_000;
+const PIPELINE_USAGE_POLL_TIMEOUT_MS = 45_000;
+const SEEDED_USAGE_POLL_TIMEOUT_MS = 60_000;
 const USAGE_POLL_INTERVALS_MS = [500, 1000, 2000, 5000];
 const USAGE_QUERY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
-const USAGE_TEST_TIMEOUT_MS = 120_000;
+const USAGE_TEST_TIMEOUT_MS = 150_000;
 const MICRO_UNITS = 1_000_000n;
 
 type UsageKind = "thread" | "message";
@@ -103,6 +104,7 @@ async function seedPlatformUsageRecords(
 async function waitForPlatformUsageTotals(
   page: Page,
   organizationId: string,
+  timeout: number,
 ): Promise<PlatformUsageTotals> {
   let usageTotals: PlatformUsageTotals = { thread: 0, message: 0 };
   await expect(async () => {
@@ -113,10 +115,54 @@ async function waitForPlatformUsageTotals(
       );
     }
   }).toPass({
-    timeout: USAGE_POLL_TIMEOUT_MS,
+    timeout,
     intervals: USAGE_POLL_INTERVALS_MS,
   });
   return usageTotals;
+}
+
+async function waitForPipelinePlatformUsageTotals(
+  page: Page,
+  organizationId: string,
+): Promise<PlatformUsageTotals | null> {
+  try {
+    return await waitForPlatformUsageTotals(
+      page,
+      organizationId,
+      PIPELINE_USAGE_POLL_TIMEOUT_MS,
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      test.info().annotations.push({
+        type: "platform-usage-pipeline-fallback",
+        description: error.message,
+      });
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function ensureStablePlatformUsageTotals(
+  page: Page,
+  organizationId: string,
+  threadId: string,
+  messageId: string,
+): Promise<PlatformUsageTotals> {
+  const pipelineUsageTotals = await waitForPipelinePlatformUsageTotals(
+    page,
+    organizationId,
+  );
+  if (pipelineUsageTotals) {
+    return pipelineUsageTotals;
+  }
+
+  await seedPlatformUsageRecords(organizationId, threadId, messageId);
+  return waitForPlatformUsageTotals(
+    page,
+    organizationId,
+    SEEDED_USAGE_POLL_TIMEOUT_MS,
+  );
 }
 
 test.describe(
@@ -163,9 +209,12 @@ test.describe(
         senderId: identityId,
         body: "Platform usage metering message.",
       });
-      await seedPlatformUsageRecords(organizationId, threadId, messageId);
-
-      const usageTotals = await waitForPlatformUsageTotals(page, organizationId);
+      const usageTotals = await ensureStablePlatformUsageTotals(
+        page,
+        organizationId,
+        threadId,
+        messageId,
+      );
       expect(usageTotals.thread).toBeGreaterThan(0);
       expect(usageTotals.message).toBeGreaterThan(0);
 
