@@ -28,11 +28,6 @@ const MEMBERSHIP_ROLE_MAP = {
   MEMBERSHIP_ROLE_MEMBER: 'MEMBERSHIP_ROLE_MEMBER',
 } satisfies Record<MembershipRoleValue, string>;
 
-const AGENT_AVAILABILITY_MAP = {
-  [AgentAvailability.INTERNAL]: 'internal',
-  [AgentAvailability.PRIVATE]: 'private',
-} satisfies Record<AgentAvailability.INTERNAL | AgentAvailability.PRIVATE, string>;
-
 const DEBUG_CREATE_AGENT_PAYLOAD = process.env.E2E_DEBUG_CREATE_AGENT_PAYLOAD === 'true';
 const REDACTED_VALUE = '<redacted>';
 const SENSITIVE_KEY_PATTERN = /token|secret|password|authorization|credential/i;
@@ -420,7 +415,7 @@ type CreateAgentOptions = {
 };
 
 type CreateAgentPayload = Omit<CreateAgentOptions, 'availability'> & {
-  availability: string;
+  availability?: number;
 };
 
 type SetupTestAgentOptions = {
@@ -484,10 +479,10 @@ export function buildCreateAgentPayload(opts: CreateAgentOptions): CreateAgentPa
   if (availability !== AgentAvailability.INTERNAL && availability !== AgentAvailability.PRIVATE) {
     throw new Error(`Unsupported agent availability: ${availability}`);
   }
-  return {
-    ...rest,
-    availability: AGENT_AVAILABILITY_MAP[availability],
-  };
+  if (availability === AgentAvailability.INTERNAL) {
+    return rest;
+  }
+  return { ...rest, availability };
 }
 
 export async function createTestModel(
