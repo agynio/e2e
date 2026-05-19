@@ -1,6 +1,6 @@
-import { create, enumToJson, toJson } from '@bufbuild/protobuf';
+import { enumToJson } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
-import { AgentAvailability, AgentAvailabilitySchema, CreateAgentRequestSchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ChatStatus, ChatStatusSchema } from '../../src/gen/agynio/api/chat/v1/chat_pb';
 import { MembershipRole, MembershipRoleSchema } from '../../src/gen/agynio/api/organizations/v1/organizations_pb';
 
@@ -399,6 +399,10 @@ type CreateAgentOptions = {
   availability?: AgentAvailability;
 };
 
+type CreateAgentPayload = Omit<CreateAgentOptions, 'availability'> & {
+  availability: AgentAvailability;
+};
+
 type SetupTestAgentOptions = {
   endpoint: string;
   initImage?: string;
@@ -437,12 +441,7 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   if (!trimmedInitImage) {
     throw new Error('initImage is required to create chat agents.');
   }
-  const request = create(CreateAgentRequestSchema, {
-    ...rest,
-    initImage: trimmedInitImage,
-    availability: opts.availability ?? AgentAvailability.INTERNAL,
-  });
-  const payload = toJson(CreateAgentRequestSchema, request);
+  const payload = buildCreateAgentPayload({ ...rest, initImage: trimmedInitImage });
   const response = await postConnect<CreateAgentResponseWire>(
     page,
     AGENTS_GATEWAY_PATH,
@@ -455,6 +454,14 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   const agentId = response.agent.meta.id;
   await waitForAgent(page, opts.organizationId, agentId);
   return agentId;
+}
+
+export function buildCreateAgentPayload(opts: CreateAgentOptions): CreateAgentPayload {
+  const { availability = AgentAvailability.INTERNAL, ...rest } = opts;
+  return {
+    ...rest,
+    availability,
+  };
 }
 
 export async function createTestModel(
