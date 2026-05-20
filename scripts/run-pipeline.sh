@@ -228,6 +228,56 @@ PY
       exit 1
     fi
 
+    collect_pod_logs_by_name() {
+      local log_namespace=$1
+      local log_prefix=$2
+      shift 2
+      for pod_pattern in "$@"; do
+        while IFS= read -r pod_resource || [ -n "$pod_resource" ]; do
+          if [ -z "$pod_resource" ]; then
+            continue
+          fi
+          local pod_log_name
+          pod_log_name=${pod_resource#pod/}
+          kubectl logs -n "$log_namespace" --all-containers --prefix --tail=500 "$pod_resource" \
+            > "$suite_diagnostics_dir/logs/${log_prefix}-${pod_log_name}.log" 2>&1 || true
+        done < <(kubectl get pods -n "$log_namespace" -o name 2>/dev/null | grep -E "^pod/${pod_pattern}" || true)
+      done
+    }
+
+    collect_failure_diagnostics() {
+      local suite_diagnostics_dir=$1
+      mkdir -p "$suite_diagnostics_dir/logs"
+      kubectl get pod "$pod_name" -n "$namespace" -o wide > "$suite_diagnostics_dir/pod.txt" 2>&1 || true
+      kubectl describe pod "$pod_name" -n "$namespace" > "$suite_diagnostics_dir/describe.txt" 2>&1 || true
+      kubectl logs -n "$namespace" --all-containers --prefix "$pod_name" \
+        > "$suite_diagnostics_dir/logs/${pod_name}.log" 2>&1 || true
+      kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp \
+        > "$suite_diagnostics_dir/events.txt" 2>&1 || true
+
+      kubectl get pods -n agyn-workloads -o wide > "$suite_diagnostics_dir/workload-pods.txt" 2>&1 || true
+      kubectl get events -n agyn-workloads --sort-by=.metadata.creationTimestamp \
+        > "$suite_diagnostics_dir/workload-events.txt" 2>&1 || true
+      collect_pod_logs_by_name agyn-workloads workload workload-
+
+      collect_pod_logs_by_name "$namespace" platform \
+        agents- \
+        agents-orchestrator- \
+        authorization- \
+        chat- \
+        gateway-gateway- \
+        k8s-runner- \
+        llm- \
+        llm-proxy-llm-proxy- \
+        organizations- \
+        runners- \
+        threads- \
+        tracing- \
+        ziti-management-
+      collect_pod_logs_by_name ziti ziti ziti-controller- ziti-router-
+      collect_pod_logs_by_name openfga openfga openfga-
+    }
+
     required_envs=()
     if [ -s "$required_env_file" ]; then
       while IFS= read -r env_name || [ -n "$env_name" ]; do
@@ -401,15 +451,17 @@ EOF
       run_status=1
     fi
 
+    for artifact_name in test-results playwright-report; do
+      if kubectl exec -n "$namespace" "$pod_name" -- test -e "$workdir/$artifact_name"; then
+        if ! kubectl cp "$namespace/$pod_name:$workdir/$artifact_name" "$suite_artifacts_dir/$artifact_name"; then
+          echo "ERROR: failed to copy $artifact_name for suite $suite_name" >&2
+          run_status=1
+        fi
+      fi
+    done
+
     if [ "$run_status" -ne 0 ]; then
-      suite_diagnostics_dir="$diagnostics_root/$suite_name"
-      mkdir -p "$suite_diagnostics_dir/logs"
-      kubectl get pod "$pod_name" -n "$namespace" -o wide > "$suite_diagnostics_dir/pod.txt" 2>&1 || true
-      kubectl describe pod "$pod_name" -n "$namespace" > "$suite_diagnostics_dir/describe.txt" 2>&1 || true
-      kubectl logs -n "$namespace" --all-containers --prefix "$pod_name" \
-        > "$suite_diagnostics_dir/logs/${pod_name}.log" 2>&1 || true
-      kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp \
-        > "$suite_diagnostics_dir/events.txt" 2>&1 || true
+      collect_failure_diagnostics "$diagnostics_root/$suite_name"
     fi
 
     exit "$run_status"
