@@ -66,10 +66,6 @@ type CreateMembershipResponseWire = {
   membership?: { id?: string };
 };
 
-type CreateAPITokenResponseWire = {
-  plaintextToken?: string;
-};
-
 type GetMeResponseWire = {
   user?: { meta?: { id?: string } };
 };
@@ -354,20 +350,6 @@ export async function createMembership(
   return response.membership.id;
 }
 
-export async function createApiToken(page: Page, name: string): Promise<string> {
-  const response = await postConnect<CreateAPITokenResponseWire>(
-    page,
-    USERS_GATEWAY_PATH,
-    'CreateAPIToken',
-    { name },
-  );
-  const token = response.plaintextToken;
-  if (!token) {
-    throw new Error('CreateAPIToken response missing plaintext token.');
-  }
-  return token;
-}
-
 export async function acceptMembership(page: Page, membershipId: string): Promise<void> {
   await postConnect(page, ORGS_GATEWAY_PATH, 'AcceptMembership', { membershipId });
 }
@@ -563,7 +545,6 @@ export async function setupTestAgent(
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
   const initImage = resolveCodexInitImage(opts.initImage);
-  const apiToken = await createApiToken(page, `e2e-agent-token-${now}`);
 
   const { modelId } = await createTestModel(page, {
     organizationId,
@@ -586,7 +567,6 @@ export async function setupTestAgent(
     image: DEFAULT_TEST_AGENT_IMAGE,
     initImage,
   });
-  await createAgentEnv(page, agentId, 'LLM_API_TOKEN', apiToken);
   const participantId = agentId;
 
   return { organizationId, agentId, agentName, participantId };
