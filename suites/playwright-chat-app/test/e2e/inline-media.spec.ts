@@ -3,13 +3,11 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
   createChat,
+  createOrganization,
+  resolveIdentityId,
   sendChatMessage,
-  setupTestAgent,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
-
-const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
-const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
 
 const mermaidSource = `graph TD
     A[Start] --> B{Decision}
@@ -36,19 +34,14 @@ const vegaLiteSource = JSON.stringify({
 });
 
 async function openChat(page: Page, message: string): Promise<void> {
-  const { organizationId, participantId } = await setupTestAgent(page, {
-    endpoint: llmEndpoint,
-    initImage: process.env.E2E_AGENT_INIT_IMAGE,
-  });
+  const now = Date.now();
+  const organizationId = await createOrganization(page, `e2e-org-inline-media-${now}`);
+  const participantId = await resolveIdentityId(page);
   const chatId = await createChat(page, organizationId, participantId);
   await setSelectedOrganization(page, organizationId);
   await sendChatMessage(page, chatId, message);
-  const chatLoaded = page.waitForResponse(
-    (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
-    { timeout: 15000 },
-  );
   await page.goto(`/chats/${encodeURIComponent(chatId)}`);
-  await chatLoaded;
+  await expect(page.getByTestId('chat-message').filter({ hasText: message })).toBeVisible({ timeout: 15000 });
 }
 
 function mermaidMessage(source: string): string {
@@ -63,7 +56,6 @@ test.describe('inline-media', {
   tag: [
     '@svc_chat_app',
     '@svc_gateway',
-    '@svc_agents_orchestrator',
     '@svc_organizations',
     '@svc_files',
     '@svc_media_proxy',

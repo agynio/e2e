@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import {
@@ -131,7 +130,7 @@ test.describe('chat trace link', {
       const chatId = await createChat(page, organizationId, participantId);
       await setSelectedOrganization(page, organizationId);
 
-      const messageText = `trace-${scenario.name}-${randomUUID()}`;
+      const messageText = 'hello';
       await sendChatMessage(page, chatId, messageText);
 
       await waitForAgentReply(page, chatId, identityId, 180_000);
