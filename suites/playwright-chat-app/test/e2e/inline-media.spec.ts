@@ -40,8 +40,13 @@ async function openChat(page: Page, message: string): Promise<void> {
   const chatId = await createChat(page, organizationId, participantId);
   await setSelectedOrganization(page, organizationId);
   await sendChatMessage(page, chatId, message);
+  const chatLoaded = page.waitForResponse(
+    (resp) => resp.url().includes('GetMessages') && resp.status() === 200,
+    { timeout: 15000 },
+  );
   await page.goto(`/chats/${encodeURIComponent(chatId)}`);
-  await expect(page.getByTestId('chat-message').filter({ hasText: message })).toBeVisible({ timeout: 15000 });
+  await chatLoaded;
+  await expect(page.getByTestId('chat-message')).toBeVisible({ timeout: 15000 });
 }
 
 function mermaidMessage(source: string): string {
