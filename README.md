@@ -2,6 +2,32 @@
 
 End-to-end test suites for the Agyn platform.
 
+## Microservice E2E status
+
+| Service | E2E workflow |
+|---------|--------------|
+| [agent-state](https://github.com/agynio/agent-state) | [![E2E](https://github.com/agynio/agent-state/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agent-state/actions/workflows/e2e.yml?query=branch:main) |
+| [agents](https://github.com/agynio/agents) | [![E2E](https://github.com/agynio/agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agynio/agents/actions/workflows/ci.yml?query=branch:main) |
+| [agents-orchestrator](https://github.com/agynio/agents-orchestrator) | [![E2E](https://github.com/agynio/agents-orchestrator/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agents-orchestrator/actions/workflows/e2e.yml?query=branch:main) |
+| [agn-cli](https://github.com/agynio/agn-cli) | [![E2E](https://github.com/agynio/agn-cli/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agn-cli/actions/workflows/e2e.yml?query=branch:main) |
+| [agynd-cli](https://github.com/agynio/agynd-cli) | [![E2E](https://github.com/agynio/agynd-cli/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agynd-cli/actions/workflows/e2e.yml?query=branch:main) |
+| [apps](https://github.com/agynio/apps) | [![E2E](https://github.com/agynio/apps/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/apps/actions/workflows/e2e.yml?query=branch:main) |
+| [authorization](https://github.com/agynio/authorization) | [![E2E](https://github.com/agynio/authorization/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/authorization/actions/workflows/e2e.yml?query=branch:main) |
+| [chat-app](https://github.com/agynio/chat-app) | [![E2E](https://github.com/agynio/chat-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agynio/chat-app/actions/workflows/ci.yml?query=branch:main) |
+| [console-app](https://github.com/agynio/console-app) | [![E2E](https://github.com/agynio/console-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agynio/console-app/actions/workflows/ci.yml?query=branch:main) |
+| [files](https://github.com/agynio/files) | [![E2E](https://github.com/agynio/files/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/files/actions/workflows/e2e.yml?query=branch:main) |
+| [files-mcp](https://github.com/agynio/files-mcp) | [![E2E](https://github.com/agynio/files-mcp/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/files-mcp/actions/workflows/e2e.yml?query=branch:main) |
+| [gateway](https://github.com/agynio/gateway) | [![E2E](https://github.com/agynio/gateway/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/gateway/actions/workflows/e2e.yml?query=branch:main) |
+| [identity](https://github.com/agynio/identity) | [![E2E](https://github.com/agynio/identity/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/identity/actions/workflows/e2e.yml?query=branch:main) |
+| [k8s-runner](https://github.com/agynio/k8s-runner) | [![E2E](https://github.com/agynio/k8s-runner/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/k8s-runner/actions/workflows/e2e.yml?query=branch:main) |
+| [llm](https://github.com/agynio/llm) | [![E2E](https://github.com/agynio/llm/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/llm/actions/workflows/e2e.yml?query=branch:main) |
+| [llm-proxy](https://github.com/agynio/llm-proxy) | [![E2E](https://github.com/agynio/llm-proxy/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/llm-proxy/actions/workflows/e2e.yml?query=branch:main) |
+| [media-proxy](https://github.com/agynio/media-proxy) | [![E2E](https://github.com/agynio/media-proxy/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/media-proxy/actions/workflows/e2e.yml?query=branch:main) |
+| [metering](https://github.com/agynio/metering) | [![E2E](https://github.com/agynio/metering/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/metering/actions/workflows/e2e.yml?query=branch:main) |
+| [organizations](https://github.com/agynio/organizations) | [![E2E](https://github.com/agynio/organizations/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/organizations/actions/workflows/e2e.yml?query=branch:main) |
+| [runners](https://github.com/agynio/runners) | [![E2E](https://github.com/agynio/runners/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/runners/actions/workflows/e2e.yml?query=branch:main) |
+| [tracing-app](https://github.com/agynio/tracing-app) | [![E2E](https://github.com/agynio/tracing-app/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/tracing-app/actions/workflows/e2e.yml?query=branch:main) |
+
 ## Playwright suites
 
 ### tracing-app
