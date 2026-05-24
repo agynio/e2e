@@ -7,14 +7,14 @@ End-to-end test suites for the Agyn platform.
 | Service | E2E workflow |
 |---------|--------------|
 | [agent-state](https://github.com/agynio/agent-state) | [![E2E](https://github.com/agynio/agent-state/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agent-state/actions/workflows/e2e.yml?query=branch:main) |
-| [agents](https://github.com/agynio/agents) | [![E2E](https://github.com/agynio/agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agynio/agents/actions/workflows/ci.yml?query=branch:main) |
+| [agents](https://github.com/agynio/agents) | [![E2E](https://github.com/agynio/agents/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agents/actions/workflows/e2e.yml?query=branch:main) |
 | [agents-orchestrator](https://github.com/agynio/agents-orchestrator) | [![E2E](https://github.com/agynio/agents-orchestrator/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agents-orchestrator/actions/workflows/e2e.yml?query=branch:main) |
 | [agn-cli](https://github.com/agynio/agn-cli) | [![E2E](https://github.com/agynio/agn-cli/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agn-cli/actions/workflows/e2e.yml?query=branch:main) |
 | [agynd-cli](https://github.com/agynio/agynd-cli) | [![E2E](https://github.com/agynio/agynd-cli/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/agynd-cli/actions/workflows/e2e.yml?query=branch:main) |
 | [apps](https://github.com/agynio/apps) | [![E2E](https://github.com/agynio/apps/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/apps/actions/workflows/e2e.yml?query=branch:main) |
 | [authorization](https://github.com/agynio/authorization) | [![E2E](https://github.com/agynio/authorization/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/authorization/actions/workflows/e2e.yml?query=branch:main) |
-| [chat-app](https://github.com/agynio/chat-app) | [![E2E](https://github.com/agynio/chat-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agynio/chat-app/actions/workflows/ci.yml?query=branch:main) |
-| [console-app](https://github.com/agynio/console-app) | [![E2E](https://github.com/agynio/console-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agynio/console-app/actions/workflows/ci.yml?query=branch:main) |
+| [chat-app](https://github.com/agynio/chat-app) | [![E2E](https://github.com/agynio/chat-app/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/chat-app/actions/workflows/e2e.yml?query=branch:main) |
+| [console-app](https://github.com/agynio/console-app) | [![E2E](https://github.com/agynio/console-app/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/console-app/actions/workflows/e2e.yml?query=branch:main) |
 | [files](https://github.com/agynio/files) | [![E2E](https://github.com/agynio/files/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/files/actions/workflows/e2e.yml?query=branch:main) |
 | [files-mcp](https://github.com/agynio/files-mcp) | [![E2E](https://github.com/agynio/files-mcp/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/files-mcp/actions/workflows/e2e.yml?query=branch:main) |
 | [gateway](https://github.com/agynio/gateway) | [![E2E](https://github.com/agynio/gateway/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/agynio/gateway/actions/workflows/e2e.yml?query=branch:main) |
