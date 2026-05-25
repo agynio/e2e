@@ -38,15 +38,25 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
-	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", gatewayToken)
+	var threadID string
+	t.Cleanup(func() {
+		if threadID != "" {
+			archiveThread(t, threadsCtx, threadsClient, threadID)
+		}
+		deleteAgent(t, threadsCtx, agentsClient, agentID)
+	})
+	agentEnv := createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", gatewayToken)
+	agentEnvID := agentEnv.GetMeta().GetId()
+	if agentEnvID == "" {
+		t.Fatal("create agent env: missing id")
+	}
+	t.Cleanup(func() { deleteAgentEnv(t, threadsCtx, agentsClient, agentEnvID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
-	threadID := thread.GetId()
+	threadID = thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")
 	}
-	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
 
 	for i := 1; i <= 3; i++ {
 		sendMessage(t, threadsCtx, threadsClient, threadID, identityID, fmt.Sprintf("msg %d", i))
