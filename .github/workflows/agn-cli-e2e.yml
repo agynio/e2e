@@ -62,7 +62,6 @@ jobs:
       - name: Run go-agn-cli suite
         uses: ./.github/actions/run-tests
         with:
-          ref: ${{ github.sha }}
           tag: svc_agn_cli
           include_smoke: false
           agn-binary: agn

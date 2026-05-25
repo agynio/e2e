@@ -17,10 +17,6 @@ inputs:
   provider-binary:
     description: Optional path to a Terraform provider binary in the caller workspace.
     required: false
-  ref:
-    description: agynio/e2e ref to check out.
-    required: false
-    default: main
 runs:
   using: composite
   steps:
@@ -28,7 +24,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: agynio/e2e
-        ref: ${{ inputs.ref }}
+        ref: main
         path: e2e
 
     - name: Stage provider binary
