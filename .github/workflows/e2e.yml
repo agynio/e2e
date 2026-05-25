@@ -38,6 +38,5 @@ jobs:
           E2E_SUITES: playwright
           E2E_PLAYWRIGHT_TEST_ARGS: test/e2e/organization-platform-usage.spec.ts
         with:
-          ref: ${{ github.sha }}
           tag: svc_metering
           include_smoke: false
