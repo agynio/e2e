@@ -3,3 +3,10 @@
 package tests
 
 const clusterAdminIdentityID = "a3c1e9d2-7f4b-5e1a-9c3d-2b8f6a4e7d10"
+
+const (
+	identityMetadataKey     = "x-identity-id"
+	identityTypeMetadataKey = "x-identity-type"
+	identityTypeUser        = "user"
+	identityTypeAgent       = "agent"
+)

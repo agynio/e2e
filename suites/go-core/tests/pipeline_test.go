@@ -59,12 +59,12 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
-	provider := createLLMProviderWithProtocol(t, ctx, llmEndpoint, orgID, protocol)
+	provider := createLLMProviderWithProtocol(t, threadsCtx, llmEndpoint, orgID, protocol)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
-	model := createModel(t, ctx, llmClient, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
+	model := createModel(t, threadsCtx, llmClient, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
 	modelID := model.GetMeta().GetId()
 	if modelID == "" {
 		t.Fatal("create model: missing id")

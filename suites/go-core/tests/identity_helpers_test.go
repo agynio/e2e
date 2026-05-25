@@ -1,4 +1,4 @@
-//go:build e2e && svc_runners && !smoke
+//go:build e2e
 
 package tests
 
@@ -9,6 +9,17 @@ import (
 )
 
 func withIdentity(ctx context.Context, identityID string) context.Context {
-	md := metadata.New(map[string]string{"x-identity-id": identityID})
+	return contextWithIdentity(ctx, identityID, identityTypeUser)
+}
+
+func withAgentIdentity(ctx context.Context, agentID string) context.Context {
+	return contextWithIdentity(ctx, agentID, identityTypeAgent)
+}
+
+func contextWithIdentity(ctx context.Context, identityID string, identityType string) context.Context {
+	md := metadata.New(map[string]string{
+		identityMetadataKey:     identityID,
+		identityTypeMetadataKey: identityType,
+	})
 	return metadata.NewOutgoingContext(ctx, md)
 }
