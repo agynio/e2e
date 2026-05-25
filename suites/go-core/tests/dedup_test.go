@@ -40,12 +40,12 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
-	provider := createLLMProvider(t, ctx, llmClient, testLLMEndpointCodex, orgID)
+	provider := createLLMProvider(t, threadsCtx, llmClient, testLLMEndpointCodex, orgID)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
-	model := createModel(t, ctx, llmClient, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
+	model := createModel(t, threadsCtx, llmClient, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
 	modelID := model.GetMeta().GetId()
 	if modelID == "" {
 		t.Fatal("create model: missing id")

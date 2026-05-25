@@ -45,14 +45,14 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
-	provider := createLLMProvider(t, ctx, llmClient, testLLMEndpointAgn, orgID)
+	provider := createLLMProvider(t, threadsCtx, llmClient, testLLMEndpointAgn, orgID)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
 
-	agentAModel := createModel(t, ctx, llmClient, "e2e-agyn-wait-agent-a-model-"+uuid.NewString(), providerID, "shell-agyn-thread-create-wait", orgID)
-	agentBModel := createModel(t, ctx, llmClient, "e2e-agyn-wait-agent-b-model-"+uuid.NewString(), providerID, "agyn-wait-agent-b-reply", orgID)
+	agentAModel := createModel(t, threadsCtx, llmClient, "e2e-agyn-wait-agent-a-model-"+uuid.NewString(), providerID, "shell-agyn-thread-create-wait", orgID)
+	agentBModel := createModel(t, threadsCtx, llmClient, "e2e-agyn-wait-agent-b-model-"+uuid.NewString(), providerID, "agyn-wait-agent-b-reply", orgID)
 
 	agentBNickname := "e2e-agyn-wait-b-fixed"
 	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModel.GetMeta().GetId(), orgID, agnInitImage)

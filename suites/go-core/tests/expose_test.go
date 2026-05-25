@@ -181,12 +181,12 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
-	provider := createLLMProvider(t, ctx, llmClient, testLLMEndpointAgn, orgID)
+	provider := createLLMProvider(t, threadsCtx, llmClient, testLLMEndpointAgn, orgID)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
-	model := createModel(t, ctx, llmClient, "e2e-expose-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
+	model := createModel(t, threadsCtx, llmClient, "e2e-expose-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
 	modelID := model.GetMeta().GetId()
 	if modelID == "" {
 		t.Fatal("create model: missing id")

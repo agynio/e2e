@@ -9,6 +9,9 @@ import (
 )
 
 func withIdentity(ctx context.Context, identityID string) context.Context {
-	md := metadata.New(map[string]string{"x-identity-id": identityID})
+	md := metadata.New(map[string]string{
+		"x-identity-id":   identityID,
+		"x-identity-type": "user",
+	})
 	return metadata.NewOutgoingContext(ctx, md)
 }
