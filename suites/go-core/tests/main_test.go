@@ -19,6 +19,7 @@ import (
 	secretsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/secrets/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/metadata"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -227,6 +228,14 @@ func createAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsSer
 	return env
 }
 
+func deleteAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, envID string) {
+	t.Helper()
+	_, err := client.DeleteEnv(ctx, &agentsv1.DeleteEnvRequest{Id: envID})
+	if err != nil {
+		t.Logf("cleanup: delete agent env %s: %v", envID, err)
+	}
+}
+
 func createImagePullSecret(
 	t *testing.T,
 	ctx context.Context,
@@ -341,8 +350,18 @@ func createThread(t *testing.T, ctx context.Context, client threadsv1.ThreadsSer
 	if organizationID == "" {
 		t.Fatal("create thread: missing organization id")
 	}
+	initiatorID := identityIDFromOutgoingContext(ctx)
+	participants := make([]*threadsv1.ParticipantIdentifier, 0, len(participantIDs))
+	for _, participantID := range participantIDs {
+		if participantID == initiatorID {
+			continue
+		}
+		participants = append(participants, &threadsv1.ParticipantIdentifier{
+			Identifier: &threadsv1.ParticipantIdentifier_ParticipantId{ParticipantId: participantID},
+		})
+	}
 	resp, err := client.CreateThread(ctx, &threadsv1.CreateThreadRequest{
-		ParticipantIds: participantIDs,
+		Participants:   participants,
 		OrganizationId: &organizationID,
 	})
 	if err != nil {
@@ -353,6 +372,18 @@ func createThread(t *testing.T, ctx context.Context, client threadsv1.ThreadsSer
 		t.Fatal("create thread: nil response")
 	}
 	return thread
+}
+
+func identityIDFromOutgoingContext(ctx context.Context) string {
+	metadata, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return ""
+	}
+	values := metadata.Get(identityMetadataKey)
+	if len(values) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(values[0])
 }
 
 func archiveThread(t *testing.T, ctx context.Context, client threadsv1.ThreadsServiceClient, threadID string) {
