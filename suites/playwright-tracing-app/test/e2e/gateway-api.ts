@@ -1,5 +1,12 @@
+import { create, fromBinary, toBinary, toJson } from '@bufbuild/protobuf';
+import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
 import { readOidcSession } from './oidc-helpers';
+import {
+  AgentAvailability,
+  CreateAgentRequestSchema,
+  CreateAgentResponseSchema,
+} from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { ListSpansOrderBy } from '../../src/gen/agynio/api/tracing/v1/tracing_pb';
 
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
@@ -37,6 +44,24 @@ type CreateModelResponseWire = {
 
 type CreateAgentResponseWire = {
   agent?: { meta?: { id?: string } };
+};
+
+type CreateAgentOptions = {
+  organizationId: string;
+  name: string;
+  model: string;
+  image: string;
+  initImage: string;
+  description?: string;
+  role?: string;
+  configuration?: string;
+};
+
+type CreateAgentPayload = Omit<CreateAgentOptions, 'description' | 'role' | 'configuration'> & {
+  availability: AgentAvailability.INTERNAL;
+  description: string;
+  role: string;
+  configuration: string;
 };
 
 type CreateEnvResponseWire = {
@@ -121,27 +146,67 @@ function buildRpcUrl(servicePath: string, method: string): string {
   return new URL(`${servicePath}/${method}`, resolveBaseUrl()).toString();
 }
 
+const CONNECT_JSON_HEADERS = {
+  'Connect-Protocol-Version': '1',
+  'Content-Type': 'application/json',
+};
+
+const CONNECT_PROTO_HEADERS = {
+  'Connect-Protocol-Version': '1',
+  'Content-Type': 'application/proto',
+};
+
+type PostConnectProtoOptions<InputSchema extends DescMessage, OutputSchema extends DescMessage> = {
+  encoding: 'proto';
+  inputSchema: InputSchema;
+  outputSchema: OutputSchema;
+};
+
+function formatCreateAgentDebugPayload(payload: unknown): string {
+  return JSON.stringify(payload);
+}
+
 async function postConnect<T>(
   page: Page,
   servicePath: string,
   method: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown> | MessageShape<DescMessage>,
+  options?: PostConnectProtoOptions<DescMessage, DescMessage>,
 ): Promise<T> {
   const session = await readOidcSession(page);
   const accessToken = session?.accessToken;
   if (!accessToken) {
     throw new Error('OIDC session missing access token.');
   }
+
+  if (options?.encoding === 'proto') {
+    const message = payload as MessageShape<typeof options.inputSchema>;
+    const requestBody = Buffer.from(toBinary(options.inputSchema, message));
+    const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
+      data: requestBody,
+      headers: { ...CONNECT_PROTO_HEADERS, Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok()) {
+      const body = await response.text();
+      if (method === 'CreateAgent') {
+        console.error(`Connect RPC ${method} request JSON: ${formatCreateAgentDebugPayload(toJson(options.inputSchema, message))}`);
+        console.error(`Connect RPC ${method} request proto hex: ${requestBody.toString('hex')}`);
+      }
+      throw new Error(`Connect RPC ${servicePath}/${method} failed (${response.status()}): ${body}`);
+    }
+    const responseBody = Buffer.from(await response.body());
+    return fromBinary(options.outputSchema, responseBody) as T;
+  }
+
   const response = await page.context().request.post(buildRpcUrl(servicePath, method), {
     data: payload,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Connect-Protocol-Version': '1',
-      'Content-Type': 'application/json',
-    },
+    headers: { ...CONNECT_JSON_HEADERS, Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok()) {
     const body = await response.text();
+    if (method === 'CreateAgent') {
+      console.error(`Connect RPC ${method} request JSON: ${formatCreateAgentDebugPayload(payload)}`);
+    }
     throw new Error(`Connect RPC ${servicePath}/${method} failed (${response.status()}): ${body}`);
   }
   return (await response.json()) as T;
@@ -242,38 +307,45 @@ export async function createModel(page: Page, params: {
   return modelId;
 }
 
-export async function createAgent(page: Page, params: {
-  organizationId: string;
-  name: string;
-  model: string;
-  image: string;
-  initImage: string;
-  description?: string;
-  role?: string;
-  configuration?: string;
-}): Promise<string> {
+export function buildCreateAgentPayload(params: CreateAgentOptions): CreateAgentPayload {
   const initImage = params.initImage.trim();
   if (!initImage) {
     throw new Error('initImage is required to create agents.');
   }
-  const payload: Record<string, unknown> = {
+  return {
     organizationId: params.organizationId,
     name: params.name,
     model: params.model,
     image: params.image,
     initImage,
-    availability: 'AGENT_AVAILABILITY_INTERNAL',
+    availability: AgentAvailability.INTERNAL,
     role: params.role ?? 'assistant',
+    description: params.description ?? '',
+    configuration: params.configuration ?? '',
   };
-  if (params.description !== undefined) {
-    payload.description = params.description;
-  }
-  if (params.configuration !== undefined) {
-    payload.configuration = params.configuration;
-  }
-  const response = await postConnect<CreateAgentResponseWire>(page, AGENTS_GATEWAY_PATH, 'CreateAgent', {
-    ...payload,
-  });
+}
+
+export function buildCreateAgentRequestJson(params: CreateAgentOptions): unknown {
+  return toJson(CreateAgentRequestSchema, create(CreateAgentRequestSchema, buildCreateAgentPayload(params)));
+}
+
+export function buildCreateAgentRequestBytes(params: CreateAgentOptions): Uint8Array {
+  return toBinary(CreateAgentRequestSchema, create(CreateAgentRequestSchema, buildCreateAgentPayload(params)));
+}
+
+export async function createAgent(page: Page, params: CreateAgentOptions): Promise<string> {
+  const request = create(CreateAgentRequestSchema, buildCreateAgentPayload(params));
+  const response = await postConnect<CreateAgentResponseWire>(
+    page,
+    AGENTS_GATEWAY_PATH,
+    'CreateAgent',
+    request,
+    {
+      encoding: 'proto',
+      inputSchema: CreateAgentRequestSchema,
+      outputSchema: CreateAgentResponseSchema,
+    },
+  );
   const agentId = response.agent?.meta?.id;
   if (!agentId) {
     throw new Error('CreateAgent response missing agent id.');
