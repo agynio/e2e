@@ -59,7 +59,7 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
 
-	provider := createLLMProviderWithProtocol(t, ctx, llmClient, llmEndpoint, orgID, protocol)
+	provider := createLLMProviderWithProtocol(t, ctx, llmEndpoint, orgID, protocol)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")

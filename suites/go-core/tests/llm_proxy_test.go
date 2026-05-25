@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +16,6 @@ import (
 	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -27,8 +25,6 @@ import (
 const (
 	llmProxyURLDefault      = "https://llm.agyn.dev:2496"
 	llmProxyRequestTimeout  = 45 * time.Second
-	llmGatewayServicePath   = "agynio.api.gateway.v1.LLMGateway"
-	llmProviderTestEndpoint = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
 	llmProxyIdentityType    = "user"
 	llmProxyAuthzAddr       = "authorization:50051"
 	llmProxyIdentityKey     = "x-identity-id"
@@ -144,117 +140,6 @@ func llmProxyAdminContext(ctx context.Context) context.Context {
 		llmProxyIdentityKey, clusterAdminIdentityID,
 		llmProxyIdentityTypeKey, llmProxyIdentityType,
 	))
-}
-
-func createGatewayLLMProvider(t *testing.T, ctx context.Context, token string, organizationID string) (string, error) {
-	t.Helper()
-	resp, err := postGatewayConnect[gatewayCreateLLMProviderResponse](t, ctx, token, "CreateLLMProvider", map[string]string{
-		"endpoint":       llmProviderTestEndpoint,
-		"authMethod":     "AUTH_METHOD_X_API_KEY",
-		"token":          "e2e-test-token",
-		"organizationId": organizationID,
-		"protocol":       "PROTOCOL_RESPONSES",
-	})
-	if err != nil {
-		return "", err
-	}
-	providerID := strings.TrimSpace(resp.Provider.Meta.ID)
-	if providerID == "" {
-		return "", fmt.Errorf("provider id missing")
-	}
-	return providerID, nil
-}
-
-func createGatewayLLMModel(t *testing.T, ctx context.Context, token string, organizationID string, providerID string) (string, error) {
-	t.Helper()
-	resp, err := postGatewayConnect[gatewayCreateModelResponse](t, ctx, token, "CreateModel", map[string]string{
-		"name":           fmt.Sprintf("e2e-llm-proxy-%s", uuid.NewString()),
-		"llmProviderId":  providerID,
-		"remoteName":     "simple-hello",
-		"organizationId": organizationID,
-	})
-	if err != nil {
-		return "", err
-	}
-	modelID := strings.TrimSpace(resp.Model.Meta.ID)
-	if modelID == "" {
-		return "", fmt.Errorf("model id missing")
-	}
-	return modelID, nil
-}
-
-type gatewayCreateLLMProviderResponse struct {
-	Provider gatewayLLMEntity `json:"provider"`
-}
-
-type gatewayCreateModelResponse struct {
-	Model gatewayLLMEntity `json:"model"`
-}
-
-type gatewayLLMEntity struct {
-	Meta gatewayEntityMeta `json:"meta"`
-}
-
-type gatewayEntityMeta struct {
-	ID string `json:"id"`
-}
-
-func postGatewayConnect[T any](t *testing.T, ctx context.Context, token string, method string, payload any) (T, error) {
-	t.Helper()
-	var response T
-	body, statusCode := postGatewayConnectRaw(t, ctx, token, method, payload)
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
-		return response, fmt.Errorf("gateway %s failed with status %d: %s", method, statusCode, body)
-	}
-
-	if err := json.Unmarshal([]byte(body), &response); err != nil {
-		return response, fmt.Errorf("decode gateway %s response: %w", method, err)
-	}
-	return response, nil
-}
-
-func postGatewayConnectBestEffort(t *testing.T, ctx context.Context, token string, method string, payload any) {
-	t.Helper()
-	_, _ = postGatewayConnectRaw(t, ctx, token, method, payload)
-}
-
-func postGatewayConnectRaw(t *testing.T, ctx context.Context, token string, method string, payload any) (string, int) {
-	t.Helper()
-	body, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("marshal gateway %s request: %v", method, err)
-	}
-
-	endpoint := gatewayLLMConnectEndpoint(t, method)
-
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		t.Fatalf("build gateway %s request: %v", method, err)
-	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Connect-Protocol-Version", "1")
-	request.Header.Set("Authorization", "Bearer "+token)
-
-	response, err := newGatewayClient(t).Do(request)
-	if err != nil {
-		t.Fatalf("post gateway %s: %v", method, err)
-	}
-	defer response.Body.Close()
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		t.Fatalf("read gateway %s response: %v", method, err)
-	}
-	return strings.TrimSpace(string(responseBody)), response.StatusCode
-}
-
-func gatewayLLMConnectEndpoint(t *testing.T, method string) string {
-	t.Helper()
-	endpoint, err := url.JoinPath(gatewayBaseURL(t), llmGatewayServicePath, method)
-	if err != nil {
-		t.Fatalf("build gateway %s url: %v", method, err)
-	}
-	return endpoint
 }
 
 type llmProxyResponsesRequest struct {

@@ -98,44 +98,34 @@ func newUserID() string {
 	return uuid.New().String()
 }
 
-func createLLMProvider(t *testing.T, ctx context.Context, client llmv1.LLMServiceClient, endpoint, orgID string) *llmv1.LLMProvider {
+func createLLMProvider(t *testing.T, ctx context.Context, _ llmv1.LLMServiceClient, endpoint, orgID string) *llmv1.LLMProvider {
 	t.Helper()
-	return createLLMProviderWithProtocol(t, ctx, client, endpoint, orgID, llmv1.Protocol_PROTOCOL_RESPONSES)
+	return createLLMProviderWithProtocol(t, ctx, endpoint, orgID, llmv1.Protocol_PROTOCOL_RESPONSES)
 }
 
-func createLLMProviderWithProtocol(t *testing.T, ctx context.Context, client llmv1.LLMServiceClient, endpoint, orgID string, protocol llmv1.Protocol) *llmv1.LLMProvider {
+func createLLMProviderWithProtocol(t *testing.T, ctx context.Context, endpoint, orgID string, protocol llmv1.Protocol) *llmv1.LLMProvider {
 	t.Helper()
-	resp, err := client.CreateLLMProvider(ctx, &llmv1.CreateLLMProviderRequest{
-		Endpoint:       endpoint,
-		AuthMethod:     llmv1.AuthMethod_AUTH_METHOD_BEARER,
-		Token:          "test-token",
-		OrganizationId: orgID,
-		Protocol:       protocol,
-	})
+	provider, err := createGatewayLLMProviderResource(
+		t,
+		ctx,
+		gatewayAPIToken(t),
+		endpoint,
+		"AUTH_METHOD_BEARER",
+		"test-token",
+		orgID,
+		protocol,
+	)
 	if err != nil {
-		t.Fatalf("create llm provider: %v", err)
-	}
-	provider := resp.GetProvider()
-	if provider == nil || provider.GetMeta() == nil {
-		t.Fatal("create llm provider: nil response")
+		t.Fatalf("create llm provider through gateway: %v", err)
 	}
 	return provider
 }
 
-func createModel(t *testing.T, ctx context.Context, client llmv1.LLMServiceClient, name, providerID, remoteName, orgID string) *llmv1.Model {
+func createModel(t *testing.T, ctx context.Context, _ llmv1.LLMServiceClient, name, providerID, remoteName, orgID string) *llmv1.Model {
 	t.Helper()
-	resp, err := client.CreateModel(ctx, &llmv1.CreateModelRequest{
-		Name:           name,
-		LlmProviderId:  providerID,
-		RemoteName:     remoteName,
-		OrganizationId: orgID,
-	})
+	model, err := createGatewayLLMModelResource(t, ctx, gatewayAPIToken(t), name, orgID, providerID, remoteName)
 	if err != nil {
-		t.Fatalf("create model %q: %v", name, err)
-	}
-	model := resp.GetModel()
-	if model == nil || model.GetMeta() == nil {
-		t.Fatal("create model: nil response")
+		t.Fatalf("create model %q through gateway: %v", name, err)
 	}
 	return model
 }
