@@ -66,7 +66,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	agentThreadsCtx := withIdentity(ctx, agentID)
+	agentThreadsCtx := withAgentIdentity(ctx, agentID)
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 	agentInfoResp, err := agentsClient.GetAgent(ctx, &agentsv1.GetAgentRequest{Id: agentID})
 	if err != nil {

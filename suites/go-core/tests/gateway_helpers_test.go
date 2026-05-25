@@ -18,7 +18,6 @@ import (
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -148,7 +147,7 @@ func gatewayUserToken(t *testing.T) string {
 		t.Fatal("resolve user: identity id missing")
 	}
 
-	callCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs("x-identity-id", identityID))
+	callCtx := withIdentity(ctx, identityID)
 	tokenResp, err := usersClient.CreateAPIToken(callCtx, &usersv1.CreateAPITokenRequest{
 		Name: fmt.Sprintf("e2e-gateway-token-%s", uuid.NewString()),
 	})

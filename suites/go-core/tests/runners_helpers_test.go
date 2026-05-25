@@ -11,7 +11,6 @@ import (
 	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
 	runnersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runners/v1"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -22,11 +21,6 @@ const (
 	authorizationClusterRelation    = "cluster"
 	authorizationAdminRelation      = "admin"
 	authorizationGlobalCluster      = "cluster:global"
-
-	identityMetadataKey     = "x-identity-id"
-	identityTypeMetadataKey = "x-identity-type"
-	identityTypeUser        = "user"
-	identityTypeAgent       = "agent"
 
 	runnerContainerImage = "alpine:3.21"
 )
@@ -49,19 +43,12 @@ func newAuthorizationClient(t *testing.T) authorizationv1.AuthorizationServiceCl
 	return authorizationv1.NewAuthorizationServiceClient(conn)
 }
 
-func contextWithIdentity(ctx context.Context, identityID string, identityType string) context.Context {
-	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
-		identityMetadataKey, identityID,
-		identityTypeMetadataKey, identityType,
-	))
-}
-
 func adminContext(ctx context.Context) context.Context {
 	return contextWithIdentity(ctx, clusterAdminIdentityID, identityTypeUser)
 }
 
 func agentContext(ctx context.Context, agentID string) context.Context {
-	return contextWithIdentity(ctx, agentID, identityTypeAgent)
+	return withAgentIdentity(ctx, agentID)
 }
 
 func ensureClusterAdmin(t *testing.T, ctx context.Context, authzClient authorizationv1.AuthorizationServiceClient) {

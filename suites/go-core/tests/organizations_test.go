@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
@@ -118,7 +117,7 @@ func listOrganizations(ctx context.Context, t *testing.T, client organizationsv1
 }
 
 func identityContext(ctx context.Context, identityID string) context.Context {
-	return metadata.NewOutgoingContext(ctx, metadata.Pairs("x-identity-id", identityID))
+	return withIdentity(ctx, identityID)
 }
 
 func hasID(items []*organizationsv1.Organization, id string) bool {

@@ -12,18 +12,12 @@ import (
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
-	"google.golang.org/grpc/metadata"
 )
 
 const (
 	setupTimeout = 30 * time.Second
 	apiTokenName = "e2e-orchestrator"
 )
-
-func withIdentity(ctx context.Context, identityID string) context.Context {
-	md := metadata.New(map[string]string{"x-identity-id": identityID})
-	return metadata.NewOutgoingContext(ctx, md)
-}
 
 func resolveOrCreateUser(t *testing.T, ctx context.Context, client usersv1.UsersServiceClient) string {
 	t.Helper()

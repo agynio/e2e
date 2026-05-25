@@ -79,7 +79,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		agentCleanupCtx := withIdentity(cleanupCtx, agentID)
+		agentCleanupCtx := withAgentIdentity(cleanupCtx, agentID)
 		ackAllUnackedMessagesBestEffort(t, agentCleanupCtx, threadsClient, agentID)
 		ids, err := findWorkloadsByLabels(cleanupCtx, runnerClient, labels)
 		if err != nil {
