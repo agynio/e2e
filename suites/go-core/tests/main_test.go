@@ -227,6 +227,14 @@ func createAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsSer
 	return env
 }
 
+func deleteAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, envID string) {
+	t.Helper()
+	_, err := client.DeleteEnv(ctx, &agentsv1.DeleteEnvRequest{Id: envID})
+	if err != nil {
+		t.Logf("cleanup: delete agent env %s: %v", envID, err)
+	}
+}
+
 func createImagePullSecret(
 	t *testing.T,
 	ctx context.Context,
