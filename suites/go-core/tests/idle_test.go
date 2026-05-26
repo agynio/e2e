@@ -139,7 +139,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 	idleCtx, idleCancel := context.WithTimeout(ctx, idleStopTimeout)
 	defer idleCancel()
 	if err := pollUntil(idleCtx, pollInterval, func(ctx context.Context) error {
-		logRunnersWorkloadState(t, threadsCtx, runnersClient, workloadID)
+		logRunnersWorkloadState(t, withIdentity(ctx, identityID), runnersClient, workloadID)
 		ids, err := findWorkloadsByLabels(ctx, runnerClient, labels)
 		if err != nil {
 			return err
