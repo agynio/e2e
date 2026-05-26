@@ -43,6 +43,39 @@ const TRACE_SCENARIOS: TraceScenario[] = [
   },
 ];
 
+async function waitForRunPageFromMessageDeepLink(
+  page: Page,
+  runUrlPattern: RegExp,
+  timeoutMs: number,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (runUrlPattern.test(page.url())) {
+      return;
+    }
+
+    const retryButton = page.getByRole('button', { name: 'Retry' });
+    if (await retryButton.isVisible({ timeout: 500 })) {
+      await retryButton.click();
+    }
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+
+    await page.waitForURL(runUrlPattern, { timeout: Math.min(5000, remainingMs) }).catch((error) => {
+      if (isTimeoutError(error)) {
+        return;
+      }
+      throw error;
+    });
+  }
+
+  throw new Error(`Trace message deep link did not resolve to a run page. Current URL: ${page.url()}`);
+}
+
 async function openTraceFromChat(
   page: Page,
   params: { chatId: string; organizationId: string; messageId: string; messageText: string },
@@ -98,18 +131,7 @@ async function openTraceFromChat(
   expect(openedTraceUrl.searchParams.get('orgId')).toBe(params.organizationId);
 
   const runUrlPattern = new RegExp(`/${params.organizationId}/runs/[0-9a-f]{32}(\\?.*)?$`);
-  const messageDeepLinkStatus = tracePage.getByText(/Waiting for run to appear|No run found for message\./i);
-  const destination = await Promise.race([
-    tracePage.waitForURL(runUrlPattern, { timeout: 120000 }).then(() => 'run' as const),
-    messageDeepLinkStatus.waitFor({ timeout: 30000 }).then(() => 'message' as const),
-  ]);
-
-  if (destination === 'message') {
-    await expect(tracePage).toHaveURL(messageUrlPattern);
-    await expect(messageDeepLinkStatus).toBeVisible();
-    await tracePage.close();
-    return;
-  }
+  await waitForRunPageFromMessageDeepLink(tracePage, runUrlPattern, 180000);
 
   await expect(tracePage).toHaveURL(runUrlPattern);
   await expect(tracePage.getByTestId('run-summary-status')).toContainText(/finished/i, { timeout: 120000 });
@@ -135,7 +157,7 @@ test.describe('chat trace link', {
   tag: ['@svc_chat_app', '@svc_tracing_app', '@svc_agents_orchestrator', '@svc_organizations'],
 }, () => {
   for (const scenario of TRACE_SCENARIOS) {
-    test(`view trace opens tracing deep link (${scenario.name})`, async ({ page }) => {
+    test(`view trace resolves tracing deep link (${scenario.name})`, async ({ page }) => {
       test.setTimeout(8 * 60_000);
 
       const { organizationId, participantId } = await setupTestAgent(page, {
