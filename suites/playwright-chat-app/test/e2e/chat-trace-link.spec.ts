@@ -92,8 +92,10 @@ async function openTraceFromChat(
     await callbackPromise;
   }
 
-  const runUrlPattern = new RegExp(`/${params.organizationId}/runs/[0-9a-f]{32}(\\?.*)?$`);
-  await expect(tracePage).toHaveURL(runUrlPattern, { timeout: 120000 });
+  const messageUrlPattern = new RegExp(`/message/${params.messageId}(\\?.*)?$`);
+  await expect(tracePage).toHaveURL(messageUrlPattern, { timeout: 120000 });
+  const openedTraceUrl = new URL(tracePage.url());
+  expect(openedTraceUrl.searchParams.get('orgId')).toBe(params.organizationId);
 
   await expect(tracePage.getByTestId('run-summary-status')).toContainText(/finished/i, { timeout: 120000 });
 
