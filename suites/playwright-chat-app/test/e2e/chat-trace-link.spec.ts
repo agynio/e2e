@@ -97,6 +97,21 @@ async function openTraceFromChat(
   const openedTraceUrl = new URL(tracePage.url());
   expect(openedTraceUrl.searchParams.get('orgId')).toBe(params.organizationId);
 
+  const runUrlPattern = new RegExp(`/${params.organizationId}/runs/[0-9a-f]{32}(\\?.*)?$`);
+  const messageDeepLinkStatus = tracePage.getByText(/Waiting for run to appear|No run found for message\./i);
+  const destination = await Promise.race([
+    tracePage.waitForURL(runUrlPattern, { timeout: 120000 }).then(() => 'run' as const),
+    messageDeepLinkStatus.waitFor({ timeout: 30000 }).then(() => 'message' as const),
+  ]);
+
+  if (destination === 'message') {
+    await expect(tracePage).toHaveURL(messageUrlPattern);
+    await expect(messageDeepLinkStatus).toBeVisible();
+    await tracePage.close();
+    return;
+  }
+
+  await expect(tracePage).toHaveURL(runUrlPattern);
   await expect(tracePage.getByTestId('run-summary-status')).toContainText(/finished/i, { timeout: 120000 });
 
   const eventsList = tracePage.getByTestId('run-events-list');
@@ -120,7 +135,7 @@ test.describe('chat trace link', {
   tag: ['@svc_chat_app', '@svc_tracing_app', '@svc_agents_orchestrator', '@svc_organizations'],
 }, () => {
   for (const scenario of TRACE_SCENARIOS) {
-    test(`view trace opens tracing run (${scenario.name})`, async ({ page }) => {
+    test(`view trace opens tracing deep link (${scenario.name})`, async ({ page }) => {
       test.setTimeout(8 * 60_000);
 
       const { organizationId, participantId } = await setupTestAgent(page, {
