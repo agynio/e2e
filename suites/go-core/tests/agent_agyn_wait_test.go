@@ -10,7 +10,6 @@ import (
 	"time"
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
-	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
@@ -32,27 +31,26 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	runnerConn := dialRunnerGRPC(t, runnerAddr)
 	usersConn := dialGRPC(t, usersAddr)
 	orgsConn := dialGRPC(t, orgsAddr)
-	llmConn := dialGRPC(t, llmAddr)
 
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 	usersClient := usersv1.NewUsersServiceClient(usersConn)
 	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
-	llmClient := llmv1.NewLLMServiceClient(llmConn)
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
+	token := createAPIToken(t, ctx, usersClient, identityID)
 
-	provider := createLLMProvider(t, threadsCtx, llmClient, testLLMEndpointAgn, orgID)
+	provider := createLLMProvider(t, threadsCtx, token, testLLMEndpointAgn, orgID)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
 
-	agentAModel := createModel(t, threadsCtx, llmClient, "e2e-agyn-wait-agent-a-model-"+uuid.NewString(), providerID, "shell-agyn-thread-create-wait", orgID)
-	agentBModel := createModel(t, threadsCtx, llmClient, "e2e-agyn-wait-agent-b-model-"+uuid.NewString(), providerID, "agyn-wait-agent-b-reply", orgID)
+	agentAModel := createModel(t, threadsCtx, token, "e2e-agyn-wait-agent-a-model-"+uuid.NewString(), providerID, "shell-agyn-thread-create-wait", orgID)
+	agentBModel := createModel(t, threadsCtx, token, "e2e-agyn-wait-agent-b-model-"+uuid.NewString(), providerID, "agyn-wait-agent-b-reply", orgID)
 
 	agentBNickname := "e2e-agyn-wait-b-fixed"
 	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModel.GetMeta().GetId(), orgID, agnInitImage)
