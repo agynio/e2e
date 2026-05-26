@@ -68,8 +68,8 @@ func TestLLMProxyGatewayCreatedModel(t *testing.T) {
 	authzClient := newLLMProxyAuthorizationClient(t)
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
-	apiToken := createAPIToken(t, ctx, usersClient, identityID)
 	organizationID := createTestOrganization(t, ctx, orgsClient, identityID)
+	apiToken := createAPIToken(t, ctx, usersClient, identityID)
 
 	providerID, err := createGatewayLLMProvider(t, ctx, apiToken, organizationID)
 	if err != nil {
