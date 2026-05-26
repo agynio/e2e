@@ -14,10 +14,9 @@ import (
 	"time"
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
-	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
+	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
-	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	zitimgmtv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/ziti_management/v1"
 	"github.com/google/uuid"
 	sdk "github.com/openziti/sdk-golang"
@@ -163,38 +162,28 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	agentsConn := dialGRPC(t, agentsAddr)
 	threadsConn := dialGRPC(t, threadsAddr)
 	runnerConn := dialRunnerGRPC(t, runnerAddr)
-	usersConn := dialGRPC(t, usersAddr)
-	orgsConn := dialGRPC(t, orgsAddr)
 
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
-	usersClient := usersv1.NewUsersServiceClient(usersConn)
-	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 	exposeInitImage := envOrDefault("AGN_EXPOSE_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:latest")
 
-	identityID := resolveOrCreateUser(t, ctx, usersClient)
-	threadsCtx := withIdentity(ctx, identityID)
-	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
-	token := createAPIToken(t, ctx, usersClient, identityID)
-
-	provider := createLLMProvider(t, threadsCtx, token, testLLMEndpointAgn, orgID)
-	providerID := provider.GetMeta().GetId()
-	if providerID == "" {
-		t.Fatal("create llm provider: missing id")
-	}
-	model := createModel(t, threadsCtx, token, "e2e-expose-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
-	modelID := model.GetMeta().GetId()
-	if modelID == "" {
-		t.Fatal("create model: missing id")
-	}
+	setup := newWorkflowGatewaySetup(t, ctx)
+	identityID := setup.IdentityID
+	threadsCtx := setup.Context
+	orgID := setup.OrganizationID
+	token := setup.Token
+	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointAgn, llmv1.Protocol_PROTOCOL_RESPONSES, "simple-hello")
 
 	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-expose-%s", uuid.NewString()), modelID, orgID, exposeInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() {
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, agentID)
+	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "HOME", "/tmp")
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "AGYN_GATEWAY_URL", "http://gateway:8080")
