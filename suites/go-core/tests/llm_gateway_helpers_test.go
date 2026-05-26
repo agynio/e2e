@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
+	gatewayv1connect "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/gateway/v1/gatewayv1connect"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	"github.com/google/uuid"
 )
@@ -21,6 +23,79 @@ const (
 	llmGatewayServicePath   = "agynio.api.gateway.v1.LLMGateway"
 	llmProviderTestEndpoint = "https://testllm.dev/v1/org/agynio/suite/agn/responses"
 )
+
+type workflowGatewaySetup struct {
+	IdentityID     string
+	Token          string
+	OrganizationID string
+	ModelID        string
+	Context        context.Context
+}
+
+func newWorkflowGatewaySetup(t *testing.T, ctx context.Context) workflowGatewaySetup {
+	t.Helper()
+	token := gatewayAPIToken(t)
+	identity := fetchGatewayIdentity(t, token)
+	return workflowGatewaySetup{
+		IdentityID:     identity.IdentityID,
+		Token:          token,
+		OrganizationID: gatewayOrganizationID(t),
+		ModelID:        gatewayModelID(t),
+		Context:        withIdentity(ctx, identity.IdentityID),
+	}
+}
+
+func createWorkflowGatewayModel(t *testing.T, setup workflowGatewaySetup, endpoint string, protocol llmv1.Protocol, remoteName string) string {
+	t.Helper()
+	client := newLLMGatewayClient(t, setup.Token)
+
+	providerResp, err := client.CreateLLMProvider(setup.Context, connect.NewRequest(&llmv1.CreateLLMProviderRequest{
+		Endpoint:       endpoint,
+		AuthMethod:     llmv1.AuthMethod_AUTH_METHOD_BEARER,
+		Token:          "test-token",
+		OrganizationId: setup.OrganizationID,
+		Protocol:       protocol,
+	}))
+	if err != nil {
+		t.Fatalf("create llm provider through gateway: %v", err)
+	}
+	provider := providerResp.Msg.GetProvider()
+	if provider == nil || provider.GetMeta().GetId() == "" {
+		t.Fatal("create llm provider: missing id")
+	}
+	providerID := provider.GetMeta().GetId()
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
+		defer cleanupCancel()
+		_, _ = client.DeleteLLMProvider(cleanupCtx, connect.NewRequest(&llmv1.DeleteLLMProviderRequest{Id: providerID}))
+	})
+
+	modelResp, err := client.CreateModel(setup.Context, connect.NewRequest(&llmv1.CreateModelRequest{
+		Name:           "e2e-model-" + uuid.NewString(),
+		LlmProviderId:  providerID,
+		RemoteName:     remoteName,
+		OrganizationId: setup.OrganizationID,
+	}))
+	if err != nil {
+		t.Fatalf("create model %q through gateway: %v", remoteName, err)
+	}
+	model := modelResp.Msg.GetModel()
+	if model == nil || model.GetMeta().GetId() == "" {
+		t.Fatal("create model: missing id")
+	}
+	modelID := model.GetMeta().GetId()
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), gatewayRequestTimeout)
+		defer cleanupCancel()
+		_, _ = client.DeleteModel(cleanupCtx, connect.NewRequest(&llmv1.DeleteModelRequest{Id: modelID}))
+	})
+	return modelID
+}
+
+func newLLMGatewayClient(t *testing.T, token string) gatewayv1connect.LLMGatewayClient {
+	t.Helper()
+	return gatewayv1connect.NewLLMGatewayClient(newGatewayAuthenticatedClient(t, token), gatewayBaseURL(t))
+}
 
 func createGatewayLLMProvider(t *testing.T, ctx context.Context, token string, organizationID string) (string, error) {
 	t.Helper()

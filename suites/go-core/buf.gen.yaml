@@ -13,6 +13,7 @@ inputs:
       - agynio/api/authorization/v1
       - agynio/api/files/v1
       - agynio/api/gateway/v1/agents.proto
+      - agynio/api/gateway/v1/llm.proto
       - agynio/api/gateway/v1/users.proto
       - agynio/api/identity/v1
       - agynio/api/llm/v1

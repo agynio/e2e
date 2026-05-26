@@ -235,6 +235,27 @@ func deleteAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsSer
 	}
 }
 
+func cleanupAgentEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, agentID string) {
+	t.Helper()
+	pageToken := ""
+	for {
+		resp, err := client.ListEnvs(ctx, &agentsv1.ListEnvsRequest{AgentId: agentID, PageSize: 100, PageToken: pageToken})
+		if err != nil {
+			t.Logf("cleanup: list agent envs for %s: %v", agentID, err)
+			return
+		}
+		for _, env := range resp.GetEnvs() {
+			if env.GetMeta().GetId() != "" {
+				deleteAgentEnv(t, ctx, client, env.GetMeta().GetId())
+			}
+		}
+		pageToken = resp.GetNextPageToken()
+		if pageToken == "" {
+			return
+		}
+	}
+}
+
 func createImagePullSecret(
 	t *testing.T,
 	ctx context.Context,

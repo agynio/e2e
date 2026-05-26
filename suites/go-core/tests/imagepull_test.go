@@ -10,11 +10,9 @@ import (
 	"time"
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
-	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	secretsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/secrets/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
-	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,32 +32,19 @@ func TestImagePullSecretAttachedToPod(t *testing.T) {
 	agentsConn := dialGRPC(t, agentsAddr)
 	threadsConn := dialGRPC(t, threadsAddr)
 	runnerConn := dialRunnerGRPC(t, runnerAddr)
-	usersConn := dialGRPC(t, usersAddr)
-	orgsConn := dialGRPC(t, orgsAddr)
 	secretsConn := dialGRPC(t, secretsAddr)
 
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
-	usersClient := usersv1.NewUsersServiceClient(usersConn)
-	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 	secretsClient := secretsv1.NewSecretsServiceClient(secretsConn)
 
-	identityID := resolveOrCreateUser(t, ctx, usersClient)
-	threadsCtx := withIdentity(ctx, identityID)
-	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
-	token := createAPIToken(t, ctx, usersClient, identityID)
-
-	provider := createLLMProvider(t, threadsCtx, token, testLLMEndpointCodex, orgID)
-	providerID := provider.GetMeta().GetId()
-	if providerID == "" {
-		t.Fatal("create llm provider: missing id")
-	}
-	model := createModel(t, threadsCtx, token, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
-	modelID := model.GetMeta().GetId()
-	if modelID == "" {
-		t.Fatal("create model: missing id")
-	}
+	setup := newWorkflowGatewaySetup(t, ctx)
+	identityID := setup.IdentityID
+	threadsCtx := setup.Context
+	orgID := setup.OrganizationID
+	token := setup.Token
+	modelID := setup.ModelID
 
 	imagePullSecret := createImagePullSecret(
 		t,
@@ -82,7 +67,10 @@ func TestImagePullSecretAttachedToPod(t *testing.T) {
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() {
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, agentID)
+	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
 	attachment := createImagePullSecretAttachment(t, ctx, agentsClient, imagePullSecretID, agentID)
