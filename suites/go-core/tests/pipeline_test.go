@@ -48,23 +48,21 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
-	llmConn := dialGRPC(t, llmAddr)
-	llmClient := llmv1.NewLLMServiceClient(llmConn)
 	usersClient := usersv1.NewUsersServiceClient(usersConn)
 	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
-	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
+	token := createAPIToken(t, ctx, usersClient, identityID)
 
-	provider := createLLMProviderWithProtocol(t, threadsCtx, llmEndpoint, orgID, protocol)
+	provider := createLLMProviderWithProtocol(t, threadsCtx, token, llmEndpoint, orgID, protocol)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
-	model := createModel(t, threadsCtx, llmClient, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
+	model := createModel(t, threadsCtx, token, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
 	modelID := model.GetMeta().GetId()
 	if modelID == "" {
 		t.Fatal("create model: missing id")

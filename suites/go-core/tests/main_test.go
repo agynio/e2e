@@ -98,17 +98,17 @@ func newUserID() string {
 	return uuid.New().String()
 }
 
-func createLLMProvider(t *testing.T, ctx context.Context, _ llmv1.LLMServiceClient, endpoint, orgID string) *llmv1.LLMProvider {
+func createLLMProvider(t *testing.T, ctx context.Context, token string, endpoint, orgID string) *llmv1.LLMProvider {
 	t.Helper()
-	return createLLMProviderWithProtocol(t, ctx, endpoint, orgID, llmv1.Protocol_PROTOCOL_RESPONSES)
+	return createLLMProviderWithProtocol(t, ctx, token, endpoint, orgID, llmv1.Protocol_PROTOCOL_RESPONSES)
 }
 
-func createLLMProviderWithProtocol(t *testing.T, ctx context.Context, endpoint, orgID string, protocol llmv1.Protocol) *llmv1.LLMProvider {
+func createLLMProviderWithProtocol(t *testing.T, ctx context.Context, token, endpoint, orgID string, protocol llmv1.Protocol) *llmv1.LLMProvider {
 	t.Helper()
 	provider, err := createGatewayLLMProviderResource(
 		t,
 		ctx,
-		gatewayAPIToken(t),
+		token,
 		endpoint,
 		"AUTH_METHOD_BEARER",
 		"test-token",
@@ -121,9 +121,9 @@ func createLLMProviderWithProtocol(t *testing.T, ctx context.Context, endpoint, 
 	return provider
 }
 
-func createModel(t *testing.T, ctx context.Context, _ llmv1.LLMServiceClient, name, providerID, remoteName, orgID string) *llmv1.Model {
+func createModel(t *testing.T, ctx context.Context, token, name, providerID, remoteName, orgID string) *llmv1.Model {
 	t.Helper()
-	model, err := createGatewayLLMModelResource(t, ctx, gatewayAPIToken(t), name, orgID, providerID, remoteName)
+	model, err := createGatewayLLMModelResource(t, ctx, token, name, orgID, providerID, remoteName)
 	if err != nil {
 		t.Fatalf("create model %q through gateway: %v", name, err)
 	}

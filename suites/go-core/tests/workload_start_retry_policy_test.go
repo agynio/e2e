@@ -10,7 +10,6 @@ import (
 	"time"
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
-	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	runnersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runners/v1"
@@ -51,8 +50,6 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
-	llmConn := dialGRPC(t, llmAddr)
-	llmClient := llmv1.NewLLMServiceClient(llmConn)
 	usersClient := usersv1.NewUsersServiceClient(usersConn)
 	orgsClient := organizationsv1.NewOrganizationsServiceClient(orgsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
@@ -60,15 +57,15 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 
 	identityID := resolveOrCreateUser(t, ctx, usersClient)
 	threadsCtx := withIdentity(ctx, identityID)
-	token := createAPIToken(t, ctx, usersClient, identityID)
 	orgID := createTestOrganization(t, ctx, orgsClient, identityID)
+	token := createAPIToken(t, ctx, usersClient, identityID)
 
-	provider := createLLMProvider(t, threadsCtx, llmClient, testLLMEndpointCodex, orgID)
+	provider := createLLMProvider(t, threadsCtx, token, testLLMEndpointCodex, orgID)
 	providerID := provider.GetMeta().GetId()
 	if providerID == "" {
 		t.Fatal("create llm provider: missing id")
 	}
-	model := createModel(t, threadsCtx, llmClient, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
+	model := createModel(t, threadsCtx, token, "e2e-model-"+uuid.NewString(), providerID, "simple-hello", orgID)
 	modelID := model.GetMeta().GetId()
 	if modelID == "" {
 		t.Fatal("create model: missing id")
