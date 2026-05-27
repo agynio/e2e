@@ -17,6 +17,8 @@ const CLAUDE_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT_CLAUDE ?? 'https://testllm.dev/v1/org/agynio/suite/claude/messages';
 const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:latest';
 const CLAUDE_PROTOCOL = 'PROTOCOL_ANTHROPIC_MESSAGES';
+const MESSAGE_DEEP_LINK_RESOLVING_TEXT = 'Resolving message...';
+const MESSAGE_DEEP_LINK_NOT_FOUND_TEXT = 'No run found for message.';
 
 function isTimeoutError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'TimeoutError';
@@ -49,15 +51,22 @@ async function waitForRunPageFromMessageDeepLink(
   timeoutMs: number,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
+  const resolvingMessage = page.getByText(MESSAGE_DEEP_LINK_RESOLVING_TEXT);
+  const noRunFoundMessage = page.getByText(MESSAGE_DEEP_LINK_NOT_FOUND_TEXT);
+  const retryButton = page.getByRole('button', { name: 'Retry' });
 
   while (Date.now() < deadline) {
     if (runUrlPattern.test(page.url())) {
       return;
     }
 
-    const retryButton = page.getByRole('button', { name: 'Retry' });
-    if (await retryButton.isVisible({ timeout: 500 })) {
+    if (await resolvingMessage.isVisible({ timeout: 500 })) {
+      await expect(resolvingMessage).toBeVisible();
+    } else if (await noRunFoundMessage.isVisible({ timeout: 500 })) {
+      await expect(noRunFoundMessage).toBeVisible();
+      await expect(retryButton).toBeVisible();
       await retryButton.click();
+      await expect(resolvingMessage).toBeVisible({ timeout: 30000 });
     }
 
     const remainingMs = deadline - Date.now();
