@@ -20,14 +20,15 @@ import (
 )
 
 const (
-	startRetryTestTimeout = 8 * time.Minute
-	failedWorkloadTimeout = 3 * time.Minute
-	fastRetryTimeout      = 40 * time.Second
-	fastRetryWindow       = 30 * time.Second
-	responseWaitTimeout   = 3 * time.Minute
-	runnerCleanupTimeout  = 90 * time.Second
-	invalidInitImage      = "INVALID_IMAGE_NAME:latest"
-	expectedAgentResponse = "Hi! How are you?"
+	startRetryTestTimeout  = 8 * time.Minute
+	failedWorkloadTimeout  = 3 * time.Minute
+	fastRetryTimeout       = 40 * time.Second
+	fastRetryWindow        = 30 * time.Second
+	startRetryPollInterval = time.Second
+	responseWaitTimeout    = 3 * time.Minute
+	runnerCleanupTimeout   = 90 * time.Second
+	invalidInitImage       = "INVALID_IMAGE_NAME:latest"
+	expectedAgentResponse  = "Hi! How are you?"
 )
 
 var configInvalidContainerReasons = map[string]struct{}{
@@ -37,6 +38,7 @@ var configInvalidContainerReasons = map[string]struct{}{
 }
 
 func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
+	logStep := startTimingBreadcrumbs(t)
 	ctx, cancel := context.WithTimeout(context.Background(), startRetryTestTimeout)
 	t.Cleanup(cancel)
 
@@ -56,6 +58,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	orgID := setup.OrganizationID
 	token := setup.Token
 	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointCodex, llmv1.Protocol_PROTOCOL_RESPONSES, "simple-hello")
+	logStep("workflow_setup")
 
 	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-start-retry-%s", uuid.NewString()), modelID, orgID, invalidInitImage)
 	agentID := agent.GetMeta().GetId()
@@ -77,6 +80,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 
 	sentMessage := sendMessage(t, threadsCtx, threadsClient, threadID, identityID, "hello")
 	sentMessageTime := messageCreatedAt(t, sentMessage)
+	logStep("invalid_image_message_sent")
 
 	labels := map[string]string{
 		labelManagedBy: managedByValue,
@@ -103,6 +107,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	if len(failedWorkloads) < 2 {
 		t.Fatalf("expected at least 2 failed workloads, got %d", len(failedWorkloads))
 	}
+	logStep("failed_workloads_observed")
 	failedLatest := failedWorkloads[0]
 	failedPrevious := failedWorkloads[1]
 	assertFailedWorkload(t, failedLatest, threadID, agentID)
@@ -144,6 +149,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	if _, err := agentsClient.UpdateAgent(updateCtx, &agentsv1.UpdateAgentRequest{Id: agentID, InitImage: &validInitImage}); err != nil {
 		t.Fatalf("update agent init image: %v", err)
 	}
+	logStep("valid_image_updated")
 
 	fastRetryCtx, fastRetryCancel := context.WithTimeout(ctx, fastRetryTimeout)
 	defer fastRetryCancel()
@@ -155,6 +161,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	if retryCreatedAt.Sub(removedAt) >= fastRetryWindow {
 		t.Fatalf("expected retry within %s, got %s", fastRetryWindow, retryCreatedAt.Sub(removedAt))
 	}
+	logStep("retry_workload_observed")
 
 	responseCtx, responseCancel := context.WithTimeout(threadsCtx, responseWaitTimeout)
 	defer responseCancel()
@@ -165,19 +172,23 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	if agentBody != expectedAgentResponse {
 		t.Fatalf("expected agent response %q, got %q", expectedAgentResponse, agentBody)
 	}
+	logStep("agent_response_observed")
 
+	failedInstanceIDs := make([]string, 0, 2)
 	for _, failed := range []*runnersv1.Workload{failedLatest, failedPrevious} {
 		instanceID := failed.GetInstanceId()
 		if instanceID == "" {
 			t.Fatalf("failed workload %s missing instance id", workloadID(t, failed))
 		}
-		cleanupCtx, cleanupCancel := context.WithTimeout(ctx, runnerCleanupTimeout)
-		if err := waitForRunnerWorkloadGone(cleanupCtx, runnerClient, instanceID); err != nil {
-			cleanupCancel()
-			t.Fatalf("wait for runner workload %s cleanup: %v", instanceID, err)
-		}
-		cleanupCancel()
+		failedInstanceIDs = append(failedInstanceIDs, instanceID)
 	}
+	cleanupCtx, cleanupCancel := context.WithTimeout(ctx, runnerCleanupTimeout)
+	if err := waitForRunnerWorkloadsGone(cleanupCtx, runnerClient, failedInstanceIDs); err != nil {
+		cleanupCancel()
+		t.Fatalf("wait for runner workload cleanup: %v", err)
+	}
+	cleanupCancel()
+	logStep("failed_runner_workloads_cleaned")
 }
 
 func waitForFailedWorkloads(
@@ -191,7 +202,7 @@ func waitForFailedWorkloads(
 		return nil, fmt.Errorf("expected positive count, got %d", count)
 	}
 	var failed []*runnersv1.Workload
-	err := pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+	err := pollUntil(ctx, startRetryPollInterval, func(ctx context.Context) error {
 		workloads, err := listWorkloadsByThread(ctx, client, threadID, agentID, []runnersv1.WorkloadStatus{runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED})
 		if err != nil {
 			return err
@@ -263,7 +274,7 @@ func waitForRetryWorkload(
 		return nil, fmt.Errorf("removed_at is zero")
 	}
 	var retry *runnersv1.Workload
-	err := pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+	err := pollUntil(ctx, startRetryPollInterval, func(ctx context.Context) error {
 		workloads, err := listWorkloadsByThread(ctx, client, threadID, agentID, nil)
 		if err != nil {
 			return err
@@ -364,16 +375,55 @@ func waitForRunnerWorkloadGone(ctx context.Context, client runnerv1.RunnerServic
 	if workloadID == "" {
 		return fmt.Errorf("workload id is empty")
 	}
-	return pollUntil(ctx, pollInterval, func(ctx context.Context) error {
-		_, err := client.InspectWorkload(ctx, &runnerv1.InspectWorkloadRequest{WorkloadId: workloadID})
-		if err != nil {
-			if status.Code(err) == codes.NotFound {
-				return nil
-			}
-			return err
+	return waitForRunnerWorkloadsGone(ctx, client, []string{workloadID})
+}
+
+func waitForRunnerWorkloadsGone(ctx context.Context, client runnerv1.RunnerServiceClient, workloadIDs []string) error {
+	if len(workloadIDs) == 0 {
+		return fmt.Errorf("workload ids are empty")
+	}
+	remaining := make(map[string]struct{}, len(workloadIDs))
+	for _, workloadID := range workloadIDs {
+		if workloadID == "" {
+			return fmt.Errorf("workload id is empty")
 		}
-		return fmt.Errorf("workload %s still present", workloadID)
+		remaining[workloadID] = struct{}{}
+	}
+	return pollUntil(ctx, startRetryPollInterval, func(ctx context.Context) error {
+		for workloadID := range remaining {
+			gone, err := runnerWorkloadGone(ctx, client, workloadID)
+			if err != nil {
+				return err
+			}
+			if gone {
+				delete(remaining, workloadID)
+			}
+		}
+		if len(remaining) == 0 {
+			return nil
+		}
+		return fmt.Errorf("workloads still present: %s", sortedMapKeys(remaining))
 	})
+}
+
+func runnerWorkloadGone(ctx context.Context, client runnerv1.RunnerServiceClient, workloadID string) (bool, error) {
+	_, err := client.InspectWorkload(ctx, &runnerv1.InspectWorkloadRequest{WorkloadId: workloadID})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return true, nil
+		}
+		return false, err
+	}
+	return false, nil
+}
+
+func sortedMapKeys(values map[string]struct{}) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func assertFailedWorkload(t *testing.T, workload *runnersv1.Workload, threadID, agentID string) {

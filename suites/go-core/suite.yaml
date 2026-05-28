@@ -46,14 +46,24 @@ run: |
 
   tmp_json=$(mktemp)
   set +e
-  go_test_args=(-count=1 -tags "${tag_args}")
+  # The go-core suite can legitimately run tests with 8m per-test contexts.
+  # Keep a package-level watchdog, but make it larger than any single test so
+  # CI fails on true hangs instead of exhausting Go's implicit 10m default.
+  go_test_timeout="${E2E_GO_TEST_TIMEOUT:-25m}"
+  go_test_args=(-count=1 -timeout "${go_test_timeout}" -tags "${tag_args}" -v)
   if [ -n "${E2E_GO_TEST_RUN:-}" ]; then
     go_test_args+=(-run "${E2E_GO_TEST_RUN}")
   fi
   go_test_args+=(-json ./tests/...)
 
-  go test "${go_test_args[@]}" 2>&1 | tee "${tmp_json}"
-  status=${PIPESTATUS[0]}
+  go test "${go_test_args[@]}" 2>&1 \
+    | tee "${tmp_json}" \
+    | go run ./internal/go-test-breadcrumbs --timeout "${go_test_timeout}"
+  pipeline_status=("${PIPESTATUS[@]}")
+  status=${pipeline_status[0]}
+  if [ "$status" -eq 0 ] && [ "${pipeline_status[2]}" -ne 0 ]; then
+    status=${pipeline_status[2]}
+  fi
   set -e
 
   go run github.com/jstemmer/go-junit-report/v2@v2.1.0 -parser gojson < "${tmp_json}" > junit.xml
