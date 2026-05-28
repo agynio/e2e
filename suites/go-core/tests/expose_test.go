@@ -50,6 +50,7 @@ const (
 )
 
 func TestZitiManagementEndpointDefaultUsesIngress(t *testing.T) {
+	t.Setenv(zitiMgmtEndpointEnvKey, "")
 	t.Setenv("E2E_DOMAIN", "e2e.agyn.dev")
 	t.Setenv("E2E_INGRESS_PORT", "30443")
 
