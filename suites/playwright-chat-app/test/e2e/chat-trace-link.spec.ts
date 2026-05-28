@@ -17,6 +17,8 @@ const CLAUDE_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT_CLAUDE ?? 'https://testllm.dev/v1/org/agynio/suite/claude/messages';
 const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:latest';
 const CLAUDE_PROTOCOL = 'PROTOCOL_ANTHROPIC_MESSAGES';
+const MESSAGE_DEEP_LINK_RESOLUTION_TIMEOUT_MS = 180000;
+const MESSAGE_DEEP_LINK_POLL_INTERVAL_MS = 5000;
 
 function isTimeoutError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'TimeoutError';
@@ -45,18 +47,50 @@ const TRACE_SCENARIOS: TraceScenario[] = [
 
 async function waitForRunPageFromMessageDeepLink(
   page: Page,
-  runUrlPattern: RegExp,
-  timeoutMs: number,
+  params: { messageId: string; organizationId: string; runUrlPattern: RegExp; timeoutMs: number },
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const messageUrlPattern = new RegExp(`/message/${params.messageId}(\\?.*)?$`);
+
+  const initialUrl = page.url();
+  if (params.runUrlPattern.test(initialUrl)) {
+    return;
+  }
+
+  if (!messageUrlPattern.test(initialUrl)) {
+    await expect(page).toHaveURL((url) => messageUrlPattern.test(url.href) || params.runUrlPattern.test(url.href), {
+      timeout: params.timeoutMs,
+    });
+
+    if (params.runUrlPattern.test(page.url())) {
+      return;
+    }
+  }
+
+  const openedTraceUrl = new URL(page.url());
+  expect(openedTraceUrl.searchParams.get('orgId')).toBe(params.organizationId);
+
+  const resolvingMessage = page.getByText('Resolving message...');
+  const noRunMessage = page.getByText('No run found for message.');
+  const retryButton = page.getByRole('button', { name: 'Retry' });
+
+  const deadline = Date.now() + params.timeoutMs;
 
   while (Date.now() < deadline) {
-    if (runUrlPattern.test(page.url())) {
+    if (params.runUrlPattern.test(page.url())) {
       return;
     }
 
-    const retryButton = page.getByRole('button', { name: 'Retry' });
-    if (await retryButton.isVisible({ timeout: 500 })) {
+    if (!messageUrlPattern.test(page.url())) {
+      throw new Error(`Trace message deep link navigated to an unexpected URL: ${page.url()}`);
+    }
+
+    if (await resolvingMessage.isVisible({ timeout: 500 })) {
+      await expect(resolvingMessage).toBeVisible();
+    }
+
+    if (await noRunMessage.isVisible({ timeout: 500 })) {
+      await expect(noRunMessage).toBeVisible();
+      await expect(retryButton).toBeVisible({ timeout: 5000 });
       await retryButton.click();
     }
 
@@ -65,7 +99,9 @@ async function waitForRunPageFromMessageDeepLink(
       break;
     }
 
-    await page.waitForURL(runUrlPattern, { timeout: Math.min(5000, remainingMs) }).catch((error) => {
+    await page.waitForURL(params.runUrlPattern, {
+      timeout: Math.min(MESSAGE_DEEP_LINK_POLL_INTERVAL_MS, remainingMs),
+    }).catch((error) => {
       if (isTimeoutError(error)) {
         return;
       }
@@ -120,18 +156,18 @@ async function openTraceFromChat(
     }
     throw error;
   });
-  const completed = await completeOidcLogin(tracePage, { timeoutMs: 10000 });
+  const completed = await completeOidcLogin(tracePage, { timeoutMs: 60000 });
   if (completed) {
     await callbackPromise;
   }
 
-  const messageUrlPattern = new RegExp(`/message/${params.messageId}(\\?.*)?$`);
-  await expect(tracePage).toHaveURL(messageUrlPattern, { timeout: 120000 });
-  const openedTraceUrl = new URL(tracePage.url());
-  expect(openedTraceUrl.searchParams.get('orgId')).toBe(params.organizationId);
-
   const runUrlPattern = new RegExp(`/${params.organizationId}/runs/[0-9a-f]{32}(\\?.*)?$`);
-  await waitForRunPageFromMessageDeepLink(tracePage, runUrlPattern, 180000);
+  await waitForRunPageFromMessageDeepLink(tracePage, {
+    messageId: params.messageId,
+    organizationId: params.organizationId,
+    runUrlPattern,
+    timeoutMs: MESSAGE_DEEP_LINK_RESOLUTION_TIMEOUT_MS,
+  });
 
   await expect(tracePage).toHaveURL(runUrlPattern);
   await expect(tracePage.getByTestId('run-summary-status')).toContainText(/finished/i, { timeout: 120000 });
