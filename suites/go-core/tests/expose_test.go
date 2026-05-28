@@ -40,13 +40,35 @@ const (
 	exposeExpectedResponse    = "Hi! How are you?"
 	exposeStatusActive        = "active"
 	zitiMgmtEndpointEnvKey    = "ZITI_MGMT_ENDPOINT"
-	defaultZitiMgmtEndpoint   = "https://ziti-mgmt.agyn.dev:2496/edge/management/v1"
+	zitiMgmtServiceName       = "ziti-mgmt"
+	zitiMgmtPath              = "/edge/management/v1"
 	zitiNamespaceEnvKey       = "ZITI_NAMESPACE"
 	defaultZitiNamespace      = "ziti"
 	zitiAdminSecretName       = "ziti-controller-admin-secret"
 	zitiAdminUserKey          = "admin-user"
 	zitiAdminPasswordKey      = "admin-password"
 )
+
+func TestZitiManagementEndpointDefaultUsesIngress(t *testing.T) {
+	t.Setenv("E2E_DOMAIN", "e2e.agyn.dev")
+	t.Setenv("E2E_INGRESS_PORT", "30443")
+
+	got := zitiManagementEndpoint()
+	want := "https://ziti-mgmt.e2e.agyn.dev:30443/edge/management/v1"
+	if got != want {
+		t.Fatalf("ziti management endpoint mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestZitiManagementEndpointExplicitOverride(t *testing.T) {
+	t.Setenv(zitiMgmtEndpointEnvKey, "https://custom.example.test:9443/edge/management/v1/")
+
+	got := zitiManagementEndpoint()
+	want := "https://custom.example.test:9443/edge/management/v1"
+	if got != want {
+		t.Fatalf("ziti management endpoint mismatch: got %q want %q", got, want)
+	}
+}
 
 type exposeWorkloadFixture struct {
 	ctx           context.Context
@@ -694,7 +716,7 @@ func createZitiManagementSession(t *testing.T, ctx context.Context) (zitiManagem
 		return zitiManagementSession{}, err
 	}
 
-	endpoint := strings.TrimRight(envOrDefault(zitiMgmtEndpointEnvKey, defaultZitiMgmtEndpoint), "/")
+	endpoint := zitiManagementEndpoint()
 	client := &http.Client{
 		Timeout:   exposeRequestTimeout,
 		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
@@ -742,6 +764,15 @@ func zitiAdminCredentials(t *testing.T, ctx context.Context) (string, string, er
 		return "", "", fmt.Errorf("%s/%s missing admin credentials", zitiNamespace(), zitiAdminSecretName)
 	}
 	return username, password, nil
+}
+
+func zitiManagementEndpoint() string {
+	if explicitEndpoint := strings.TrimSpace(envOrDefault(zitiMgmtEndpointEnvKey, "")); explicitEndpoint != "" {
+		return strings.TrimRight(explicitEndpoint, "/")
+	}
+	domain := envOrDefault("E2E_DOMAIN", envOrDefault("DOMAIN", "agyn.dev"))
+	port := envOrDefault("E2E_INGRESS_PORT", envOrDefault("INGRESS_PORT", envOrDefault("PORT", "2496")))
+	return strings.TrimRight(fmt.Sprintf("https://%s.%s:%s%s", zitiMgmtServiceName, domain, port, zitiMgmtPath), "/")
 }
 
 func logZitiResource(t *testing.T, ctx context.Context, session zitiManagementSession, label, path string) {
