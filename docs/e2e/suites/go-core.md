@@ -13,7 +13,7 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 
 - Source directory: `suites/go-core`
 - Test inventory pattern: `tests/*_test.go`
-- Included case count: 91
+- Included case count: 89
 
 ## Actors
 
@@ -130,8 +130,6 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 | [E2E-GO-CORE-082](#e2e-go-core-082) | `TestAgentSimpleHelloProducesTrace` | @svc_agents_orchestrator |
 | [E2E-GO-CORE-083](#e2e-go-core-083) | `TestAgentMCPToolsProducesTrace` | @svc_agents_orchestrator |
 | [E2E-GO-CORE-084](#e2e-go-core-084) | `TestWorkloadStartRetryPolicyFastRetry` | @svc_agents_orchestrator, @svc_runners, @svc_k8s_runner |
-| [E2E-GO-CORE-085](#e2e-go-core-085) | `TestBreadcrumbLoggerReportsTestDurations` | _none_ |
-| [E2E-GO-CORE-086](#e2e-go-core-086) | `TestScanEventsPassesThroughPlainOutput` | _none_ |
 | [E2E-GO-CORE-087](#e2e-go-core-087) | `TestFullPipelineAgnMessageResponse` | @svc_agents_orchestrator, @svc_llm |
 | [E2E-GO-CORE-088](#e2e-go-core-088) | `TestFullPipelineClaudeMessageResponse` | @svc_agents_orchestrator, @svc_llm |
 | [E2E-GO-CORE-089](#e2e-go-core-089) | `TestBatchUpdateWorkloadSampledAtSingle` | @svc_runners |
@@ -1081,30 +1079,6 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - **Given** A workload start fails because of invalid container configuration.
 - **When** The orchestrator observes failure and retries.
 - **Then** Failed workloads are recorded, retry happens quickly, the thread stays active, and a later valid workload produces the expected response.
-
-### E2E-GO-CORE-085
-
-- **Source:** `suites/go-core/internal/go-test-breadcrumbs/main_test.go`
-- **Test:** `TestBreadcrumbLoggerReportsTestDurations`
-- **Tags:** _none_
-
-**Scenario:** TestBreadcrumbLoggerReportsTestDurations
-
-- **Given** Go test JSON events include test start and finish times.
-- **When** The breadcrumb logger scans the events.
-- **Then** It reports breadcrumb output with test durations.
-
-### E2E-GO-CORE-086
-
-- **Source:** `suites/go-core/internal/go-test-breadcrumbs/main_test.go`
-- **Test:** `TestScanEventsPassesThroughPlainOutput`
-- **Tags:** _none_
-
-**Scenario:** TestScanEventsPassesThroughPlainOutput
-
-- **Given** The scanner receives plain non-JSON output.
-- **When** It scans the stream.
-- **Then** The plain output is passed through unchanged.
 
 ### E2E-GO-CORE-087
 

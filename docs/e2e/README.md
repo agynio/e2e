@@ -36,7 +36,8 @@ Tags are selected through suite-level `TAGS` filtering. Suite docs list suite ta
 - Suite IDs use `E2E-SUITE-<SUITE-NAME>` with the suite directory name uppercased and hyphenated.
 - Case IDs use `E2E-<SUITE-NAME>-NNN` and are stable within a suite doc.
 - Add new cases at the end of the relevant suite unless a deliberate renumbering migration is documented.
-- Each Playwright `test(...)` case and each Go top-level test or documented subtest appears exactly once.
+- Each Playwright `test(...)` case and each Go E2E top-level test or documented subtest from the suite runner's E2E test paths appears exactly once.
+- Internal helper/unit tests outside the E2E suite run, such as `internal/` packages, are excluded from this inventory.
 - Parameterized tests are expanded when the parameter value is part of the observable behavior, for example Codex and Claude trace-link scenarios.
 
 ## BDD documentation rules
