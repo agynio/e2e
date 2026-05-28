@@ -4,6 +4,7 @@ package tests
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,9 +35,17 @@ const (
 	exposeUnreachableTimeout  = 90 * time.Second
 	exposeRequestTimeout      = 15 * time.Second
 	exposeZitiRequestTimeout  = 30 * time.Second
+	exposeDiagnosticsTimeout  = 20 * time.Second
 	exposePort                = 3000
 	exposeExpectedResponse    = "Hi! How are you?"
 	exposeStatusActive        = "active"
+	zitiMgmtEndpointEnvKey    = "ZITI_MGMT_ENDPOINT"
+	defaultZitiMgmtEndpoint   = "https://ziti-mgmt.agyn.dev:2496/edge/management/v1"
+	zitiNamespaceEnvKey       = "ZITI_NAMESPACE"
+	defaultZitiNamespace      = "ziti"
+	zitiAdminSecretName       = "ziti-controller-admin-secret"
+	zitiAdminUserKey          = "admin-user"
+	zitiAdminPasswordKey      = "admin-password"
 )
 
 type exposeWorkloadFixture struct {
@@ -46,10 +55,20 @@ type exposeWorkloadFixture struct {
 }
 
 type exposeEntry struct {
-	ID     string `json:"id"`
-	Port   int    `json:"port"`
-	URL    string `json:"url"`
-	Status string `json:"status"`
+	ID                        string `json:"id"`
+	WorkloadID                string `json:"workload_id"`
+	WorkloadIDCamel           string `json:"workloadId"`
+	AgentID                   string `json:"agent_id"`
+	AgentIDCamel              string `json:"agentId"`
+	Port                      int    `json:"port"`
+	OpenZitiServiceID         string `json:"openziti_service_id"`
+	OpenZitiBindPolicyID      string `json:"openziti_bind_policy_id"`
+	OpenZitiDialPolicyID      string `json:"openziti_dial_policy_id"`
+	OpenZitiServiceIDCamel    string `json:"openzitiServiceId"`
+	OpenZitiBindPolicyIDCamel string `json:"openzitiBindPolicyId"`
+	OpenZitiDialPolicyIDCamel string `json:"openzitiDialPolicyId"`
+	URL                       string `json:"url"`
+	Status                    string `json:"status"`
 }
 
 func TestAgentExposeListExec(t *testing.T) {
@@ -132,6 +151,13 @@ func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
 	reachCtx, reachCancel := context.WithTimeout(fixture.ctx, exposeReachabilityTimeout)
 	defer reachCancel()
 	if err := waitForExposeReachable(t, reachCtx, httpClient, exposedURL, body); err != nil {
+		latestEntry := listedEntry
+		if refreshedEntry, refreshErr := execExposeEntryByID(t, fixture.ctx, fixture, addEntry.ID); refreshErr != nil {
+			t.Logf("diagnostics: refresh expose entry: %v", refreshErr)
+		} else {
+			latestEntry = refreshedEntry
+		}
+		logExposeTimeoutDiagnostics(t, fixture, latestEntry, exposedURL)
 		t.Fatalf("wait for exposed service: %v", err)
 	}
 
@@ -309,6 +335,22 @@ func execExposeList(t *testing.T, ctx context.Context, fixture exposeWorkloadFix
 	return entries, nil
 }
 
+func execExposeEntryByID(t *testing.T, parentCtx context.Context, fixture exposeWorkloadFixture, exposeID string) (exposeEntry, error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(parentCtx, exposeCommandTimeout)
+	defer cancel()
+	entries, err := execExposeList(t, ctx, fixture)
+	if err != nil {
+		return exposeEntry{}, err
+	}
+	for _, entry := range entries {
+		if entry.ID == exposeID {
+			return entry, nil
+		}
+	}
+	return exposeEntry{}, fmt.Errorf("expose %s not listed", exposeID)
+}
+
 func execExposeAdd(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, port int) (exposeEntry, error) {
 	t.Helper()
 	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "--output", "json", "expose", "add", fmt.Sprintf("%d", port)})
@@ -360,9 +402,27 @@ func parseExposeAddResponse(output string) (exposeEntry, error) {
 
 func normalizeExposeEntry(entry exposeEntry) exposeEntry {
 	entry.ID = strings.TrimSpace(entry.ID)
+	entry.WorkloadID = normalizeExposeResourceID(entry.WorkloadID, entry.WorkloadIDCamel)
+	entry.AgentID = normalizeExposeResourceID(entry.AgentID, entry.AgentIDCamel)
+	entry.WorkloadIDCamel = ""
+	entry.AgentIDCamel = ""
+	entry.OpenZitiServiceID = normalizeExposeResourceID(entry.OpenZitiServiceID, entry.OpenZitiServiceIDCamel)
+	entry.OpenZitiBindPolicyID = normalizeExposeResourceID(entry.OpenZitiBindPolicyID, entry.OpenZitiBindPolicyIDCamel)
+	entry.OpenZitiDialPolicyID = normalizeExposeResourceID(entry.OpenZitiDialPolicyID, entry.OpenZitiDialPolicyIDCamel)
+	entry.OpenZitiServiceIDCamel = ""
+	entry.OpenZitiBindPolicyIDCamel = ""
+	entry.OpenZitiDialPolicyIDCamel = ""
 	entry.URL = strings.TrimSpace(entry.URL)
 	entry.Status = strings.TrimSpace(entry.Status)
 	return entry
+}
+
+func normalizeExposeResourceID(snakeCaseID, camelCaseID string) string {
+	trimmedSnakeCaseID := strings.TrimSpace(snakeCaseID)
+	if trimmedSnakeCaseID != "" {
+		return trimmedSnakeCaseID
+	}
+	return strings.TrimSpace(camelCaseID)
 }
 
 func waitForExposeListed(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, exposeID string) (exposeEntry, error) {
@@ -548,6 +608,209 @@ func createZitiHTTPClient(t *testing.T) *http.Client {
 	httpClient := sdk.NewHttpClient(zitiContext, nil)
 	httpClient.Timeout = exposeRequestTimeout
 	return httpClient
+}
+
+type zitiManagementSession struct {
+	endpoint string
+	token    string
+	client   *http.Client
+}
+
+type zitiAuthenticationResponse struct {
+	Data struct {
+		Token string `json:"token"`
+	} `json:"data"`
+}
+
+func logExposeTimeoutDiagnostics(t *testing.T, fixture exposeWorkloadFixture, exposure exposeEntry, exposedURL string) {
+	t.Helper()
+	t.Log("diagnostics: exposed service reachability timed out")
+
+	diagnosticsCtx, diagnosticsCancel := context.WithTimeout(context.Background(), exposeDiagnosticsTimeout)
+	defer diagnosticsCancel()
+
+	serviceName := fmt.Sprintf("exposed-%s", exposure.ID)
+	logExposureDetails(t, exposure, serviceName, exposedURL)
+	logZitiExposureDiagnostics(t, diagnosticsCtx, serviceName, exposure)
+	logExposeWorkloadSidecarLogs(t, diagnosticsCtx, fixture)
+}
+
+func logExposureDetails(t *testing.T, exposure exposeEntry, serviceName, dialURL string) {
+	t.Helper()
+	t.Logf(
+		"diagnostics: exposure id=%s workload_id=%s agent_id=%s host=%s port=%d url=%s dial_url=%s status=%s",
+		exposure.ID,
+		diagnosticValue(exposure.WorkloadID),
+		diagnosticValue(exposure.AgentID),
+		serviceName,
+		exposure.Port,
+		diagnosticValue(exposure.URL),
+		dialURL,
+		diagnosticValue(exposure.Status),
+	)
+	t.Logf(
+		"diagnostics: exposure ziti service_id=%s bind_policy_id=%s dial_policy_id=%s expected_service_name=%s expected_intercept_host=%s.ziti expected_host_forward=127.0.0.1:%d",
+		diagnosticValue(exposure.OpenZitiServiceID),
+		diagnosticValue(exposure.OpenZitiBindPolicyID),
+		diagnosticValue(exposure.OpenZitiDialPolicyID),
+		serviceName,
+		serviceName,
+		exposure.Port,
+	)
+}
+
+func logZitiExposureDiagnostics(t *testing.T, ctx context.Context, serviceName string, exposure exposeEntry) {
+	t.Helper()
+	session, err := createZitiManagementSession(t, ctx)
+	if err != nil {
+		t.Logf("diagnostics: ziti management unavailable: %v", err)
+		return
+	}
+
+	logZitiResource(t, ctx, session, "service", zitiFilterPath("/services", "name", serviceName))
+	logZitiResource(t, ctx, session, "terminators", zitiFilterPath("/terminators", "service.name", serviceName))
+	logZitiResource(t, ctx, session, "bind-policy", zitiFilterPath("/service-policies", "name", serviceName+"-bind"))
+	logZitiResource(t, ctx, session, "dial-policy", zitiFilterPath("/service-policies", "name", serviceName+"-dial"))
+
+	if exposure.OpenZitiServiceID != "" {
+		logZitiResource(t, ctx, session, "service-by-id", "/services/"+url.PathEscape(exposure.OpenZitiServiceID))
+	}
+	if exposure.OpenZitiBindPolicyID != "" {
+		logZitiResource(t, ctx, session, "bind-policy-by-id", "/service-policies/"+url.PathEscape(exposure.OpenZitiBindPolicyID))
+	}
+	if exposure.OpenZitiDialPolicyID != "" {
+		logZitiResource(t, ctx, session, "dial-policy-by-id", "/service-policies/"+url.PathEscape(exposure.OpenZitiDialPolicyID))
+	}
+}
+
+func zitiFilterPath(resourcePath, field, value string) string {
+	return fmt.Sprintf("%s?filter=%s%%3D%%22%s%%22", resourcePath, url.QueryEscape(field), url.QueryEscape(value))
+}
+
+func createZitiManagementSession(t *testing.T, ctx context.Context) (zitiManagementSession, error) {
+	t.Helper()
+	username, password, err := zitiAdminCredentials(t, ctx)
+	if err != nil {
+		return zitiManagementSession{}, err
+	}
+
+	endpoint := strings.TrimRight(envOrDefault(zitiMgmtEndpointEnvKey, defaultZitiMgmtEndpoint), "/")
+	client := &http.Client{
+		Timeout:   exposeRequestTimeout,
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+	}
+	payload := fmt.Sprintf(`{"username":%q,"password":%q}`, username, password)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/authenticate?method=password", strings.NewReader(payload))
+	if err != nil {
+		return zitiManagementSession{}, fmt.Errorf("build authenticate request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := client.Do(request)
+	if err != nil {
+		return zitiManagementSession{}, fmt.Errorf("authenticate: %w", err)
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return zitiManagementSession{}, fmt.Errorf("read authenticate response: %w", err)
+	}
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return zitiManagementSession{}, fmt.Errorf("authenticate status %d body=%s", response.StatusCode, truncateLogLine(strings.TrimSpace(string(body))))
+	}
+
+	var auth zitiAuthenticationResponse
+	if err := json.Unmarshal(body, &auth); err != nil {
+		return zitiManagementSession{}, fmt.Errorf("parse authenticate response: %w", err)
+	}
+	token := strings.TrimSpace(auth.Data.Token)
+	if token == "" {
+		return zitiManagementSession{}, fmt.Errorf("authenticate response missing token")
+	}
+	return zitiManagementSession{endpoint: endpoint, token: token, client: client}, nil
+}
+
+func zitiAdminCredentials(t *testing.T, ctx context.Context) (string, string, error) {
+	t.Helper()
+	secret, err := kubeClientset(t).CoreV1().Secrets(zitiNamespace()).Get(ctx, zitiAdminSecretName, metav1.GetOptions{})
+	if err != nil {
+		return "", "", fmt.Errorf("get %s/%s: %w", zitiNamespace(), zitiAdminSecretName, err)
+	}
+	username := strings.TrimSpace(string(secret.Data[zitiAdminUserKey]))
+	password := strings.TrimSpace(string(secret.Data[zitiAdminPasswordKey]))
+	if username == "" || password == "" {
+		return "", "", fmt.Errorf("%s/%s missing admin credentials", zitiNamespace(), zitiAdminSecretName)
+	}
+	return username, password, nil
+}
+
+func logZitiResource(t *testing.T, ctx context.Context, session zitiManagementSession, label, path string) {
+	t.Helper()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, session.endpoint+path, nil)
+	if err != nil {
+		t.Logf("diagnostics: ziti %s request error: %v", label, err)
+		return
+	}
+	request.Header.Set("zt-session", session.token)
+
+	response, err := session.client.Do(request)
+	if err != nil {
+		t.Logf("diagnostics: ziti %s query error: %v", label, err)
+		return
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Logf("diagnostics: ziti %s read error: %v", label, err)
+		return
+	}
+	trimmedBody := strings.TrimSpace(string(body))
+	if trimmedBody == "" {
+		trimmedBody = "{}"
+	}
+	t.Logf("diagnostics: ziti %s status=%d body=%s", label, response.StatusCode, truncateLogLine(trimmedBody))
+}
+
+func logExposeWorkloadSidecarLogs(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture) {
+	t.Helper()
+	namespace := workloadNamespace(t)
+	pod, err := kubeClientset(t).CoreV1().Pods(namespace).Get(ctx, fixture.podName, metav1.GetOptions{})
+	if err != nil {
+		t.Logf("diagnostics: pod=%s get error: %v", fixture.podName, err)
+		return
+	}
+	logWorkloadPodStatus(t, *pod)
+	foundSidecar := false
+	for _, container := range pod.Spec.Containers {
+		if container.Name != "ziti-sidecar" {
+			continue
+		}
+		foundSidecar = true
+		t.Logf("diagnostics: workload pod=%s container=%s", pod.Name, container.Name)
+		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 300, MaxLines: 80})
+	}
+	for _, container := range pod.Spec.InitContainers {
+		if container.Name != "ziti-sidecar" {
+			continue
+		}
+		foundSidecar = true
+		t.Logf("diagnostics: workload pod=%s init-container=%s (previous)", pod.Name, container.Name)
+		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 200, MaxLines: 40, Previous: true})
+	}
+	if !foundSidecar {
+		t.Logf("diagnostics: pod=%s ziti-sidecar container not found", pod.Name)
+	}
+}
+
+func zitiNamespace() string {
+	return envOrDefault(zitiNamespaceEnvKey, defaultZitiNamespace)
+}
+
+func diagnosticValue(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "-"
+	}
+	return value
 }
 
 func waitForWorkloadAgentContainerReady(t *testing.T, ctx context.Context, workloadID string) (string, string, error) {
