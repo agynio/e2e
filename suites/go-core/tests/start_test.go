@@ -28,30 +28,30 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
-	threadsCtx := setup.Context
+	identityCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
 	modelID := setup.ModelID
 
-	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-start-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agent := createAgent(t, identityCtx, agentsClient, fmt.Sprintf("e2e-test-agent-start-%s", uuid.NewString()), modelID, orgID, codexInitImage)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, identityCtx, agentsClient, agentID)
+		deleteAgent(t, identityCtx, agentsClient, agentID)
 	})
-	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
+	createAgentEnv(t, identityCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, identityCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")
 	}
-	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
+	t.Cleanup(func() { archiveThread(t, identityCtx, threadsClient, threadID) })
 
-	_ = sendMessage(t, threadsCtx, threadsClient, threadID, identityID, "e2e test message")
+	_ = sendMessage(t, identityCtx, threadsClient, threadID, identityID, "e2e test message")
 
 	labels := map[string]string{
 		labelManagedBy: managedByValue,

@@ -54,4 +54,24 @@ test.describe('chat api helpers', () => {
       availability: AgentAvailability.PRIVATE,
     });
   });
+
+  test('CreateAgent ConnectRPC JSON uses private protobuf enum name', () => {
+    const payload = buildCreateAgentRequestJson({
+      ...createAgentOptions,
+      availability: AgentAvailability.PRIVATE,
+    });
+
+    expect(JSON.parse(JSON.stringify(payload))).toMatchObject({
+      availability: 'AGENT_AVAILABILITY_PRIVATE',
+    });
+  });
+
+  test('CreateAgent rejects unsupported availability enum', () => {
+    expect(() =>
+      buildCreateAgentPayload({
+        ...createAgentOptions,
+        availability: AgentAvailability.UNSPECIFIED,
+      }),
+    ).toThrow('Unsupported agent availability: 0');
+  });
 });
