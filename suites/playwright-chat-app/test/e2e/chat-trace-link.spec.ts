@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import {
   createChat,
@@ -19,6 +19,7 @@ const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent
 const CLAUDE_PROTOCOL = 'PROTOCOL_ANTHROPIC_MESSAGES';
 const MESSAGE_DEEP_LINK_RESOLUTION_TIMEOUT_MS = 180000;
 const MESSAGE_DEEP_LINK_POLL_INTERVAL_MS = 5000;
+const MESSAGE_DEEP_LINK_ASSERTION_TIMEOUT_MS = 1500;
 
 function isTimeoutError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'TimeoutError';
@@ -30,6 +31,8 @@ type TraceScenario = {
   protocol?: string;
   initImage?: string;
 };
+
+type MessageDeepLinkTerminalState = 'resolving' | 'no-run';
 
 const TRACE_SCENARIOS: TraceScenario[] = [
   {
@@ -44,6 +47,36 @@ const TRACE_SCENARIOS: TraceScenario[] = [
     initImage: CLAUDE_INIT_IMAGE,
   },
 ];
+
+async function assertMessageDeepLinkTerminalState(
+  page: Page,
+  params: {
+    messageUrlPattern: RegExp;
+    organizationId: string;
+    resolvingMessage: Locator;
+    noRunMessage: Locator;
+    retryButton: Locator;
+  },
+): Promise<MessageDeepLinkTerminalState> {
+  expect(page.url()).toMatch(params.messageUrlPattern);
+  await expect(page).toHaveURL(params.messageUrlPattern);
+  await expect(page).toHaveURL((url) => new URL(url.href).searchParams.get('orgId') === params.organizationId);
+
+  const hasNoRun = await params.noRunMessage.isVisible({ timeout: MESSAGE_DEEP_LINK_ASSERTION_TIMEOUT_MS });
+  if (hasNoRun) {
+    await expect(params.noRunMessage).toBeVisible();
+    await expect(params.retryButton).toBeVisible({ timeout: 5000 });
+    return 'no-run';
+  }
+
+  const hasResolving = await params.resolvingMessage.isVisible({ timeout: MESSAGE_DEEP_LINK_ASSERTION_TIMEOUT_MS });
+  if (hasResolving) {
+    await expect(params.resolvingMessage).toBeVisible();
+    return 'resolving';
+  }
+
+  throw new Error(`Trace message deep link did not reach a run page and did not show expected message UI. Current URL: ${page.url()}`);
+}
 
 async function waitForRunPageFromMessageDeepLink(
   page: Page,
@@ -84,14 +117,30 @@ async function waitForRunPageFromMessageDeepLink(
       throw new Error(`Trace message deep link navigated to an unexpected URL: ${page.url()}`);
     }
 
-    if (await resolvingMessage.isVisible({ timeout: 500 })) {
-      await expect(resolvingMessage).toBeVisible();
-    }
+    const hasNoRun = await noRunMessage.isVisible({ timeout: 500 });
+    if (hasNoRun) {
+      await assertMessageDeepLinkTerminalState(page, {
+        messageUrlPattern,
+        organizationId: params.organizationId,
+        resolvingMessage,
+        noRunMessage,
+        retryButton,
+      });
 
-    if (await noRunMessage.isVisible({ timeout: 500 })) {
-      await expect(noRunMessage).toBeVisible();
-      await expect(retryButton).toBeVisible({ timeout: 5000 });
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= MESSAGE_DEEP_LINK_POLL_INTERVAL_MS) {
+        return false;
+      }
+
       await retryButton.click();
+    } else if (await resolvingMessage.isVisible({ timeout: 500 })) {
+      await assertMessageDeepLinkTerminalState(page, {
+        messageUrlPattern,
+        organizationId: params.organizationId,
+        resolvingMessage,
+        noRunMessage,
+        retryButton,
+      });
     }
 
     const remainingMs = deadline - Date.now();
@@ -112,15 +161,13 @@ async function waitForRunPageFromMessageDeepLink(
   // Some environments appear to never redirect message deep links to a run page.
   // Treat the message page as a valid terminal state, as long as it is stable and
   // shows an expected UI state (resolving or empty).
-  expect(page.url()).toMatch(messageUrlPattern);
-  await expect(page).toHaveURL(messageUrlPattern);
-  await expect(page).toHaveURL((url) => new URL(url.href).searchParams.get('orgId') === params.organizationId);
-
-  const hasNoRun = await noRunMessage.isVisible({ timeout: 1500 }).catch(() => false);
-  const hasResolving = await resolvingMessage.isVisible({ timeout: 1500 }).catch(() => false);
-  if (!hasNoRun && !hasResolving) {
-    throw new Error(`Trace message deep link did not reach a run page and did not show expected message UI. Current URL: ${page.url()}`);
-  }
+  await assertMessageDeepLinkTerminalState(page, {
+    messageUrlPattern,
+    organizationId: params.organizationId,
+    resolvingMessage,
+    noRunMessage,
+    retryButton,
+  });
 
   return false;
 }
