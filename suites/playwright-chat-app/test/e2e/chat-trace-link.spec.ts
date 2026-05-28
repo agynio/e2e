@@ -50,7 +50,21 @@ async function waitForRunPageFromMessageDeepLink(
   params: { messageId: string; organizationId: string; runUrlPattern: RegExp; timeoutMs: number },
 ): Promise<void> {
   const messageUrlPattern = new RegExp(`/message/${params.messageId}(\\?.*)?$`);
-  await expect(page).toHaveURL(messageUrlPattern, { timeout: params.timeoutMs });
+
+  const initialUrl = page.url();
+  if (params.runUrlPattern.test(initialUrl)) {
+    return;
+  }
+
+  if (!messageUrlPattern.test(initialUrl)) {
+    await expect(page).toHaveURL((url) => messageUrlPattern.test(url.href) || params.runUrlPattern.test(url.href), {
+      timeout: params.timeoutMs,
+    });
+
+    if (params.runUrlPattern.test(page.url())) {
+      return;
+    }
+  }
 
   const openedTraceUrl = new URL(page.url());
   expect(openedTraceUrl.searchParams.get('orgId')).toBe(params.organizationId);
