@@ -26,21 +26,22 @@ import (
 )
 
 const (
-	exposeTestTimeout          = 8 * time.Minute
-	exposeCommandTimeout       = 2 * time.Minute
-	exposeListTimeout          = 30 * time.Second
-	exposeListEmptyTimeout     = 60 * time.Second
-	exposeReachabilityTimeout  = 90 * time.Second
-	exposeUnreachableTimeout   = 90 * time.Second
-	exposeRequestTimeout       = 15 * time.Second
-	exposeZitiRequestTimeout   = 30 * time.Second
-	exposeDiagnosticsTimeout   = 20 * time.Second
-	exposePort                 = 3000
-	exposeExpectedResponse     = "Hi! How are you?"
-	exposeStatusActive         = "active"
-	exposeDebugEndpointEnvKey  = "EXPOSE_DEBUG_ENDPOINT"
-	exposeDebugTokenSecretName = "expose-debug-token"
-	exposeDebugTokenKey        = "token"
+	exposeTestTimeout         = 8 * time.Minute
+	exposeCommandTimeout      = 2 * time.Minute
+	exposeListTimeout         = 30 * time.Second
+	exposeListEmptyTimeout    = 60 * time.Second
+	exposeReachabilityTimeout = 90 * time.Second
+	exposeUnreachableTimeout  = 90 * time.Second
+	exposeRequestTimeout      = 15 * time.Second
+	exposeZitiRequestTimeout  = 30 * time.Second
+	exposeDiagnosticsTimeout  = 20 * time.Second
+	exposePort                = 3000
+	exposeExpectedResponse    = "Hi! How are you?"
+	exposeStatusActive        = "active"
+	exposeDebugEndpointEnvKey = "EXPOSE_DEBUG_ENDPOINT"
+	exposeDebugTokenKey       = "token"
+	exposeDebugTokenEnvKey    = "EXPOSE_DEBUG_TOKEN"
+	exposeDebugTokenSecretKey = "EXPOSE_DEBUG_TOKEN_SECRET"
 )
 
 func TestExposeDebugEndpointDefaultUsesService(t *testing.T) {
@@ -64,24 +65,17 @@ func TestExposeDebugEndpointExplicitOverride(t *testing.T) {
 	}
 }
 
-func TestExposeDebugTokenSecretUsesPlatformNamespace(t *testing.T) {
-	secretNamespace, secretName := exposeDebugTokenSecretRef()
-	if secretNamespace != "platform" {
-		t.Fatalf("expose debug token secret namespace mismatch: got %q want %q", secretNamespace, "platform")
+func TestExposeDebugTokenSecretExplicitRef(t *testing.T) {
+	t.Setenv(exposeDebugTokenSecretKey, "custom-platform/custom-secret")
+	secretNamespace, secretName, ok := exposeDebugTokenSecretRef()
+	if !ok {
+		t.Fatal("expected explicit secret ref")
 	}
-	if secretName != exposeDebugTokenSecretName {
-		t.Fatalf("expose debug token secret name mismatch: got %q want %q", secretName, exposeDebugTokenSecretName)
-	}
-}
-
-func TestExposeDebugTokenSecretUsesDevspaceNamespace(t *testing.T) {
-	t.Setenv("DEVSPACE_NAMESPACE", "custom-platform")
-	secretNamespace, secretName := exposeDebugTokenSecretRef()
 	if secretNamespace != "custom-platform" {
 		t.Fatalf("expose debug token secret namespace mismatch: got %q want %q", secretNamespace, "custom-platform")
 	}
-	if secretName != exposeDebugTokenSecretName {
-		t.Fatalf("expose debug token secret name mismatch: got %q want %q", secretName, exposeDebugTokenSecretName)
+	if secretName != "custom-secret" {
+		t.Fatalf("expose debug token secret name mismatch: got %q want %q", secretName, "custom-secret")
 	}
 }
 
@@ -722,7 +716,13 @@ func logExposeDebugDiagnostics(t *testing.T, ctx context.Context, exposure expos
 
 func exposeDebugToken(t *testing.T, ctx context.Context) (string, error) {
 	t.Helper()
-	secretNamespace, secretName := exposeDebugTokenSecretRef()
+	if token := strings.TrimSpace(envOrDefault(exposeDebugTokenEnvKey, "")); token != "" {
+		return token, nil
+	}
+	secretNamespace, secretName, ok := exposeDebugTokenSecretRef()
+	if !ok {
+		return "", fmt.Errorf("%s or %s must be set for expose debug diagnostics", exposeDebugTokenEnvKey, exposeDebugTokenSecretKey)
+	}
 	secret, err := kubeClientset(t).CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("get %s/%s: %w", secretNamespace, secretName, err)
@@ -734,8 +734,20 @@ func exposeDebugToken(t *testing.T, ctx context.Context) (string, error) {
 	return token, nil
 }
 
-func exposeDebugTokenSecretRef() (string, string) {
-	return envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "platform")), exposeDebugTokenSecretName
+func exposeDebugTokenSecretRef() (string, string, bool) {
+	ref := strings.TrimSpace(envOrDefault(exposeDebugTokenSecretKey, ""))
+	if ref == "" {
+		return "", "", false
+	}
+	parts := strings.Split(ref, "/")
+	if len(parts) == 1 {
+		namespace := envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "platform"))
+		return namespace, parts[0], true
+	}
+	if len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && strings.TrimSpace(parts[1]) != "" {
+		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), true
+	}
+	return "", "", false
 }
 
 func exposeDebugEndpoint() string {
