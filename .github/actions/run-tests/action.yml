@@ -24,7 +24,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: agynio/e2e
-        ref: main
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'agynio/e2e' && github.head_ref || 'main' }}
         path: e2e
 
     - name: Stage provider binary

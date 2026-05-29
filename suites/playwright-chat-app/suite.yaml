@@ -25,7 +25,14 @@ run: |
   export E2E_BASE_URL="${E2E_BASE_URL:-https://chat.${E2E_DOMAIN}}"
 
   npm ci --no-fund --no-audit
-  npx buf generate
+  mkdir -p .bin
+  curl -fsSL --retry 3 --retry-delay 5 \
+    -o .bin/buf \
+    "https://github.com/bufbuild/buf/releases/download/v1.68.4/buf-$(uname -s)-$(uname -m)"
+  chmod +x .bin/buf
+  export PATH="$PWD/.bin:$PWD/node_modules/.bin:$PATH"
+  buf --version
+  buf generate
 
   grep_tags=""
   if [ -n "${TAGS:-}" ]; then
