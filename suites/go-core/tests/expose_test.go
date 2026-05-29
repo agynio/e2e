@@ -27,21 +27,23 @@ import (
 )
 
 const (
-	exposeTestTimeout          = 8 * time.Minute
-	exposeCommandTimeout       = 2 * time.Minute
-	exposeListTimeout          = 30 * time.Second
-	exposeListEmptyTimeout     = 60 * time.Second
-	exposeReachabilityTimeout  = 90 * time.Second
-	exposeUnreachableTimeout   = 90 * time.Second
-	exposeRequestTimeout       = 15 * time.Second
-	exposeZitiRequestTimeout   = 30 * time.Second
-	exposeDiagnosticsTimeout   = 20 * time.Second
-	exposePort                 = 3000
-	exposeExpectedResponse     = "Hi! How are you?"
-	exposeStatusActive         = "active"
-	zitiMgmtEndpointEnvKey     = "ZITI_MGMT_ENDPOINT"
-	zitiMgmtServiceName        = "ziti-mgmt"
-	zitiMgmtPath               = "/edge/management/v1"
+	exposeTestTimeout         = 8 * time.Minute
+	exposeCommandTimeout      = 2 * time.Minute
+	exposeListTimeout         = 30 * time.Second
+	exposeListEmptyTimeout    = 60 * time.Second
+	exposeReachabilityTimeout = 90 * time.Second
+	exposeUnreachableTimeout  = 90 * time.Second
+	exposeRequestTimeout      = 15 * time.Second
+	exposeZitiRequestTimeout  = 30 * time.Second
+	exposeDiagnosticsTimeout  = 20 * time.Second
+	exposePort                = 3000
+	exposeExpectedResponse    = "Hi! How are you?"
+	exposeStatusActive        = "active"
+	zitiMgmtEndpointEnvKey    = "ZITI_MGMT_ENDPOINT"
+	zitiMgmtServiceName       = "ziti-mgmt"
+	zitiMgmtPath              = "/edge/management/v1"
+	// DEV/E2E ONLY: ziti-management-diagnostics must only exist in dev/E2E
+	// bootstrap deployments and must never be enabled in production.
 	zitiDiagnosticsSecretName  = "ziti-management-diagnostics"
 	zitiDiagnosticsUserKey     = "username"
 	zitiDiagnosticsPasswordKey = "password"

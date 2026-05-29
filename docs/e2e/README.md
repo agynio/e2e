@@ -20,6 +20,14 @@ Additional references:
 - [Service coverage](traceability/service-coverage.md)
 - [Architecture and product anchors](traceability/architecture-product-anchors.md)
 
+## DEV/E2E-only diagnostics resources
+
+The `ziti-management-diagnostics` identity and Kubernetes secret are test-only
+diagnostics resources. They are allowed only in development and E2E bootstrap
+deployments, must be guarded by the bootstrap Terraform variable
+`enable_ziti_management_diagnostics` defaulting to `false`, and must not exist
+in production deployments.
+
 ## Tag glossary
 
 Tags are selected through suite-level `TAGS` filtering. Suite docs list suite tags from `suites/*/suite.yaml`; individual case tags mirror the nearest Playwright `test.describe` tag or the service area implied by the Go test file.
