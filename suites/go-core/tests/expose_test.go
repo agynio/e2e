@@ -27,26 +27,24 @@ import (
 )
 
 const (
-	exposeTestTimeout         = 8 * time.Minute
-	exposeCommandTimeout      = 2 * time.Minute
-	exposeListTimeout         = 30 * time.Second
-	exposeListEmptyTimeout    = 60 * time.Second
-	exposeReachabilityTimeout = 90 * time.Second
-	exposeUnreachableTimeout  = 90 * time.Second
-	exposeRequestTimeout      = 15 * time.Second
-	exposeZitiRequestTimeout  = 30 * time.Second
-	exposeDiagnosticsTimeout  = 20 * time.Second
-	exposePort                = 3000
-	exposeExpectedResponse    = "Hi! How are you?"
-	exposeStatusActive        = "active"
-	zitiMgmtEndpointEnvKey    = "ZITI_MGMT_ENDPOINT"
-	zitiMgmtServiceName       = "ziti-mgmt"
-	zitiMgmtPath              = "/edge/management/v1"
-	zitiNamespaceEnvKey       = "ZITI_NAMESPACE"
-	defaultZitiNamespace      = "ziti"
-	zitiAdminSecretName       = "ziti-controller-admin-secret"
-	zitiAdminUserKey          = "admin-user"
-	zitiAdminPasswordKey      = "admin-password"
+	exposeTestTimeout          = 8 * time.Minute
+	exposeCommandTimeout       = 2 * time.Minute
+	exposeListTimeout          = 30 * time.Second
+	exposeListEmptyTimeout     = 60 * time.Second
+	exposeReachabilityTimeout  = 90 * time.Second
+	exposeUnreachableTimeout   = 90 * time.Second
+	exposeRequestTimeout       = 15 * time.Second
+	exposeZitiRequestTimeout   = 30 * time.Second
+	exposeDiagnosticsTimeout   = 20 * time.Second
+	exposePort                 = 3000
+	exposeExpectedResponse     = "Hi! How are you?"
+	exposeStatusActive         = "active"
+	zitiMgmtEndpointEnvKey     = "ZITI_MGMT_ENDPOINT"
+	zitiMgmtServiceName        = "ziti-mgmt"
+	zitiMgmtPath               = "/edge/management/v1"
+	zitiDiagnosticsSecretName  = "ziti-management-diagnostics"
+	zitiDiagnosticsUserKey     = "username"
+	zitiDiagnosticsPasswordKey = "password"
 )
 
 func TestZitiManagementEndpointDefaultUsesIngress(t *testing.T) {
@@ -68,6 +66,27 @@ func TestZitiManagementEndpointExplicitOverride(t *testing.T) {
 	want := "https://custom.example.test:9443/edge/management/v1"
 	if got != want {
 		t.Fatalf("ziti management endpoint mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestZitiDiagnosticsSecretUsesPlatformNamespace(t *testing.T) {
+	secretNamespace, secretName := zitiDiagnosticsSecretRef()
+	if secretNamespace != "platform" {
+		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "platform")
+	}
+	if secretName != zitiDiagnosticsSecretName {
+		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
+	}
+}
+
+func TestZitiDiagnosticsSecretUsesDevspaceNamespace(t *testing.T) {
+	t.Setenv("DEVSPACE_NAMESPACE", "custom-platform")
+	secretNamespace, secretName := zitiDiagnosticsSecretRef()
+	if secretNamespace != "custom-platform" {
+		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "custom-platform")
+	}
+	if secretName != zitiDiagnosticsSecretName {
+		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
 	}
 }
 
@@ -712,7 +731,7 @@ func zitiFilterPath(resourcePath, field, value string) string {
 
 func createZitiManagementSession(t *testing.T, ctx context.Context) (zitiManagementSession, error) {
 	t.Helper()
-	username, password, err := zitiAdminCredentials(t, ctx)
+	username, password, err := zitiDiagnosticsCredentials(t, ctx)
 	if err != nil {
 		return zitiManagementSession{}, err
 	}
@@ -753,18 +772,23 @@ func createZitiManagementSession(t *testing.T, ctx context.Context) (zitiManagem
 	return zitiManagementSession{endpoint: endpoint, token: token, client: client}, nil
 }
 
-func zitiAdminCredentials(t *testing.T, ctx context.Context) (string, string, error) {
+func zitiDiagnosticsCredentials(t *testing.T, ctx context.Context) (string, string, error) {
 	t.Helper()
-	secret, err := kubeClientset(t).CoreV1().Secrets(zitiNamespace()).Get(ctx, zitiAdminSecretName, metav1.GetOptions{})
+	secretNamespace, secretName := zitiDiagnosticsSecretRef()
+	secret, err := kubeClientset(t).CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		return "", "", fmt.Errorf("get %s/%s: %w", zitiNamespace(), zitiAdminSecretName, err)
+		return "", "", fmt.Errorf("get %s/%s: %w", secretNamespace, secretName, err)
 	}
-	username := strings.TrimSpace(string(secret.Data[zitiAdminUserKey]))
-	password := strings.TrimSpace(string(secret.Data[zitiAdminPasswordKey]))
+	username := strings.TrimSpace(string(secret.Data[zitiDiagnosticsUserKey]))
+	password := strings.TrimSpace(string(secret.Data[zitiDiagnosticsPasswordKey]))
 	if username == "" || password == "" {
-		return "", "", fmt.Errorf("%s/%s missing admin credentials", zitiNamespace(), zitiAdminSecretName)
+		return "", "", fmt.Errorf("%s/%s missing diagnostics credentials", secretNamespace, secretName)
 	}
 	return username, password, nil
+}
+
+func zitiDiagnosticsSecretRef() (string, string) {
+	return envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "platform")), zitiDiagnosticsSecretName
 }
 
 func zitiManagementEndpoint() string {
@@ -832,10 +856,6 @@ func logExposeWorkloadSidecarLogs(t *testing.T, ctx context.Context, fixture exp
 	if !foundSidecar {
 		t.Logf("diagnostics: pod=%s ziti-sidecar container not found", pod.Name)
 	}
-}
-
-func zitiNamespace() string {
-	return envOrDefault(zitiNamespaceEnvKey, defaultZitiNamespace)
 }
 
 func diagnosticValue(value string) string {
