@@ -12,15 +12,14 @@ For BDD coverage, tag conventions, and traceability references, see the
 
 ## DEV/E2E-only Ziti diagnostics credentials
 
-Some expose diagnostics tests read a Kubernetes secret named
-`ziti-management-diagnostics`. That secret and its matching OpenZiti identity
-are for development and E2E diagnostics only, and must not exist in production
-deployments.
+The shared Go E2E diagnostics helpers can optionally read a Kubernetes secret
+named `ziti-diagnostics` to query OpenZiti management state after failures.
+That secret and its matching OpenZiti identity are for development and E2E
+diagnostics only, and must not exist in production deployments.
 
 The bootstrap Terraform stack must guard the resources with
-`enable_ziti_management_diagnostics`, which defaults to `false`. Only E2E/dev
-bootstrap runs should enable the flag; production deployments must keep it
-disabled.
+`enable_ziti_diagnostics`, which defaults to `false`. Only E2E/dev bootstrap
+runs should enable the flag; production deployments must keep it disabled.
 
 ## Microservice E2E status
 
