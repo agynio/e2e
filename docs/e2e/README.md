@@ -22,11 +22,15 @@ Additional references:
 
 ## DEV/E2E-only diagnostics resources
 
-The `ziti-management-diagnostics` identity and Kubernetes secret are test-only
-diagnostics resources. They are allowed only in development and E2E bootstrap
-deployments, must be guarded by the bootstrap Terraform variable
-`enable_ziti_management_diagnostics` defaulting to `false`, and must not exist
-in production deployments.
+The `ziti-diagnostics` identity and Kubernetes secret are shared diagnostics
+resources used by E2E helpers to query OpenZiti management state after failures.
+They are allowed only in development and E2E bootstrap deployments, must be
+guarded by the bootstrap Terraform variable `enable_ziti_diagnostics`
+defaulting to `false`, and must not exist in production deployments.
+
+The helper defaults to the bootstrap-managed `platform/ziti-diagnostics` secret.
+Use `ZITI_DIAGNOSTICS_SECRET_NAMESPACE` and `ZITI_DIAGNOSTICS_SECRET_NAME` for
+non-default development or E2E deployments.
 
 ## Tag glossary
 

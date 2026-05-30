@@ -4,7 +4,6 @@ package tests
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,58 +38,7 @@ const (
 	exposePort                = 3000
 	exposeExpectedResponse    = "Hi! How are you?"
 	exposeStatusActive        = "active"
-	zitiMgmtEndpointEnvKey    = "ZITI_MGMT_ENDPOINT"
-	zitiMgmtServiceName       = "ziti-mgmt"
-	zitiMgmtPath              = "/edge/management/v1"
-	// DEV/E2E ONLY: ziti-management-diagnostics must only exist in dev/E2E
-	// bootstrap deployments and must never be enabled in production.
-	zitiDiagnosticsSecretName  = "ziti-management-diagnostics"
-	zitiDiagnosticsUserKey     = "username"
-	zitiDiagnosticsPasswordKey = "password"
 )
-
-func TestZitiManagementEndpointDefaultUsesIngress(t *testing.T) {
-	t.Setenv(zitiMgmtEndpointEnvKey, "")
-	t.Setenv("E2E_DOMAIN", "e2e.agyn.dev")
-	t.Setenv("E2E_INGRESS_PORT", "30443")
-
-	got := zitiManagementEndpoint()
-	want := "https://ziti-mgmt.e2e.agyn.dev:30443/edge/management/v1"
-	if got != want {
-		t.Fatalf("ziti management endpoint mismatch: got %q want %q", got, want)
-	}
-}
-
-func TestZitiManagementEndpointExplicitOverride(t *testing.T) {
-	t.Setenv(zitiMgmtEndpointEnvKey, "https://custom.example.test:9443/edge/management/v1/")
-
-	got := zitiManagementEndpoint()
-	want := "https://custom.example.test:9443/edge/management/v1"
-	if got != want {
-		t.Fatalf("ziti management endpoint mismatch: got %q want %q", got, want)
-	}
-}
-
-func TestZitiDiagnosticsSecretUsesPlatformNamespace(t *testing.T) {
-	secretNamespace, secretName := zitiDiagnosticsSecretRef()
-	if secretNamespace != "platform" {
-		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "platform")
-	}
-	if secretName != zitiDiagnosticsSecretName {
-		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
-	}
-}
-
-func TestZitiDiagnosticsSecretUsesDevspaceNamespace(t *testing.T) {
-	t.Setenv("DEVSPACE_NAMESPACE", "custom-platform")
-	secretNamespace, secretName := zitiDiagnosticsSecretRef()
-	if secretNamespace != "custom-platform" {
-		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "custom-platform")
-	}
-	if secretName != zitiDiagnosticsSecretName {
-		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
-	}
-}
 
 type exposeWorkloadFixture struct {
 	ctx           context.Context
@@ -116,6 +64,7 @@ type exposeEntry struct {
 }
 
 func TestAgentExposeListExec(t *testing.T) {
+	registerZitiFailureDiagnostics(t)
 	fixture := setupExposeTestWorkload(t)
 
 	execCtx, execCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
@@ -127,6 +76,7 @@ func TestAgentExposeListExec(t *testing.T) {
 }
 
 func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
+	registerZitiFailureDiagnostics(t)
 	fixture := setupExposeTestWorkload(t)
 
 	listCtx, listCancel := context.WithTimeout(fixture.ctx, exposeCommandTimeout)
@@ -654,18 +604,6 @@ func createZitiHTTPClient(t *testing.T) *http.Client {
 	return httpClient
 }
 
-type zitiManagementSession struct {
-	endpoint string
-	token    string
-	client   *http.Client
-}
-
-type zitiAuthenticationResponse struct {
-	Data struct {
-		Token string `json:"token"`
-	} `json:"data"`
-}
-
 func logExposeTimeoutDiagnostics(t *testing.T, fixture exposeWorkloadFixture, exposure exposeEntry, exposedURL string) {
 	t.Helper()
 	t.Log("diagnostics: exposed service reachability timed out")
@@ -705,128 +643,23 @@ func logExposureDetails(t *testing.T, exposure exposeEntry, serviceName, dialURL
 
 func logZitiExposureDiagnostics(t *testing.T, ctx context.Context, serviceName string, exposure exposeEntry) {
 	t.Helper()
-	session, err := createZitiManagementSession(t, ctx)
-	if err != nil {
-		t.Logf("diagnostics: ziti management unavailable: %v", err)
-		return
+
+	queries := []zitiDiagnosticsQuery{
+		{Label: "service", Path: zitiFilterPath("/services", "name", serviceName)},
+		{Label: "terminators", Path: zitiFilterPath("/terminators", "service.name", serviceName)},
+		{Label: "bind-policy", Path: zitiFilterPath("/service-policies", "name", serviceName+"-bind")},
+		{Label: "dial-policy", Path: zitiFilterPath("/service-policies", "name", serviceName+"-dial")},
 	}
-
-	logZitiResource(t, ctx, session, "service", zitiFilterPath("/services", "name", serviceName))
-	logZitiResource(t, ctx, session, "terminators", zitiFilterPath("/terminators", "service.name", serviceName))
-	logZitiResource(t, ctx, session, "bind-policy", zitiFilterPath("/service-policies", "name", serviceName+"-bind"))
-	logZitiResource(t, ctx, session, "dial-policy", zitiFilterPath("/service-policies", "name", serviceName+"-dial"))
-
 	if exposure.OpenZitiServiceID != "" {
-		logZitiResource(t, ctx, session, "service-by-id", "/services/"+url.PathEscape(exposure.OpenZitiServiceID))
+		queries = append(queries, zitiDiagnosticsQuery{Label: "service-by-id", Path: "/services/" + url.PathEscape(exposure.OpenZitiServiceID)})
 	}
 	if exposure.OpenZitiBindPolicyID != "" {
-		logZitiResource(t, ctx, session, "bind-policy-by-id", "/service-policies/"+url.PathEscape(exposure.OpenZitiBindPolicyID))
+		queries = append(queries, zitiDiagnosticsQuery{Label: "bind-policy-by-id", Path: "/service-policies/" + url.PathEscape(exposure.OpenZitiBindPolicyID)})
 	}
 	if exposure.OpenZitiDialPolicyID != "" {
-		logZitiResource(t, ctx, session, "dial-policy-by-id", "/service-policies/"+url.PathEscape(exposure.OpenZitiDialPolicyID))
+		queries = append(queries, zitiDiagnosticsQuery{Label: "dial-policy-by-id", Path: "/service-policies/" + url.PathEscape(exposure.OpenZitiDialPolicyID)})
 	}
-}
-
-func zitiFilterPath(resourcePath, field, value string) string {
-	return fmt.Sprintf("%s?filter=%s%%3D%%22%s%%22", resourcePath, url.QueryEscape(field), url.QueryEscape(value))
-}
-
-func createZitiManagementSession(t *testing.T, ctx context.Context) (zitiManagementSession, error) {
-	t.Helper()
-	username, password, err := zitiDiagnosticsCredentials(t, ctx)
-	if err != nil {
-		return zitiManagementSession{}, err
-	}
-
-	endpoint := zitiManagementEndpoint()
-	client := &http.Client{
-		Timeout:   exposeRequestTimeout,
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-	}
-	payload := fmt.Sprintf(`{"username":%q,"password":%q}`, username, password)
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/authenticate?method=password", strings.NewReader(payload))
-	if err != nil {
-		return zitiManagementSession{}, fmt.Errorf("build authenticate request: %w", err)
-	}
-	request.Header.Set("Content-Type", "application/json")
-
-	response, err := client.Do(request)
-	if err != nil {
-		return zitiManagementSession{}, fmt.Errorf("authenticate: %w", err)
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return zitiManagementSession{}, fmt.Errorf("read authenticate response: %w", err)
-	}
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return zitiManagementSession{}, fmt.Errorf("authenticate status %d body=%s", response.StatusCode, truncateLogLine(strings.TrimSpace(string(body))))
-	}
-
-	var auth zitiAuthenticationResponse
-	if err := json.Unmarshal(body, &auth); err != nil {
-		return zitiManagementSession{}, fmt.Errorf("parse authenticate response: %w", err)
-	}
-	token := strings.TrimSpace(auth.Data.Token)
-	if token == "" {
-		return zitiManagementSession{}, fmt.Errorf("authenticate response missing token")
-	}
-	return zitiManagementSession{endpoint: endpoint, token: token, client: client}, nil
-}
-
-func zitiDiagnosticsCredentials(t *testing.T, ctx context.Context) (string, string, error) {
-	t.Helper()
-	secretNamespace, secretName := zitiDiagnosticsSecretRef()
-	secret, err := kubeClientset(t).CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
-	if err != nil {
-		return "", "", fmt.Errorf("get %s/%s: %w", secretNamespace, secretName, err)
-	}
-	username := strings.TrimSpace(string(secret.Data[zitiDiagnosticsUserKey]))
-	password := strings.TrimSpace(string(secret.Data[zitiDiagnosticsPasswordKey]))
-	if username == "" || password == "" {
-		return "", "", fmt.Errorf("%s/%s missing diagnostics credentials", secretNamespace, secretName)
-	}
-	return username, password, nil
-}
-
-func zitiDiagnosticsSecretRef() (string, string) {
-	return envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "platform")), zitiDiagnosticsSecretName
-}
-
-func zitiManagementEndpoint() string {
-	if explicitEndpoint := strings.TrimSpace(envOrDefault(zitiMgmtEndpointEnvKey, "")); explicitEndpoint != "" {
-		return strings.TrimRight(explicitEndpoint, "/")
-	}
-	domain := envOrDefault("E2E_DOMAIN", envOrDefault("DOMAIN", "agyn.dev"))
-	port := envOrDefault("E2E_INGRESS_PORT", envOrDefault("INGRESS_PORT", envOrDefault("PORT", "2496")))
-	return strings.TrimRight(fmt.Sprintf("https://%s.%s:%s%s", zitiMgmtServiceName, domain, port, zitiMgmtPath), "/")
-}
-
-func logZitiResource(t *testing.T, ctx context.Context, session zitiManagementSession, label, path string) {
-	t.Helper()
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, session.endpoint+path, nil)
-	if err != nil {
-		t.Logf("diagnostics: ziti %s request error: %v", label, err)
-		return
-	}
-	request.Header.Set("zt-session", session.token)
-
-	response, err := session.client.Do(request)
-	if err != nil {
-		t.Logf("diagnostics: ziti %s query error: %v", label, err)
-		return
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		t.Logf("diagnostics: ziti %s read error: %v", label, err)
-		return
-	}
-	trimmedBody := strings.TrimSpace(string(body))
-	if trimmedBody == "" {
-		trimmedBody = "{}"
-	}
-	t.Logf("diagnostics: ziti %s status=%d body=%s", label, response.StatusCode, truncateLogLine(trimmedBody))
+	logZitiDiagnostics(t, ctx, queries)
 }
 
 func logExposeWorkloadSidecarLogs(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture) {
