@@ -18,16 +18,19 @@ import (
 )
 
 const (
-	zitiDiagnosticsTimeout        = 20 * time.Second
-	zitiDiagnosticsRequestTimeout = 15 * time.Second
-	zitiMgmtEndpointEnvKey        = "ZITI_MGMT_ENDPOINT"
-	zitiMgmtServiceName           = "ziti-mgmt"
-	zitiMgmtPath                  = "/edge/management/v1"
+	zitiDiagnosticsTimeout                = 20 * time.Second
+	zitiDiagnosticsRequestTimeout         = 15 * time.Second
+	zitiMgmtEndpointEnvKey                = "ZITI_MGMT_ENDPOINT"
+	zitiMgmtServiceName                   = "ziti-mgmt"
+	zitiMgmtPath                          = "/edge/management/v1"
+	zitiDiagnosticsSecretNamespaceEnvKey  = "ZITI_DIAGNOSTICS_SECRET_NAMESPACE"
+	zitiDiagnosticsSecretNameEnvKey       = "ZITI_DIAGNOSTICS_SECRET_NAME"
+	zitiDiagnosticsDefaultSecretNamespace = "platform"
 	// DEV/E2E ONLY: ziti-diagnostics must only exist in dev/E2E bootstrap
 	// deployments and must never be enabled in production.
-	zitiDiagnosticsSecretName  = "ziti-diagnostics"
-	zitiDiagnosticsUserKey     = "username"
-	zitiDiagnosticsPasswordKey = "password"
+	zitiDiagnosticsDefaultSecretName = "ziti-diagnostics"
+	zitiDiagnosticsUserKey           = "username"
+	zitiDiagnosticsPasswordKey       = "password"
 )
 
 type zitiDiagnosticsQuery struct {
@@ -69,24 +72,31 @@ func TestZitiManagementEndpointExplicitOverride(t *testing.T) {
 	}
 }
 
-func TestZitiDiagnosticsSecretUsesPlatformNamespace(t *testing.T) {
+func TestZitiDiagnosticsSecretUsesBootstrapDefaults(t *testing.T) {
+	t.Setenv(zitiDiagnosticsSecretNamespaceEnvKey, "")
+	t.Setenv(zitiDiagnosticsSecretNameEnvKey, "")
+	t.Setenv("E2E_NAMESPACE", "custom-e2e")
+	t.Setenv("DEVSPACE_NAMESPACE", "custom-devspace")
+
 	secretNamespace, secretName := zitiDiagnosticsSecretRef()
-	if secretNamespace != "platform" {
-		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "platform")
+	if secretNamespace != zitiDiagnosticsDefaultSecretNamespace {
+		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, zitiDiagnosticsDefaultSecretNamespace)
 	}
-	if secretName != zitiDiagnosticsSecretName {
-		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
+	if secretName != zitiDiagnosticsDefaultSecretName {
+		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsDefaultSecretName)
 	}
 }
 
-func TestZitiDiagnosticsSecretUsesDevspaceNamespace(t *testing.T) {
-	t.Setenv("DEVSPACE_NAMESPACE", "custom-platform")
+func TestZitiDiagnosticsSecretUsesExplicitOverrides(t *testing.T) {
+	t.Setenv(zitiDiagnosticsSecretNamespaceEnvKey, "custom-platform")
+	t.Setenv(zitiDiagnosticsSecretNameEnvKey, "custom-ziti-diagnostics")
+
 	secretNamespace, secretName := zitiDiagnosticsSecretRef()
 	if secretNamespace != "custom-platform" {
 		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "custom-platform")
 	}
-	if secretName != zitiDiagnosticsSecretName {
-		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
+	if secretName != "custom-ziti-diagnostics" {
+		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, "custom-ziti-diagnostics")
 	}
 }
 
@@ -198,7 +208,9 @@ func zitiDiagnosticsCredentials(t *testing.T, ctx context.Context) (string, stri
 }
 
 func zitiDiagnosticsSecretRef() (string, string) {
-	return envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "platform")), zitiDiagnosticsSecretName
+	namespace := envOrDefault(zitiDiagnosticsSecretNamespaceEnvKey, zitiDiagnosticsDefaultSecretNamespace)
+	name := envOrDefault(zitiDiagnosticsSecretNameEnvKey, zitiDiagnosticsDefaultSecretName)
+	return namespace, name
 }
 
 func zitiManagementEndpoint() string {

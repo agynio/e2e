@@ -28,6 +28,10 @@ They are allowed only in development and E2E bootstrap deployments, must be
 guarded by the bootstrap Terraform variable `enable_ziti_diagnostics`
 defaulting to `false`, and must not exist in production deployments.
 
+The helper defaults to the bootstrap-managed `platform/ziti-diagnostics` secret.
+Use `ZITI_DIAGNOSTICS_SECRET_NAMESPACE` and `ZITI_DIAGNOSTICS_SECRET_NAME` for
+non-default development or E2E deployments.
+
 ## Tag glossary
 
 Tags are selected through suite-level `TAGS` filtering. Suite docs list suite tags from `suites/*/suite.yaml`; individual case tags mirror the nearest Playwright `test.describe` tag or the service area implied by the Go test file.

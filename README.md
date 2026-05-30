@@ -17,6 +17,11 @@ named `ziti-diagnostics` to query OpenZiti management state after failures.
 That secret and its matching OpenZiti identity are for development and E2E
 diagnostics only, and must not exist in production deployments.
 
+By default, helpers read `platform/ziti-diagnostics`, matching bootstrap.
+Override with `ZITI_DIAGNOSTICS_SECRET_NAMESPACE` and
+`ZITI_DIAGNOSTICS_SECRET_NAME` when a non-default namespace or secret name is
+required.
+
 The bootstrap Terraform stack must guard the resources with
 `enable_ziti_diagnostics`, which defaults to `false`. Only E2E/dev bootstrap
 runs should enable the flag; production deployments must keep it disabled.
