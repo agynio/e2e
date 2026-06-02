@@ -72,6 +72,8 @@ func TestZitiManagementEndpointExplicitOverride(t *testing.T) {
 }
 
 func TestZitiDiagnosticsSecretUsesPlatformNamespace(t *testing.T) {
+	t.Setenv("E2E_NAMESPACE", "")
+	t.Setenv("DEVSPACE_NAMESPACE", "")
 	secretNamespace, secretName := zitiDiagnosticsSecretRef()
 	if secretNamespace != "platform" {
 		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "platform")
@@ -82,10 +84,23 @@ func TestZitiDiagnosticsSecretUsesPlatformNamespace(t *testing.T) {
 }
 
 func TestZitiDiagnosticsSecretUsesDevspaceNamespace(t *testing.T) {
+	t.Setenv("E2E_NAMESPACE", "")
 	t.Setenv("DEVSPACE_NAMESPACE", "custom-platform")
 	secretNamespace, secretName := zitiDiagnosticsSecretRef()
 	if secretNamespace != "custom-platform" {
 		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "custom-platform")
+	}
+	if secretName != zitiDiagnosticsSecretName {
+		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
+	}
+}
+
+func TestZitiDiagnosticsSecretPrefersE2ENamespace(t *testing.T) {
+	t.Setenv("E2E_NAMESPACE", "e2e-platform")
+	t.Setenv("DEVSPACE_NAMESPACE", "custom-platform")
+	secretNamespace, secretName := zitiDiagnosticsSecretRef()
+	if secretNamespace != "e2e-platform" {
+		t.Fatalf("ziti diagnostics secret namespace mismatch: got %q want %q", secretNamespace, "e2e-platform")
 	}
 	if secretName != zitiDiagnosticsSecretName {
 		t.Fatalf("ziti diagnostics secret name mismatch: got %q want %q", secretName, zitiDiagnosticsSecretName)
