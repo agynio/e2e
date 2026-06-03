@@ -257,7 +257,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
-	exposeInitImage := envOrDefault("AGN_EXPOSE_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:latest")
+	exposeInitImage := envOrDefault("AGN_EXPOSE_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:0.5.4")
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
