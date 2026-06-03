@@ -17,10 +17,10 @@ jobs:
       contents: read
     env:
       AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
-      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13
-      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
-      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1
-      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.4
+      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13.27
+      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.4
+      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1.27
+      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.4
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
     steps:

@@ -169,7 +169,7 @@ runs:
         fi
 
         if [ -z "${CODEX_INIT_IMAGE:-}" ]; then
-          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:latest"
+          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:0.13.27"
           echo "CODEX_INIT_IMAGE=$CODEX_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
@@ -180,17 +180,17 @@ runs:
         fi
 
         if [ -z "${AGN_INIT_IMAGE:-}" ]; then
-          AGN_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:latest"
+          AGN_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.4"
           echo "AGN_INIT_IMAGE=$AGN_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
         if [ -z "${CLAUDE_INIT_IMAGE:-}" ]; then
-          CLAUDE_INIT_IMAGE="ghcr.io/agynio/agent-init-claude:latest"
+          CLAUDE_INIT_IMAGE="ghcr.io/agynio/agent-init-claude:0.1.27"
           echo "CLAUDE_INIT_IMAGE=$CLAUDE_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
         if [ -z "${AGN_EXPOSE_INIT_IMAGE:-}" ]; then
-          AGN_EXPOSE_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:latest"
+          AGN_EXPOSE_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.4"
           echo "AGN_EXPOSE_INIT_IMAGE=$AGN_EXPOSE_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 

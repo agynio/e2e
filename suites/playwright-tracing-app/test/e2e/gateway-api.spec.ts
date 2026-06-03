@@ -10,7 +10,7 @@ const createAgentOptions = {
   description: 'description',
   configuration: '{}',
   image: 'alpine:3.21',
-  initImage: 'ghcr.io/agynio/agent-init-agn:latest',
+  initImage: 'ghcr.io/agynio/agent-init-agn:0.5.4',
 };
 
 test.describe('tracing gateway api helpers', () => {
@@ -36,7 +36,7 @@ test.describe('tracing gateway api helpers', () => {
     const payload = buildCreateAgentRequestBytes(createAgentOptions);
 
     expect(Buffer.from(payload).toString('hex')).toBe(
-      '0a0a6167656e742d6e616d651209617373697374616e741a086d6f64656c2d6964220b6465736372697074696f6e2a027b7d320b616c70696e653a332e3231420f6f7267616e697a6174696f6e2d69644a24676863722e696f2f6167796e696f2f6167656e742d696e69742d61676e3a6c61746573746801',
+      '0a0a6167656e742d6e616d651209617373697374616e741a086d6f64656c2d6964220b6465736372697074696f6e2a027b7d320b616c70696e653a332e3231420f6f7267616e697a6174696f6e2d69644a23676863722e696f2f6167796e696f2f6167656e742d696e69742d61676e3a302e352e346801',
     );
   });
 });
