@@ -83,6 +83,7 @@ type SendMessageResponseWire = {
 type SpanWire = {
   traceId?: string;
   name?: string;
+  attributes?: ResourceAttributeWire[];
 };
 
 type AttributeValueWire = {
