@@ -15,7 +15,7 @@ const CODEX_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT ?? 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
 const CLAUDE_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT_CLAUDE ?? 'https://testllm.dev/v1/org/agynio/suite/claude/messages';
-const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:0.1.28';
+const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:0.1.29';
 const CLAUDE_PROTOCOL = 'PROTOCOL_ANTHROPIC_MESSAGES';
 const MESSAGE_DEEP_LINK_RESOLUTION_TIMEOUT_MS = 180000;
 const MESSAGE_DEEP_LINK_POLL_INTERVAL_MS = 5000;

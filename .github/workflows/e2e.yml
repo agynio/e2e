@@ -17,9 +17,9 @@ jobs:
       contents: read
     env:
       AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
-      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13.28
+      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13.29
       AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
-      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1.28
+      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1.29
       AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12

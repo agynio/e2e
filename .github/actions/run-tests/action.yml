@@ -169,7 +169,7 @@ runs:
         fi
 
         if [ -z "${CODEX_INIT_IMAGE:-}" ]; then
-          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:0.13.28"
+          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:0.13.29"
           echo "CODEX_INIT_IMAGE=$CODEX_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
@@ -185,7 +185,7 @@ runs:
         fi
 
         if [ -z "${CLAUDE_INIT_IMAGE:-}" ]; then
-          CLAUDE_INIT_IMAGE="ghcr.io/agynio/agent-init-claude:0.1.28"
+          CLAUDE_INIT_IMAGE="ghcr.io/agynio/agent-init-claude:0.1.29"
           echo "CLAUDE_INIT_IMAGE=$CLAUDE_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
