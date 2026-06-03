@@ -37,8 +37,8 @@ const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
 const DEFAULT_INIT_IMAGES: Record<TraceSdk, string> = {
   agn: 'ghcr.io/agynio/agent-init-agn:0.5.5',
-  codex: 'ghcr.io/agynio/agent-init-codex:0.13.27',
-  claude: 'ghcr.io/agynio/agent-init-claude:0.1.27',
+  codex: 'ghcr.io/agynio/agent-init-codex:0.13.28',
+  claude: 'ghcr.io/agynio/agent-init-claude:0.1.28',
 };
 const INIT_IMAGE_ENV_VARS: Record<TraceSdk, string> = {
   agn: 'AGN_INIT_IMAGE',
