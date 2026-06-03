@@ -345,13 +345,11 @@ func startExposeHTTPServer(t *testing.T, ctx context.Context, fixture exposeWork
 mkdir -p %[1]s
 printf '%%s' "$1" > %[1]s/index.html
 if command -v python3 >/dev/null 2>&1; then
-  (cd %[1]s && python3 -m http.server %[2]d --bind 127.0.0.1 >/tmp/expose-httpd.log 2>&1) &
+  nohup sh -c 'cd "$1" && exec python3 -m http.server "$2" --bind 127.0.0.1' expose-httpd %[1]s %[2]d >/tmp/expose-httpd.log 2>&1 </dev/null &
 elif busybox --list | grep -qx httpd; then
-  busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 &
+  nohup busybox httpd -f -p %[2]d -h %[1]s >/tmp/expose-httpd.log 2>&1 </dev/null &
 else
-  while true; do
-    { printf 'HTTP/1.1 200 OK\r\nContent-Length: %%s\r\nConnection: close\r\n\r\n' "${#1}"; printf '%%s' "$1"; } | busybox nc -l -p %[2]d -w 5 127.0.0.1
-  done >/tmp/expose-httpd.log 2>&1 &
+  nohup sh -c 'while true; do { printf '\''HTTP/1.1 200 OK\r\nContent-Length: %%s\r\nConnection: close\r\n\r\n'\'' "${#1}"; printf '\''%%s'\'' "$1"; } | busybox nc -l -p "$2" -w 5 127.0.0.1; done' expose-httpd "$1" %[2]d >/tmp/expose-httpd.log 2>&1 </dev/null &
 fi
 pid=$!
 i=0
