@@ -180,7 +180,7 @@ runs:
         fi
 
         if [ -z "${AGN_INIT_IMAGE:-}" ]; then
-          AGN_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.4"
+          AGN_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.5"
           echo "AGN_INIT_IMAGE=$AGN_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
@@ -190,7 +190,7 @@ runs:
         fi
 
         if [ -z "${AGN_EXPOSE_INIT_IMAGE:-}" ]; then
-          AGN_EXPOSE_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.4"
+          AGN_EXPOSE_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.5"
           echo "AGN_EXPOSE_INIT_IMAGE=$AGN_EXPOSE_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 
