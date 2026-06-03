@@ -331,6 +331,11 @@ func logWorkloadInitContainerLogs(t *testing.T, ctx context.Context, namespace s
 		if container.Name != "ziti-sidecar" {
 			continue
 		}
+		t.Logf("diagnostics: workload pod=%s init-container=%s", pod.Name, container.Name)
+		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{
+			TailLines: 200,
+			MaxLines:  20,
+		})
 		t.Logf("diagnostics: workload pod=%s init-container=%s (previous)", pod.Name, container.Name)
 		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{
 			TailLines: 200,

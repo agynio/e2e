@@ -901,6 +901,8 @@ func logExposeWorkloadSidecarLogs(t *testing.T, ctx context.Context, fixture exp
 			continue
 		}
 		foundSidecar = true
+		t.Logf("diagnostics: workload pod=%s init-container=%s", pod.Name, container.Name)
+		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 500, MaxLines: 200})
 		t.Logf("diagnostics: workload pod=%s init-container=%s (previous)", pod.Name, container.Name)
 		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 500, MaxLines: 200, Previous: true})
 	}
