@@ -14,7 +14,7 @@ const createAgentOptions = {
   description: 'description',
   configuration: '{}',
   image: 'alpine:3.21',
-  initImage: 'ghcr.io/agynio/agent-init-codex:0.13.28',
+  initImage: 'ghcr.io/agynio/agent-init-codex:0.13.29',
 };
 
 test.describe('chat api helpers', () => {
