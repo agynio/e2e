@@ -10,7 +10,7 @@ const createAgentOptions = {
   description: 'description',
   configuration: '{}',
   image: 'alpine:3.21',
-  initImage: 'ghcr.io/agynio/agent-init-agn:0.5.4',
+  initImage: 'ghcr.io/agynio/agent-init-agn:0.5.5',
 };
 
 test.describe('tracing gateway api helpers', () => {
