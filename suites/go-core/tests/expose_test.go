@@ -201,6 +201,12 @@ func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
 	if listedEntry.URL != addEntry.URL {
 		t.Fatalf("expose list url mismatch: got %q want %q", listedEntry.URL, addEntry.URL)
 	}
+	if err := validateActiveExposureZitiIDs(listedEntry); err != nil {
+		serviceName := exposeServiceName(t, addEntry.URL)
+		exposedURL := fmt.Sprintf("http://%s:%d/index.html", serviceName, exposePort)
+		logExposeTimeoutDiagnostics(t, fixture, listedEntry, exposedURL)
+		t.Fatalf("active exposure has invalid Ziti resource ids: %v", err)
+	}
 
 	serviceName := exposeServiceName(t, addEntry.URL)
 	exposedURL := fmt.Sprintf("http://%s:%d/index.html", serviceName, exposePort)
@@ -507,6 +513,34 @@ func waitForExposeListed(t *testing.T, ctx context.Context, fixture exposeWorklo
 		return exposeEntry{}, err
 	}
 	return listedEntry, nil
+}
+
+func validateActiveExposureZitiIDs(exposure exposeEntry) error {
+	if exposure.Status != exposeStatusActive {
+		return fmt.Errorf("status is %q, want %q", exposure.Status, exposeStatusActive)
+	}
+
+	missingIDs := make([]string, 0, 3)
+	if exposure.OpenZitiServiceID == "" {
+		missingIDs = append(missingIDs, "openziti_service_id")
+	}
+	if exposure.OpenZitiBindPolicyID == "" {
+		missingIDs = append(missingIDs, "openziti_bind_policy_id")
+	}
+	if exposure.OpenZitiDialPolicyID == "" {
+		missingIDs = append(missingIDs, "openziti_dial_policy_id")
+	}
+	if len(missingIDs) != 0 {
+		return fmt.Errorf(
+			"status=%q but missing %s for exposure id=%s port=%d url=%s; expose service/Ziti management must only report active after creating all Ziti resources",
+			exposure.Status,
+			strings.Join(missingIDs, ","),
+			diagnosticValue(exposure.ID),
+			exposure.Port,
+			diagnosticValue(exposure.URL),
+		)
+	}
+	return nil
 }
 
 func waitForExposeListEmpty(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture) error {
@@ -860,7 +894,7 @@ func logExposeWorkloadSidecarLogs(t *testing.T, ctx context.Context, fixture exp
 		}
 		foundSidecar = true
 		t.Logf("diagnostics: workload pod=%s container=%s", pod.Name, container.Name)
-		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 300, MaxLines: 80})
+		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 500, MaxLines: 200})
 	}
 	for _, container := range pod.Spec.InitContainers {
 		if container.Name != "ziti-sidecar" {
@@ -868,7 +902,7 @@ func logExposeWorkloadSidecarLogs(t *testing.T, ctx context.Context, fixture exp
 		}
 		foundSidecar = true
 		t.Logf("diagnostics: workload pod=%s init-container=%s (previous)", pod.Name, container.Name)
-		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 200, MaxLines: 40, Previous: true})
+		readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name, logReadOptions{TailLines: 500, MaxLines: 200, Previous: true})
 	}
 	if !foundSidecar {
 		t.Logf("diagnostics: pod=%s ziti-sidecar container not found", pod.Name)

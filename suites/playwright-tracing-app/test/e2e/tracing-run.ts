@@ -67,6 +67,14 @@ type TraceCounts = {
   toolCount: number;
 };
 
+type TraceDiscoverySnapshot = {
+  totalSpans: number;
+  spanNames: string[];
+  traceIds: string[];
+  messageTextMatches: number;
+  messageIdAttributes: string[];
+};
+
 type ResourceSpansWire = NonNullable<ListSpansResponseWire['resourceSpans']>[number];
 
 export type FullChainRun = {
@@ -172,6 +180,68 @@ function extractTraceIdFromSpans(resourceSpans: ResourceSpansWire[] | undefined)
   return undefined;
 }
 
+function collectStringAttributes(attrs: { key?: string; value?: { stringValue?: string } }[] | undefined): Map<string, string> {
+  const values = new Map<string, string>();
+  for (const attr of attrs ?? []) {
+    const key = attr.key?.trim();
+    const value = attr.value?.stringValue?.trim();
+    if (key && value) {
+      values.set(key, value);
+    }
+  }
+  return values;
+}
+
+function formatSnapshotValues(values: string[]): string {
+  if (values.length === 0) {
+    return '-';
+  }
+  return values.slice(0, 8).join(',');
+}
+
+function summarizeTraceDiscovery(resourceSpans: ResourceSpansWire[] | undefined, messageText: string): TraceDiscoverySnapshot {
+  const spanNames = new Set<string>();
+  const traceIds = new Set<string>();
+  const messageIdAttributes = new Set<string>();
+  let totalSpans = 0;
+  let messageTextMatches = 0;
+
+  for (const resourceSpan of resourceSpans ?? []) {
+    const resourceAttrs = collectStringAttributes(resourceSpan.resource?.attributes);
+    const resourceMessageId = resourceAttrs.get('agyn.thread.message.id') ?? resourceAttrs.get('agyn.message.id');
+    if (resourceMessageId) {
+      messageIdAttributes.add(resourceMessageId);
+    }
+    for (const scopeSpan of resourceSpan.scopeSpans ?? []) {
+      for (const span of scopeSpan.spans ?? []) {
+        totalSpans += 1;
+        if (span.name) {
+          spanNames.add(span.name);
+        }
+        if (span.traceId) {
+          traceIds.add(decodeTraceId(span.traceId));
+        }
+        const spanAttrs = collectStringAttributes(span.attributes);
+        const spanMessageId = spanAttrs.get('agyn.thread.message.id') ?? spanAttrs.get('agyn.message.id');
+        if (spanMessageId) {
+          messageIdAttributes.add(spanMessageId);
+        }
+        if (spanAttrs.get('agyn.message.text') === messageText) {
+          messageTextMatches += 1;
+        }
+      }
+    }
+  }
+
+  return {
+    totalSpans,
+    spanNames: [...spanNames].sort(),
+    traceIds: [...traceIds].sort(),
+    messageTextMatches,
+    messageIdAttributes: [...messageIdAttributes].sort(),
+  };
+}
+
 function isContainerRunning(status: string | number | undefined): boolean {
   if (typeof status === 'number') {
     return status === 1;
@@ -215,15 +285,18 @@ async function waitForTraceIdByMessageId(page: Page, params: {
   organizationId: string;
   messageId: string;
   sdk: TraceSdk;
+  messageText: string;
 }): Promise<string> {
   const start = Date.now();
+  let lastSnapshot: TraceDiscoverySnapshot | undefined;
   while (Date.now() - start < TRACE_DISCOVER_TIMEOUT_MS) {
     const response = await listSpans(page, {
       organizationId: params.organizationId,
       filter: { messageId: params.messageId },
-      pageSize: 1,
+      pageSize: 25,
       orderBy: ListSpansOrderBy.START_TIME_DESC,
     });
+    lastSnapshot = summarizeTraceDiscovery(response.resourceSpans, params.messageText);
     const messageTraceId = extractTraceIdFromSpans(response.resourceSpans);
     if (messageTraceId) {
       return messageTraceId;
@@ -231,19 +304,29 @@ async function waitForTraceIdByMessageId(page: Page, params: {
     await page.waitForTimeout(TRACE_POLL_INTERVAL_MS);
   }
   const envVar = INIT_IMAGE_ENV_VARS[params.sdk];
+  const snapshotDescription = lastSnapshot
+    ? ` Last ListSpans snapshot: total=${lastSnapshot.totalSpans}, names=${formatSnapshotValues(lastSnapshot.spanNames)}, ` +
+      `traceIds=${formatSnapshotValues(lastSnapshot.traceIds)}, messageTextMatches=${lastSnapshot.messageTextMatches}, ` +
+      `messageIdAttributes=${formatSnapshotValues(lastSnapshot.messageIdAttributes)}.`
+    : ' Last ListSpans snapshot: no response received.';
   throw new Error(
     `ListSpans(filter: { messageId: ${params.messageId} }) returned no trace id after ${TRACE_DISCOVER_TIMEOUT_MS / 1000}s. ` +
-      `Check message-id correlation and ensure the ${params.sdk} agent init image is up to date (override via ${envVar}).`,
+      `Check message-id correlation and ensure the ${params.sdk} agent init image is up to date (override via ${envVar}).` +
+      snapshotDescription,
   );
 }
 
 async function waitForTraceSummary(page: Page, traceId: string): Promise<void> {
   const start = Date.now();
   let lastCounts: TraceCounts | null = null;
+  let lastCountsByName: Record<string, number | string> | undefined;
   let lastStatus: string | number | undefined;
+  let lastTotalSpans: number | string | undefined;
   while (Date.now() - start < TRACE_SUMMARY_TIMEOUT_MS) {
     const summary = await getTraceSummary(page, encodeTraceId(traceId));
     lastStatus = summary.status;
+    lastCountsByName = summary.countsByName;
+    lastTotalSpans = summary.totalSpans;
     lastCounts = extractCounts(summary.countsByName);
     if (isTraceCompleted(summary.status)) {
       if (lastCounts.messageCount >= 1 && lastCounts.llmCount >= 2 && lastCounts.toolCount >= 2) {
@@ -255,7 +338,14 @@ async function waitForTraceSummary(page: Page, traceId: string): Promise<void> {
   const countsDescription = lastCounts
     ? `message=${lastCounts.messageCount}, llm=${lastCounts.llmCount}, tool=${lastCounts.toolCount}`
     : 'message=0, llm=0, tool=0';
-  throw new Error(`Timed out waiting for trace summary. status=${String(lastStatus)} counts=${countsDescription}`);
+  const namesDescription = lastCountsByName
+    ? Object.entries(lastCountsByName).map(([name, count]) => `${name}=${count}`).sort().join(',')
+    : '-';
+  throw new Error(
+    `Timed out waiting for trace summary. status=${String(lastStatus)} totalSpans=${String(lastTotalSpans)} ` +
+      `expectedCounts=${countsDescription} countsByName=${namesDescription}. ` +
+      'If counts are dominated by transport spans, the trace id resolved to infrastructure spans instead of the application trace; fix message correlation in agent init/tracing service.',
+  );
 }
 
 export async function createFullChainRun(page: Page, options: FullChainRunOptions = {}): Promise<FullChainRun> {
@@ -327,7 +417,7 @@ export async function createFullChainRun(page: Page, options: FullChainRunOption
 
   await waitForMcpSidecarsReady(page, { threadId, agentId });
 
-  const runId = await waitForTraceIdByMessageId(page, { organizationId, messageId, sdk });
+  const runId = await waitForTraceIdByMessageId(page, { organizationId, messageId, sdk, messageText: MCP_TOOLS_PROMPT });
   await waitForTraceSummary(page, runId);
 
   return {
