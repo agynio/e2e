@@ -13,7 +13,7 @@ Validates Console App user journeys and browser-visible API behaviors for sign-i
 
 - Source directory: `suites/playwright`
 - Test inventory pattern: `test/e2e/*.spec.ts`
-- Included case count: 41
+- Included case count: 44
 
 ## Actors
 
@@ -82,6 +82,8 @@ Validates Console App user journeys and browser-visible API behaviors for sign-i
 | [E2E-PLAYWRIGHT-040](#e2e-playwright-040) | `lists users` | @svc_console |
 | [E2E-PLAYWRIGHT-041](#e2e-playwright-041) | `shows user detail` | @svc_console |
 | [E2E-PLAYWRIGHT-042](#e2e-playwright-042) | `workloads header lays out across columns` | @svc_console, @svc_gateway, @smoke |
+| [E2E-PLAYWRIGHT-043](#e2e-playwright-043) | `opens every platform sidebar section without browser crashes` | @svc_console, @svc_gateway, @smoke |
+| [E2E-PLAYWRIGHT-044](#e2e-playwright-044) | `opens every organization sidebar section without browser crashes` | @svc_console, @svc_gateway, @smoke |
 
 ## Scenarios
 
@@ -576,3 +578,27 @@ Validates Console App user journeys and browser-visible API behaviors for sign-i
 - **Given** An organization activity workloads page is available.
 - **When** The user opens the workloads page.
 - **Then** The Agent and Status headers are visible and aligned in separate columns.
+
+### E2E-PLAYWRIGHT-043
+
+- **Source:** `suites/playwright/test/e2e/console-navigation.spec.ts`
+- **Test:** `opens every platform sidebar section without browser crashes`
+- **Tags:** @svc_console, @svc_gateway, @smoke
+
+**Scenario:** opens every platform sidebar section without browser crashes
+
+- **Given** The user is signed in as a cluster administrator.
+- **When** The user opens each platform sidebar section.
+- **Then** The Console shell remains mounted and no browser page crash is reported.
+
+### E2E-PLAYWRIGHT-044
+
+- **Source:** `suites/playwright/test/e2e/console-navigation.spec.ts`
+- **Test:** `opens every organization sidebar section without browser crashes`
+- **Tags:** @svc_console, @svc_gateway, @smoke
+
+**Scenario:** opens every organization sidebar section without browser crashes
+
+- **Given** The user is signed in and an organization is selected.
+- **When** The user opens each organization sidebar section, including Runners.
+- **Then** The Console shell remains mounted and no TooltipProvider page crash is reported.
