@@ -4,6 +4,7 @@ import { createOrganization, setSelectedOrganization } from './console-api';
 
 const TOOLTIP_PROVIDER_ERROR = '`Tooltip` must be used within `TooltipProvider`';
 const APP_READY_TIMEOUT_MS = 15000;
+const ROUTE_SETTLE_TIMEOUT_MS = 500;
 
 type NavigationTarget = {
   navTestId: string;
@@ -61,7 +62,10 @@ function collectCrashSignals(page: Page): string[] {
 }
 
 async function expectNoCrashSignals(crashSignals: string[], target: NavigationTarget): Promise<void> {
-  expect(crashSignals, `unexpected browser crash signals after opening ${target.title}`).toEqual([]);
+  await test.step(`assert no crash signals after ${target.title}`, async () => {
+    await new Promise((resolve) => setTimeout(resolve, ROUTE_SETTLE_TIMEOUT_MS));
+    expect(crashSignals, `unexpected browser crash signals after opening ${target.title}`).toEqual([]);
+  });
 }
 
 async function expectShellReady(page: Page, target: NavigationTarget): Promise<void> {
@@ -71,7 +75,6 @@ async function expectShellReady(page: Page, target: NavigationTarget): Promise<v
 }
 
 async function openNavigationTarget(page: Page, target: NavigationTarget, crashSignals: string[]): Promise<void> {
-  crashSignals.length = 0;
   await page.getByTestId(target.navTestId).click();
   await expectShellReady(page, target);
   await expectNoCrashSignals(crashSignals, target);
