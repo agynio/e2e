@@ -13,7 +13,7 @@ Validates Tracing App deep links and gateway helper serialization for resolving 
 
 - Source directory: `suites/playwright-tracing-app`
 - Test inventory pattern: `test/e2e/*.spec.ts`
-- Included case count: 8
+- Included case count: 6
 
 ## Actors
 
@@ -43,9 +43,7 @@ Validates Tracing App deep links and gateway helper serialization for resolving 
 | [E2E-PLAYWRIGHT-TRACING-APP-003](#e2e-playwright-tracing-app-003) | `CreateAgent ConnectRPC proto bytes include availability value` | _none_ |
 | [E2E-PLAYWRIGHT-TRACING-APP-004](#e2e-playwright-tracing-app-004) | `shows empty state for unknown message` | @svc_tracing_app, @smoke |
 | [E2E-PLAYWRIGHT-TRACING-APP-005](#e2e-playwright-tracing-app-005) | `resolves message to run and renders timeline (agn)` | @svc_tracing_app, @svc_agents_orchestrator |
-| [E2E-PLAYWRIGHT-TRACING-APP-006](#e2e-playwright-tracing-app-006) | `resolves message to run and renders timeline (claude)` | @svc_tracing_app, @svc_agents_orchestrator |
-| [E2E-PLAYWRIGHT-TRACING-APP-007](#e2e-playwright-tracing-app-007) | `resolves message to run and renders timeline (codex)` | @svc_tracing_app, @svc_agents_orchestrator |
-| [E2E-PLAYWRIGHT-TRACING-APP-008](#e2e-playwright-tracing-app-008) | `returns to deep link after login` | @svc_tracing_app, @svc_agents_orchestrator |
+| [E2E-PLAYWRIGHT-TRACING-APP-006](#e2e-playwright-tracing-app-006) | `returns to deep link after login` | @svc_tracing_app, @svc_agents_orchestrator |
 
 ## Scenarios
 
@@ -110,30 +108,6 @@ Validates Tracing App deep links and gateway helper serialization for resolving 
 - **Then** The deep link resolves to a run page and renders the timeline.
 
 ### E2E-PLAYWRIGHT-TRACING-APP-006
-
-- **Source:** `suites/playwright-tracing-app/test/e2e/message-deeplink-fullchain-claude.spec.ts`
-- **Test:** `resolves message to run and renders timeline (claude)`
-- **Tags:** @svc_tracing_app, @svc_agents_orchestrator
-
-**Scenario:** resolves message to run and renders timeline (claude)
-
-- **Given** A Claude-backed agent message produces trace data.
-- **When** The user opens the message deep link.
-- **Then** The deep link resolves to a run page and renders the timeline.
-
-### E2E-PLAYWRIGHT-TRACING-APP-007
-
-- **Source:** `suites/playwright-tracing-app/test/e2e/message-deeplink-fullchain-codex.spec.ts`
-- **Test:** `resolves message to run and renders timeline (codex)`
-- **Tags:** @svc_tracing_app, @svc_agents_orchestrator
-
-**Scenario:** resolves message to run and renders timeline (codex)
-
-- **Given** A Codex-backed agent message produces trace data.
-- **When** The user opens the message deep link.
-- **Then** The deep link resolves to a run page and renders the timeline.
-
-### E2E-PLAYWRIGHT-TRACING-APP-008
 
 - **Source:** `suites/playwright-tracing-app/test/e2e/message-deeplink-oidc.spec.ts`
 - **Test:** `returns to deep link after login`

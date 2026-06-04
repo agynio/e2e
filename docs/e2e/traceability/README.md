@@ -14,4 +14,4 @@ Traceability files map architecture/product anchors and service tags to document
 | [Go Terraform Provider](../suites/go-terraform.md) | 47 | @svc_gateway, @tf_provider_agyn |
 | [Playwright Console App](../suites/playwright.md) | 41 | @svc_console, @svc_gateway, @svc_threads, @svc_metering, @svc_identity, @smoke |
 | [Playwright Chat App](../suites/playwright-chat-app.md) | 27 | @svc_chat_app, @svc_gateway, @svc_agents_orchestrator, @svc_organizations, @svc_files, @svc_media_proxy, @svc_tracing_app |
-| [Playwright Tracing App](../suites/playwright-tracing-app.md) | 8 | @svc_tracing_app, @svc_agents_orchestrator, @smoke |
+| [Playwright Tracing App](../suites/playwright-tracing-app.md) | 6 | @svc_tracing_app, @svc_agents_orchestrator, @smoke |
