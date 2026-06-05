@@ -3,17 +3,17 @@
 - **Suite ID:** E2E-SUITE-GO-CORE
 - **Source:** `suites/go-core/suite.yaml`
 - **Kind:** Go
-- **Tags:** @svc_agents_orchestrator, @svc_runners, @svc_metering, @svc_k8s_runner, @svc_organizations, @svc_files, @svc_gateway, @svc_media_proxy, @svc_llm, @svc_llm_proxy, @smoke
+- **Tags:** @svc_agents_orchestrator, @svc_runners, @svc_metering, @svc_k8s_runner, @svc_organizations, @svc_files, @svc_gateway, @svc_egress, @svc_egress_gateway, @svc_media_proxy, @svc_llm, @svc_llm_proxy, @smoke
 
 ## Intent
 
-Validates core platform services through Go E2E tests: gateway authentication, agents, organizations, runners, workloads, files, media proxying, LLM proxying, metering, tracing, MCP tools, Ziti exposure, and retry behavior.
+Validates core platform services through Go E2E tests: gateway authentication, agents, organizations, runners, workloads, files, egress control-plane and gateway wiring, media proxying, LLM proxying, metering, tracing, MCP tools, Ziti exposure, and retry behavior.
 
 ## Scope
 
 - Source directory: `suites/go-core`
 - Test inventory pattern: `tests/*_test.go`
-- Included case count: 89
+- Included case count: 92
 
 ## Actors
 
@@ -43,6 +43,8 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - `@svc_organizations`
 - `@svc_files`
 - `@svc_gateway`
+- `@svc_egress`
+- `@svc_egress_gateway`
 - `@svc_media_proxy`
 - `@svc_llm`
 - `@svc_llm_proxy`
@@ -141,6 +143,9 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 | [E2E-GO-CORE-095](#e2e-go-core-095) | `TestRunnerLifecycle` | @svc_runners |
 | [E2E-GO-CORE-096](#e2e-go-core-096) | `TestWorkloadStartsOnUnackedMessage` | @svc_agents_orchestrator, @svc_runners |
 | [E2E-GO-CORE-097](#e2e-go-core-097) | `TestThreadsSendShell` | @svc_agents_orchestrator |
+| [E2E-GO-CORE-098](#e2e-go-core-098) | `TestEgressGatewayFeaturePath` | @svc_egress |
+| [E2E-GO-CORE-099](#e2e-go-core-099) | `TestEgressGatewayDenyAndNoRulePaths` | @svc_egress |
+| [E2E-GO-CORE-100](#e2e-go-core-100) | `TestEgressGatewayDeploymentWiring` | @svc_egress_gateway |
 
 ## Scenarios
 
@@ -1211,3 +1216,41 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - **Given** A shell-capable thread send path is available.
 - **When** A user sends a shell message.
 - **Then** The thread send operation creates or updates the thread and records the shell message. TODO: clarify.
+
+### E2E-GO-CORE-098
+
+- **Source:** `suites/go-core/tests/egress_controlplane_test.go`
+- **Test:** `TestEgressGatewayFeaturePath`
+- **Tags:** @svc_egress
+
+**Scenario:** TestEgressGatewayFeaturePath
+
+- **Given** An organization has a secret-backed allow egress rule and an agent attachment.
+- **When** the rule is created, attached, and listed by agent for gateway consumption.
+- **Then** Egress returns the attached rule, Secrets refuses deletion while referenced, and the injected header still points at the secret.
+
+### E2E-GO-CORE-099
+
+- **Source:** `suites/go-core/tests/egress_controlplane_test.go`
+- **Test:** `TestEgressGatewayDenyAndNoRulePaths`
+- **Tags:** @svc_egress
+
+**Scenario:** TestEgressGatewayDenyAndNoRulePaths
+
+- **Given** An agent starts with no egress rule attachment.
+- **When** a deny rule is created and attached to that agent.
+- **Then** the gateway lookup path changes from no rules to the deny rule for the agent.
+
+### E2E-GO-CORE-100
+
+- **Source:** `suites/go-core/tests/egress_gateway_wiring_test.go`
+- **Test:** `TestEgressGatewayDeploymentWiring`
+- **Tags:** @svc_egress_gateway
+
+**Scenario:** TestEgressGatewayDeploymentWiring
+
+- **Given** Egress Gateway deployment wiring is installed with the platform runner.
+- **When** the suite checks the gateway health endpoint, CA and Ziti identity Secrets, NetworkPolicy, and inline CA workload path.
+- **Then** the deployment exposes the required data-plane wiring for Egress Gateway traffic.
+
+**Current framework limitation:** full outbound HTTP forwarding through Egress Gateway is not covered here because the current `egress-gateway` service process exposes only its admin health listener; the pure request-processing runtime exists in source but is not wired to an OpenZiti data-plane listener yet. These cases cover the highest-value feasible path: Egress control-plane rule lookup, Secrets referential integrity, deny/no-rule state, Egress Gateway CA/Ziti wiring, and workload NetworkPolicy defaults.

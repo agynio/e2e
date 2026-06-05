@@ -26,12 +26,13 @@ const (
 type ServiceType int32
 
 const (
-	ServiceType_SERVICE_TYPE_UNSPECIFIED  ServiceType = 0
-	ServiceType_SERVICE_TYPE_GATEWAY      ServiceType = 1
-	ServiceType_SERVICE_TYPE_ORCHESTRATOR ServiceType = 2
-	ServiceType_SERVICE_TYPE_LLM_PROXY    ServiceType = 4
-	ServiceType_SERVICE_TYPE_TRACING      ServiceType = 5
-	ServiceType_SERVICE_TYPE_RUNNERS      ServiceType = 6
+	ServiceType_SERVICE_TYPE_UNSPECIFIED    ServiceType = 0
+	ServiceType_SERVICE_TYPE_GATEWAY        ServiceType = 1
+	ServiceType_SERVICE_TYPE_ORCHESTRATOR   ServiceType = 2
+	ServiceType_SERVICE_TYPE_LLM_PROXY      ServiceType = 4
+	ServiceType_SERVICE_TYPE_TRACING        ServiceType = 5
+	ServiceType_SERVICE_TYPE_RUNNERS        ServiceType = 6
+	ServiceType_SERVICE_TYPE_EGRESS_GATEWAY ServiceType = 7
 )
 
 // Enum value maps for ServiceType.
@@ -43,14 +44,16 @@ var (
 		4: "SERVICE_TYPE_LLM_PROXY",
 		5: "SERVICE_TYPE_TRACING",
 		6: "SERVICE_TYPE_RUNNERS",
+		7: "SERVICE_TYPE_EGRESS_GATEWAY",
 	}
 	ServiceType_value = map[string]int32{
-		"SERVICE_TYPE_UNSPECIFIED":  0,
-		"SERVICE_TYPE_GATEWAY":      1,
-		"SERVICE_TYPE_ORCHESTRATOR": 2,
-		"SERVICE_TYPE_LLM_PROXY":    4,
-		"SERVICE_TYPE_TRACING":      5,
-		"SERVICE_TYPE_RUNNERS":      6,
+		"SERVICE_TYPE_UNSPECIFIED":    0,
+		"SERVICE_TYPE_GATEWAY":        1,
+		"SERVICE_TYPE_ORCHESTRATOR":   2,
+		"SERVICE_TYPE_LLM_PROXY":      4,
+		"SERVICE_TYPE_TRACING":        5,
+		"SERVICE_TYPE_RUNNERS":        6,
+		"SERVICE_TYPE_EGRESS_GATEWAY": 7,
 	}
 )
 
@@ -419,12 +422,18 @@ func (x *CreateAppIdentityResponse) GetIdentityJson() []byte {
 
 // OpenZiti host.v1 config — tells the hosting sidecar where to forward traffic.
 type HostV1Config struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Protocol      string                 `protobuf:"bytes,1,opt,name=protocol,proto3" json:"protocol,omitempty"`
-	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
-	Port          int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Protocol          string                 `protobuf:"bytes,1,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	Address           string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	Port              int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
+	ForwardProtocol   bool                   `protobuf:"varint,4,opt,name=forward_protocol,json=forwardProtocol,proto3" json:"forward_protocol,omitempty"`
+	ForwardAddress    bool                   `protobuf:"varint,5,opt,name=forward_address,json=forwardAddress,proto3" json:"forward_address,omitempty"`
+	ForwardPort       bool                   `protobuf:"varint,6,opt,name=forward_port,json=forwardPort,proto3" json:"forward_port,omitempty"`
+	AllowedProtocols  []string               `protobuf:"bytes,7,rep,name=allowed_protocols,json=allowedProtocols,proto3" json:"allowed_protocols,omitempty"`
+	AllowedAddresses  []string               `protobuf:"bytes,8,rep,name=allowed_addresses,json=allowedAddresses,proto3" json:"allowed_addresses,omitempty"`
+	AllowedPortRanges []*PortRange           `protobuf:"bytes,9,rep,name=allowed_port_ranges,json=allowedPortRanges,proto3" json:"allowed_port_ranges,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *HostV1Config) Reset() {
@@ -476,6 +485,48 @@ func (x *HostV1Config) GetPort() int32 {
 		return x.Port
 	}
 	return 0
+}
+
+func (x *HostV1Config) GetForwardProtocol() bool {
+	if x != nil {
+		return x.ForwardProtocol
+	}
+	return false
+}
+
+func (x *HostV1Config) GetForwardAddress() bool {
+	if x != nil {
+		return x.ForwardAddress
+	}
+	return false
+}
+
+func (x *HostV1Config) GetForwardPort() bool {
+	if x != nil {
+		return x.ForwardPort
+	}
+	return false
+}
+
+func (x *HostV1Config) GetAllowedProtocols() []string {
+	if x != nil {
+		return x.AllowedProtocols
+	}
+	return nil
+}
+
+func (x *HostV1Config) GetAllowedAddresses() []string {
+	if x != nil {
+		return x.AllowedAddresses
+	}
+	return nil
+}
+
+func (x *HostV1Config) GetAllowedPortRanges() []*PortRange {
+	if x != nil {
+		return x.AllowedPortRanges
+	}
+	return nil
 }
 
 // OpenZiti intercept.v1 config — tells dialing tunnelers which address to intercept.
@@ -1977,11 +2028,17 @@ const file_agynio_api_ziti_management_v1_ziti_management_proto_rawDesc = "" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\"\x81\x01\n" +
 	"\x19CreateAppIdentityResponse\x12(\n" +
 	"\x10ziti_identity_id\x18\x01 \x01(\tR\x0ezitiIdentityId\x12#\n" +
-	"\ridentity_json\x18\x02 \x01(\fR\fidentityJsonJ\x04\b\x03\x10\x04R\x0fziti_service_id\"X\n" +
+	"\ridentity_json\x18\x02 \x01(\fR\fidentityJsonJ\x04\b\x03\x10\x04R\x0fziti_service_id\"\x83\x03\n" +
 	"\fHostV1Config\x12\x1a\n" +
 	"\bprotocol\x18\x01 \x01(\tR\bprotocol\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x12\n" +
-	"\x04port\x18\x03 \x01(\x05R\x04port\"\x9a\x01\n" +
+	"\x04port\x18\x03 \x01(\x05R\x04port\x12)\n" +
+	"\x10forward_protocol\x18\x04 \x01(\bR\x0fforwardProtocol\x12'\n" +
+	"\x0fforward_address\x18\x05 \x01(\bR\x0eforwardAddress\x12!\n" +
+	"\fforward_port\x18\x06 \x01(\bR\vforwardPort\x12+\n" +
+	"\x11allowed_protocols\x18\a \x03(\tR\x10allowedProtocols\x12+\n" +
+	"\x11allowed_addresses\x18\b \x03(\tR\x10allowedAddresses\x12X\n" +
+	"\x13allowed_port_ranges\x18\t \x03(\v2(.agynio.api.ziti_management.v1.PortRangeR\x11allowedPortRanges\"\x9a\x01\n" +
 	"\x11InterceptV1Config\x12\x1c\n" +
 	"\tprotocols\x18\x01 \x03(\tR\tprotocols\x12\x1c\n" +
 	"\taddresses\x18\x02 \x03(\tR\taddresses\x12I\n" +
@@ -2067,14 +2124,15 @@ const file_agynio_api_ziti_management_v1_ziti_management_proto_rawDesc = "" +
 	"\x0eenrollment_jwt\x18\x02 \x01(\tR\renrollmentJwt\"G\n" +
 	"\x1bDeleteDeviceIdentityRequest\x12(\n" +
 	"\x10ziti_identity_id\x18\x01 \x01(\tR\x0ezitiIdentityId\"\x1e\n" +
-	"\x1cDeleteDeviceIdentityResponse*\xcf\x01\n" +
+	"\x1cDeleteDeviceIdentityResponse*\xf0\x01\n" +
 	"\vServiceType\x12\x1c\n" +
 	"\x18SERVICE_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14SERVICE_TYPE_GATEWAY\x10\x01\x12\x1d\n" +
 	"\x19SERVICE_TYPE_ORCHESTRATOR\x10\x02\x12\x1a\n" +
 	"\x16SERVICE_TYPE_LLM_PROXY\x10\x04\x12\x18\n" +
 	"\x14SERVICE_TYPE_TRACING\x10\x05\x12\x18\n" +
-	"\x14SERVICE_TYPE_RUNNERS\x10\x06\"\x04\b\x03\x10\x03*\x13SERVICE_TYPE_RUNNER*t\n" +
+	"\x14SERVICE_TYPE_RUNNERS\x10\x06\x12\x1f\n" +
+	"\x1bSERVICE_TYPE_EGRESS_GATEWAY\x10\a\"\x04\b\x03\x10\x03*\x13SERVICE_TYPE_RUNNER*t\n" +
 	"\x11ServicePolicyType\x12#\n" +
 	"\x1fSERVICE_POLICY_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18SERVICE_POLICY_TYPE_BIND\x10\x01\x12\x1c\n" +
@@ -2157,51 +2215,52 @@ var file_agynio_api_ziti_management_v1_ziti_management_proto_goTypes = []any{
 var file_agynio_api_ziti_management_v1_ziti_management_proto_depIdxs = []int32{
 	38, // 0: agynio.api.ziti_management.v1.ManagedIdentity.identity_type:type_name -> agynio.api.identity.v1.IdentityType
 	39, // 1: agynio.api.ziti_management.v1.ManagedIdentity.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 2: agynio.api.ziti_management.v1.InterceptV1Config.port_ranges:type_name -> agynio.api.ziti_management.v1.PortRange
-	7,  // 3: agynio.api.ziti_management.v1.CreateServiceRequest.host_v1_config:type_name -> agynio.api.ziti_management.v1.HostV1Config
-	8,  // 4: agynio.api.ziti_management.v1.CreateServiceRequest.intercept_v1_config:type_name -> agynio.api.ziti_management.v1.InterceptV1Config
-	38, // 5: agynio.api.ziti_management.v1.ListManagedIdentitiesRequest.identity_type:type_name -> agynio.api.identity.v1.IdentityType
-	2,  // 6: agynio.api.ziti_management.v1.ListManagedIdentitiesResponse.identities:type_name -> agynio.api.ziti_management.v1.ManagedIdentity
-	38, // 7: agynio.api.ziti_management.v1.ResolveIdentityResponse.identity_type:type_name -> agynio.api.identity.v1.IdentityType
-	0,  // 8: agynio.api.ziti_management.v1.RequestServiceIdentityRequest.service_type:type_name -> agynio.api.ziti_management.v1.ServiceType
-	1,  // 9: agynio.api.ziti_management.v1.CreateServicePolicyRequest.type:type_name -> agynio.api.ziti_management.v1.ServicePolicyType
-	3,  // 10: agynio.api.ziti_management.v1.ZitiManagementService.CreateAgentIdentity:input_type -> agynio.api.ziti_management.v1.CreateAgentIdentityRequest
-	5,  // 11: agynio.api.ziti_management.v1.ZitiManagementService.CreateAppIdentity:input_type -> agynio.api.ziti_management.v1.CreateAppIdentityRequest
-	10, // 12: agynio.api.ziti_management.v1.ZitiManagementService.CreateService:input_type -> agynio.api.ziti_management.v1.CreateServiceRequest
-	18, // 13: agynio.api.ziti_management.v1.ZitiManagementService.DeleteIdentity:input_type -> agynio.api.ziti_management.v1.DeleteIdentityRequest
-	12, // 14: agynio.api.ziti_management.v1.ZitiManagementService.DeleteAppIdentity:input_type -> agynio.api.ziti_management.v1.DeleteAppIdentityRequest
-	14, // 15: agynio.api.ziti_management.v1.ZitiManagementService.CreateRunnerIdentity:input_type -> agynio.api.ziti_management.v1.CreateRunnerIdentityRequest
-	16, // 16: agynio.api.ziti_management.v1.ZitiManagementService.DeleteRunnerIdentity:input_type -> agynio.api.ziti_management.v1.DeleteRunnerIdentityRequest
-	20, // 17: agynio.api.ziti_management.v1.ZitiManagementService.ListManagedIdentities:input_type -> agynio.api.ziti_management.v1.ListManagedIdentitiesRequest
-	22, // 18: agynio.api.ziti_management.v1.ZitiManagementService.ResolveIdentity:input_type -> agynio.api.ziti_management.v1.ResolveIdentityRequest
-	24, // 19: agynio.api.ziti_management.v1.ZitiManagementService.RequestServiceIdentity:input_type -> agynio.api.ziti_management.v1.RequestServiceIdentityRequest
-	26, // 20: agynio.api.ziti_management.v1.ZitiManagementService.ExtendIdentityLease:input_type -> agynio.api.ziti_management.v1.ExtendIdentityLeaseRequest
-	28, // 21: agynio.api.ziti_management.v1.ZitiManagementService.CreateServicePolicy:input_type -> agynio.api.ziti_management.v1.CreateServicePolicyRequest
-	30, // 22: agynio.api.ziti_management.v1.ZitiManagementService.DeleteServicePolicy:input_type -> agynio.api.ziti_management.v1.DeleteServicePolicyRequest
-	32, // 23: agynio.api.ziti_management.v1.ZitiManagementService.DeleteService:input_type -> agynio.api.ziti_management.v1.DeleteServiceRequest
-	34, // 24: agynio.api.ziti_management.v1.ZitiManagementService.CreateDeviceIdentity:input_type -> agynio.api.ziti_management.v1.CreateDeviceIdentityRequest
-	36, // 25: agynio.api.ziti_management.v1.ZitiManagementService.DeleteDeviceIdentity:input_type -> agynio.api.ziti_management.v1.DeleteDeviceIdentityRequest
-	4,  // 26: agynio.api.ziti_management.v1.ZitiManagementService.CreateAgentIdentity:output_type -> agynio.api.ziti_management.v1.CreateAgentIdentityResponse
-	6,  // 27: agynio.api.ziti_management.v1.ZitiManagementService.CreateAppIdentity:output_type -> agynio.api.ziti_management.v1.CreateAppIdentityResponse
-	11, // 28: agynio.api.ziti_management.v1.ZitiManagementService.CreateService:output_type -> agynio.api.ziti_management.v1.CreateServiceResponse
-	19, // 29: agynio.api.ziti_management.v1.ZitiManagementService.DeleteIdentity:output_type -> agynio.api.ziti_management.v1.DeleteIdentityResponse
-	13, // 30: agynio.api.ziti_management.v1.ZitiManagementService.DeleteAppIdentity:output_type -> agynio.api.ziti_management.v1.DeleteAppIdentityResponse
-	15, // 31: agynio.api.ziti_management.v1.ZitiManagementService.CreateRunnerIdentity:output_type -> agynio.api.ziti_management.v1.CreateRunnerIdentityResponse
-	17, // 32: agynio.api.ziti_management.v1.ZitiManagementService.DeleteRunnerIdentity:output_type -> agynio.api.ziti_management.v1.DeleteRunnerIdentityResponse
-	21, // 33: agynio.api.ziti_management.v1.ZitiManagementService.ListManagedIdentities:output_type -> agynio.api.ziti_management.v1.ListManagedIdentitiesResponse
-	23, // 34: agynio.api.ziti_management.v1.ZitiManagementService.ResolveIdentity:output_type -> agynio.api.ziti_management.v1.ResolveIdentityResponse
-	25, // 35: agynio.api.ziti_management.v1.ZitiManagementService.RequestServiceIdentity:output_type -> agynio.api.ziti_management.v1.RequestServiceIdentityResponse
-	27, // 36: agynio.api.ziti_management.v1.ZitiManagementService.ExtendIdentityLease:output_type -> agynio.api.ziti_management.v1.ExtendIdentityLeaseResponse
-	29, // 37: agynio.api.ziti_management.v1.ZitiManagementService.CreateServicePolicy:output_type -> agynio.api.ziti_management.v1.CreateServicePolicyResponse
-	31, // 38: agynio.api.ziti_management.v1.ZitiManagementService.DeleteServicePolicy:output_type -> agynio.api.ziti_management.v1.DeleteServicePolicyResponse
-	33, // 39: agynio.api.ziti_management.v1.ZitiManagementService.DeleteService:output_type -> agynio.api.ziti_management.v1.DeleteServiceResponse
-	35, // 40: agynio.api.ziti_management.v1.ZitiManagementService.CreateDeviceIdentity:output_type -> agynio.api.ziti_management.v1.CreateDeviceIdentityResponse
-	37, // 41: agynio.api.ziti_management.v1.ZitiManagementService.DeleteDeviceIdentity:output_type -> agynio.api.ziti_management.v1.DeleteDeviceIdentityResponse
-	26, // [26:42] is the sub-list for method output_type
-	10, // [10:26] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	9,  // 2: agynio.api.ziti_management.v1.HostV1Config.allowed_port_ranges:type_name -> agynio.api.ziti_management.v1.PortRange
+	9,  // 3: agynio.api.ziti_management.v1.InterceptV1Config.port_ranges:type_name -> agynio.api.ziti_management.v1.PortRange
+	7,  // 4: agynio.api.ziti_management.v1.CreateServiceRequest.host_v1_config:type_name -> agynio.api.ziti_management.v1.HostV1Config
+	8,  // 5: agynio.api.ziti_management.v1.CreateServiceRequest.intercept_v1_config:type_name -> agynio.api.ziti_management.v1.InterceptV1Config
+	38, // 6: agynio.api.ziti_management.v1.ListManagedIdentitiesRequest.identity_type:type_name -> agynio.api.identity.v1.IdentityType
+	2,  // 7: agynio.api.ziti_management.v1.ListManagedIdentitiesResponse.identities:type_name -> agynio.api.ziti_management.v1.ManagedIdentity
+	38, // 8: agynio.api.ziti_management.v1.ResolveIdentityResponse.identity_type:type_name -> agynio.api.identity.v1.IdentityType
+	0,  // 9: agynio.api.ziti_management.v1.RequestServiceIdentityRequest.service_type:type_name -> agynio.api.ziti_management.v1.ServiceType
+	1,  // 10: agynio.api.ziti_management.v1.CreateServicePolicyRequest.type:type_name -> agynio.api.ziti_management.v1.ServicePolicyType
+	3,  // 11: agynio.api.ziti_management.v1.ZitiManagementService.CreateAgentIdentity:input_type -> agynio.api.ziti_management.v1.CreateAgentIdentityRequest
+	5,  // 12: agynio.api.ziti_management.v1.ZitiManagementService.CreateAppIdentity:input_type -> agynio.api.ziti_management.v1.CreateAppIdentityRequest
+	10, // 13: agynio.api.ziti_management.v1.ZitiManagementService.CreateService:input_type -> agynio.api.ziti_management.v1.CreateServiceRequest
+	18, // 14: agynio.api.ziti_management.v1.ZitiManagementService.DeleteIdentity:input_type -> agynio.api.ziti_management.v1.DeleteIdentityRequest
+	12, // 15: agynio.api.ziti_management.v1.ZitiManagementService.DeleteAppIdentity:input_type -> agynio.api.ziti_management.v1.DeleteAppIdentityRequest
+	14, // 16: agynio.api.ziti_management.v1.ZitiManagementService.CreateRunnerIdentity:input_type -> agynio.api.ziti_management.v1.CreateRunnerIdentityRequest
+	16, // 17: agynio.api.ziti_management.v1.ZitiManagementService.DeleteRunnerIdentity:input_type -> agynio.api.ziti_management.v1.DeleteRunnerIdentityRequest
+	20, // 18: agynio.api.ziti_management.v1.ZitiManagementService.ListManagedIdentities:input_type -> agynio.api.ziti_management.v1.ListManagedIdentitiesRequest
+	22, // 19: agynio.api.ziti_management.v1.ZitiManagementService.ResolveIdentity:input_type -> agynio.api.ziti_management.v1.ResolveIdentityRequest
+	24, // 20: agynio.api.ziti_management.v1.ZitiManagementService.RequestServiceIdentity:input_type -> agynio.api.ziti_management.v1.RequestServiceIdentityRequest
+	26, // 21: agynio.api.ziti_management.v1.ZitiManagementService.ExtendIdentityLease:input_type -> agynio.api.ziti_management.v1.ExtendIdentityLeaseRequest
+	28, // 22: agynio.api.ziti_management.v1.ZitiManagementService.CreateServicePolicy:input_type -> agynio.api.ziti_management.v1.CreateServicePolicyRequest
+	30, // 23: agynio.api.ziti_management.v1.ZitiManagementService.DeleteServicePolicy:input_type -> agynio.api.ziti_management.v1.DeleteServicePolicyRequest
+	32, // 24: agynio.api.ziti_management.v1.ZitiManagementService.DeleteService:input_type -> agynio.api.ziti_management.v1.DeleteServiceRequest
+	34, // 25: agynio.api.ziti_management.v1.ZitiManagementService.CreateDeviceIdentity:input_type -> agynio.api.ziti_management.v1.CreateDeviceIdentityRequest
+	36, // 26: agynio.api.ziti_management.v1.ZitiManagementService.DeleteDeviceIdentity:input_type -> agynio.api.ziti_management.v1.DeleteDeviceIdentityRequest
+	4,  // 27: agynio.api.ziti_management.v1.ZitiManagementService.CreateAgentIdentity:output_type -> agynio.api.ziti_management.v1.CreateAgentIdentityResponse
+	6,  // 28: agynio.api.ziti_management.v1.ZitiManagementService.CreateAppIdentity:output_type -> agynio.api.ziti_management.v1.CreateAppIdentityResponse
+	11, // 29: agynio.api.ziti_management.v1.ZitiManagementService.CreateService:output_type -> agynio.api.ziti_management.v1.CreateServiceResponse
+	19, // 30: agynio.api.ziti_management.v1.ZitiManagementService.DeleteIdentity:output_type -> agynio.api.ziti_management.v1.DeleteIdentityResponse
+	13, // 31: agynio.api.ziti_management.v1.ZitiManagementService.DeleteAppIdentity:output_type -> agynio.api.ziti_management.v1.DeleteAppIdentityResponse
+	15, // 32: agynio.api.ziti_management.v1.ZitiManagementService.CreateRunnerIdentity:output_type -> agynio.api.ziti_management.v1.CreateRunnerIdentityResponse
+	17, // 33: agynio.api.ziti_management.v1.ZitiManagementService.DeleteRunnerIdentity:output_type -> agynio.api.ziti_management.v1.DeleteRunnerIdentityResponse
+	21, // 34: agynio.api.ziti_management.v1.ZitiManagementService.ListManagedIdentities:output_type -> agynio.api.ziti_management.v1.ListManagedIdentitiesResponse
+	23, // 35: agynio.api.ziti_management.v1.ZitiManagementService.ResolveIdentity:output_type -> agynio.api.ziti_management.v1.ResolveIdentityResponse
+	25, // 36: agynio.api.ziti_management.v1.ZitiManagementService.RequestServiceIdentity:output_type -> agynio.api.ziti_management.v1.RequestServiceIdentityResponse
+	27, // 37: agynio.api.ziti_management.v1.ZitiManagementService.ExtendIdentityLease:output_type -> agynio.api.ziti_management.v1.ExtendIdentityLeaseResponse
+	29, // 38: agynio.api.ziti_management.v1.ZitiManagementService.CreateServicePolicy:output_type -> agynio.api.ziti_management.v1.CreateServicePolicyResponse
+	31, // 39: agynio.api.ziti_management.v1.ZitiManagementService.DeleteServicePolicy:output_type -> agynio.api.ziti_management.v1.DeleteServicePolicyResponse
+	33, // 40: agynio.api.ziti_management.v1.ZitiManagementService.DeleteService:output_type -> agynio.api.ziti_management.v1.DeleteServiceResponse
+	35, // 41: agynio.api.ziti_management.v1.ZitiManagementService.CreateDeviceIdentity:output_type -> agynio.api.ziti_management.v1.CreateDeviceIdentityResponse
+	37, // 42: agynio.api.ziti_management.v1.ZitiManagementService.DeleteDeviceIdentity:output_type -> agynio.api.ziti_management.v1.DeleteDeviceIdentityResponse
+	27, // [27:43] is the sub-list for method output_type
+	11, // [11:27] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agynio_api_ziti_management_v1_ziti_management_proto_init() }
