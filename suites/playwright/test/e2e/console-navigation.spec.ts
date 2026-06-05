@@ -74,6 +74,13 @@ async function expectShellReady(page: Page, target: NavigationTarget): Promise<v
   await expect(page.getByTestId('page-title')).toHaveText(target.title, { timeout: APP_READY_TIMEOUT_MS });
 }
 
+async function setClusterContext(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.localStorage.setItem('console.contextMode', JSON.stringify({ mode: 'cluster' }));
+    window.localStorage.removeItem('console.selectedOrganization');
+  });
+}
+
 async function openNavigationTarget(page: Page, target: NavigationTarget, crashSignals: string[]): Promise<void> {
   await page.getByTestId(target.navTestId).click();
   await expectShellReady(page, target);
@@ -84,6 +91,7 @@ test.describe('console navigation', { tag: ['@svc_console', '@svc_gateway', '@sm
   test('opens every platform sidebar section without browser crashes', async ({ page }) => {
     const crashSignals = collectCrashSignals(page);
 
+    await setClusterContext(page);
     await page.goto('/');
     await expectShellReady(page, platformTargets[0]);
     await expectNoCrashSignals(crashSignals, platformTargets[0]);
