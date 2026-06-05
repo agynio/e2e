@@ -265,10 +265,10 @@ PY
         agents-orchestrator- \
         authorization- \
         chat- \
-        gateway-gateway- \
+        gateway- \
         k8s-runner- \
         llm- \
-        llm-proxy-llm-proxy- \
+        llm-proxy- \
         organizations- \
         runners- \
         threads- \
@@ -396,7 +396,7 @@ EOF
       exec_env+=("PROVIDER_BINARY=$workdir/.provider/terraform-provider-agyn")
     fi
 
-    gateway_internal_url="http://gateway-gateway.${namespace}.svc.cluster.local:8080"
+    gateway_internal_url="http://gateway.${namespace}.svc.cluster.local:8080"
     if [ -n "${AGYN_BASE_URL:-}" ]; then
       exec_env+=("AGYN_BASE_URL=${AGYN_BASE_URL}")
     else

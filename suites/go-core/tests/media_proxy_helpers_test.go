@@ -32,7 +32,7 @@ const (
 
 var (
 	mediaProxyURL = envOrDefault("MEDIA_PROXY_URL", "http://media-proxy:8080")
-	gatewayURL    = envOrDefault("GATEWAY_URL", "http://gateway-gateway:8080")
+	gatewayURL    = envOrDefault("GATEWAY_URL", "http://gateway:8080")
 
 	accessToken      string
 	resolvedIdentity mediaProxyIdentity
