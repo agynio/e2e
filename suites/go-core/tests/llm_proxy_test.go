@@ -48,11 +48,11 @@ func TestLLMProxyURLExplicitOverride(t *testing.T) {
 }
 
 func TestLLMGatewayConnectEndpointPath(t *testing.T) {
-	t.Setenv(gatewayBaseURLEnvKey, "http://gateway-gateway.platform.svc.cluster.local:8080")
+	t.Setenv(gatewayBaseURLEnvKey, "http://gateway.platform.svc.cluster.local:8080")
 
 	require.Equal(
 		t,
-		"http://gateway-gateway.platform.svc.cluster.local:8080/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider",
+		"http://gateway.platform.svc.cluster.local:8080/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider",
 		gatewayLLMConnectEndpoint(t, "CreateLLMProvider"),
 	)
 }
