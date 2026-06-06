@@ -48,6 +48,18 @@ const (
 	// AgentsGatewayListAgentsProcedure is the fully-qualified name of the AgentsGateway's ListAgents
 	// RPC.
 	AgentsGatewayListAgentsProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListAgents"
+	// AgentsGatewaySetAgentRoleProcedure is the fully-qualified name of the AgentsGateway's
+	// SetAgentRole RPC.
+	AgentsGatewaySetAgentRoleProcedure = "/agynio.api.gateway.v1.AgentsGateway/SetAgentRole"
+	// AgentsGatewayRemoveAgentRoleProcedure is the fully-qualified name of the AgentsGateway's
+	// RemoveAgentRole RPC.
+	AgentsGatewayRemoveAgentRoleProcedure = "/agynio.api.gateway.v1.AgentsGateway/RemoveAgentRole"
+	// AgentsGatewayListAgentRolesProcedure is the fully-qualified name of the AgentsGateway's
+	// ListAgentRoles RPC.
+	AgentsGatewayListAgentRolesProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListAgentRoles"
+	// AgentsGatewayListMyAgentRolesProcedure is the fully-qualified name of the AgentsGateway's
+	// ListMyAgentRoles RPC.
+	AgentsGatewayListMyAgentRolesProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListMyAgentRoles"
 	// AgentsGatewayCreateVolumeProcedure is the fully-qualified name of the AgentsGateway's
 	// CreateVolume RPC.
 	AgentsGatewayCreateVolumeProcedure = "/agynio.api.gateway.v1.AgentsGateway/CreateVolume"
@@ -158,6 +170,10 @@ type AgentsGatewayClient interface {
 	UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.UpdateAgentResponse], error)
 	DeleteAgent(context.Context, *connect.Request[v1.DeleteAgentRequest]) (*connect.Response[v1.DeleteAgentResponse], error)
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
+	SetAgentRole(context.Context, *connect.Request[v1.SetAgentRoleRequest]) (*connect.Response[v1.SetAgentRoleResponse], error)
+	RemoveAgentRole(context.Context, *connect.Request[v1.RemoveAgentRoleRequest]) (*connect.Response[v1.RemoveAgentRoleResponse], error)
+	ListAgentRoles(context.Context, *connect.Request[v1.ListAgentRolesRequest]) (*connect.Response[v1.ListAgentRolesResponse], error)
+	ListMyAgentRoles(context.Context, *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error)
 	// --- Volumes ---
 	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
@@ -245,6 +261,30 @@ func NewAgentsGatewayClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+AgentsGatewayListAgentsProcedure,
 			connect.WithSchema(agentsGatewayMethods.ByName("ListAgents")),
+			connect.WithClientOptions(opts...),
+		),
+		setAgentRole: connect.NewClient[v1.SetAgentRoleRequest, v1.SetAgentRoleResponse](
+			httpClient,
+			baseURL+AgentsGatewaySetAgentRoleProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("SetAgentRole")),
+			connect.WithClientOptions(opts...),
+		),
+		removeAgentRole: connect.NewClient[v1.RemoveAgentRoleRequest, v1.RemoveAgentRoleResponse](
+			httpClient,
+			baseURL+AgentsGatewayRemoveAgentRoleProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("RemoveAgentRole")),
+			connect.WithClientOptions(opts...),
+		),
+		listAgentRoles: connect.NewClient[v1.ListAgentRolesRequest, v1.ListAgentRolesResponse](
+			httpClient,
+			baseURL+AgentsGatewayListAgentRolesProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ListAgentRoles")),
+			connect.WithClientOptions(opts...),
+		),
+		listMyAgentRoles: connect.NewClient[v1.ListMyAgentRolesRequest, v1.ListMyAgentRolesResponse](
+			httpClient,
+			baseURL+AgentsGatewayListMyAgentRolesProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ListMyAgentRoles")),
 			connect.WithClientOptions(opts...),
 		),
 		createVolume: connect.NewClient[v1.CreateVolumeRequest, v1.CreateVolumeResponse](
@@ -485,6 +525,10 @@ type agentsGatewayClient struct {
 	updateAgent                     *connect.Client[v1.UpdateAgentRequest, v1.UpdateAgentResponse]
 	deleteAgent                     *connect.Client[v1.DeleteAgentRequest, v1.DeleteAgentResponse]
 	listAgents                      *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
+	setAgentRole                    *connect.Client[v1.SetAgentRoleRequest, v1.SetAgentRoleResponse]
+	removeAgentRole                 *connect.Client[v1.RemoveAgentRoleRequest, v1.RemoveAgentRoleResponse]
+	listAgentRoles                  *connect.Client[v1.ListAgentRolesRequest, v1.ListAgentRolesResponse]
+	listMyAgentRoles                *connect.Client[v1.ListMyAgentRolesRequest, v1.ListMyAgentRolesResponse]
 	createVolume                    *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
 	getVolume                       *connect.Client[v1.GetVolumeRequest, v1.GetVolumeResponse]
 	updateVolume                    *connect.Client[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse]
@@ -548,6 +592,26 @@ func (c *agentsGatewayClient) DeleteAgent(ctx context.Context, req *connect.Requ
 // ListAgents calls agynio.api.gateway.v1.AgentsGateway.ListAgents.
 func (c *agentsGatewayClient) ListAgents(ctx context.Context, req *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error) {
 	return c.listAgents.CallUnary(ctx, req)
+}
+
+// SetAgentRole calls agynio.api.gateway.v1.AgentsGateway.SetAgentRole.
+func (c *agentsGatewayClient) SetAgentRole(ctx context.Context, req *connect.Request[v1.SetAgentRoleRequest]) (*connect.Response[v1.SetAgentRoleResponse], error) {
+	return c.setAgentRole.CallUnary(ctx, req)
+}
+
+// RemoveAgentRole calls agynio.api.gateway.v1.AgentsGateway.RemoveAgentRole.
+func (c *agentsGatewayClient) RemoveAgentRole(ctx context.Context, req *connect.Request[v1.RemoveAgentRoleRequest]) (*connect.Response[v1.RemoveAgentRoleResponse], error) {
+	return c.removeAgentRole.CallUnary(ctx, req)
+}
+
+// ListAgentRoles calls agynio.api.gateway.v1.AgentsGateway.ListAgentRoles.
+func (c *agentsGatewayClient) ListAgentRoles(ctx context.Context, req *connect.Request[v1.ListAgentRolesRequest]) (*connect.Response[v1.ListAgentRolesResponse], error) {
+	return c.listAgentRoles.CallUnary(ctx, req)
+}
+
+// ListMyAgentRoles calls agynio.api.gateway.v1.AgentsGateway.ListMyAgentRoles.
+func (c *agentsGatewayClient) ListMyAgentRoles(ctx context.Context, req *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error) {
+	return c.listMyAgentRoles.CallUnary(ctx, req)
 }
 
 // CreateVolume calls agynio.api.gateway.v1.AgentsGateway.CreateVolume.
@@ -752,6 +816,10 @@ type AgentsGatewayHandler interface {
 	UpdateAgent(context.Context, *connect.Request[v1.UpdateAgentRequest]) (*connect.Response[v1.UpdateAgentResponse], error)
 	DeleteAgent(context.Context, *connect.Request[v1.DeleteAgentRequest]) (*connect.Response[v1.DeleteAgentResponse], error)
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
+	SetAgentRole(context.Context, *connect.Request[v1.SetAgentRoleRequest]) (*connect.Response[v1.SetAgentRoleResponse], error)
+	RemoveAgentRole(context.Context, *connect.Request[v1.RemoveAgentRoleRequest]) (*connect.Response[v1.RemoveAgentRoleResponse], error)
+	ListAgentRoles(context.Context, *connect.Request[v1.ListAgentRolesRequest]) (*connect.Response[v1.ListAgentRolesResponse], error)
+	ListMyAgentRoles(context.Context, *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error)
 	// --- Volumes ---
 	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
@@ -835,6 +903,30 @@ func NewAgentsGatewayHandler(svc AgentsGatewayHandler, opts ...connect.HandlerOp
 		AgentsGatewayListAgentsProcedure,
 		svc.ListAgents,
 		connect.WithSchema(agentsGatewayMethods.ByName("ListAgents")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewaySetAgentRoleHandler := connect.NewUnaryHandler(
+		AgentsGatewaySetAgentRoleProcedure,
+		svc.SetAgentRole,
+		connect.WithSchema(agentsGatewayMethods.ByName("SetAgentRole")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayRemoveAgentRoleHandler := connect.NewUnaryHandler(
+		AgentsGatewayRemoveAgentRoleProcedure,
+		svc.RemoveAgentRole,
+		connect.WithSchema(agentsGatewayMethods.ByName("RemoveAgentRole")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayListAgentRolesHandler := connect.NewUnaryHandler(
+		AgentsGatewayListAgentRolesProcedure,
+		svc.ListAgentRoles,
+		connect.WithSchema(agentsGatewayMethods.ByName("ListAgentRoles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayListMyAgentRolesHandler := connect.NewUnaryHandler(
+		AgentsGatewayListMyAgentRolesProcedure,
+		svc.ListMyAgentRoles,
+		connect.WithSchema(agentsGatewayMethods.ByName("ListMyAgentRoles")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentsGatewayCreateVolumeHandler := connect.NewUnaryHandler(
@@ -1077,6 +1169,14 @@ func NewAgentsGatewayHandler(svc AgentsGatewayHandler, opts ...connect.HandlerOp
 			agentsGatewayDeleteAgentHandler.ServeHTTP(w, r)
 		case AgentsGatewayListAgentsProcedure:
 			agentsGatewayListAgentsHandler.ServeHTTP(w, r)
+		case AgentsGatewaySetAgentRoleProcedure:
+			agentsGatewaySetAgentRoleHandler.ServeHTTP(w, r)
+		case AgentsGatewayRemoveAgentRoleProcedure:
+			agentsGatewayRemoveAgentRoleHandler.ServeHTTP(w, r)
+		case AgentsGatewayListAgentRolesProcedure:
+			agentsGatewayListAgentRolesHandler.ServeHTTP(w, r)
+		case AgentsGatewayListMyAgentRolesProcedure:
+			agentsGatewayListMyAgentRolesHandler.ServeHTTP(w, r)
 		case AgentsGatewayCreateVolumeProcedure:
 			agentsGatewayCreateVolumeHandler.ServeHTTP(w, r)
 		case AgentsGatewayGetVolumeProcedure:
@@ -1180,6 +1280,22 @@ func (UnimplementedAgentsGatewayHandler) DeleteAgent(context.Context, *connect.R
 
 func (UnimplementedAgentsGatewayHandler) ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListAgents is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) SetAgentRole(context.Context, *connect.Request[v1.SetAgentRoleRequest]) (*connect.Response[v1.SetAgentRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.SetAgentRole is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) RemoveAgentRole(context.Context, *connect.Request[v1.RemoveAgentRoleRequest]) (*connect.Response[v1.RemoveAgentRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.RemoveAgentRole is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ListAgentRoles(context.Context, *connect.Request[v1.ListAgentRolesRequest]) (*connect.Response[v1.ListAgentRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListAgentRoles is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ListMyAgentRoles(context.Context, *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListMyAgentRoles is not implemented"))
 }
 
 func (UnimplementedAgentsGatewayHandler) CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error) {
