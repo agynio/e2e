@@ -49,3 +49,4 @@ jobs:
           tag: svc_egress,svc_egress_gateway
           include_smoke: false
           e2e-ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          artifact-name: e2e-artifacts-egress-dataplane
