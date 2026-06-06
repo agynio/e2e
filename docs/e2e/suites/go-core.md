@@ -1225,9 +1225,12 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 
 **Scenario:** TestEgressGatewayFeaturePath
 
-- **Given** An organization has a secret-backed allow egress rule and an agent attachment.
-- **When** the rule is created, attached, and listed by agent for gateway consumption.
-- **Then** Egress returns the attached rule, Secrets refuses deletion while referenced, and the injected header still points at the secret.
+- **Given** An organization, authorized user identity, generated agent identity, and secret-backed allow egress rule fixture.
+- **When** The allow rule is created, attached to the agent, and listed through the gateway lookup path.
+- **Then** The egress service returns the attached allow rule for the agent.
+- **And** Secrets refuses deletion while the secret is referenced by the egress rule.
+- **And** The secret value can still be resolved through the Secrets integration.
+- **And** The rule configuration preserves the secret-backed injected header and attachment metadata.
 
 ### E2E-GO-CORE-099
 
@@ -1237,9 +1240,12 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 
 **Scenario:** TestEgressGatewayDenyAndNoRulePaths
 
-- **Given** An agent starts with no egress rule attachment.
-- **When** a deny rule is created and attached to that agent.
-- **Then** the gateway lookup path changes from no rules to the deny rule for the agent.
+- **Given** An authorized agent starts without any egress rule attachment.
+- **When** The gateway lookup path lists rules for the unattached agent.
+- **Then** No egress rules are returned.
+- **When** A deny egress rule is created and attached to the same agent.
+- **Then** The gateway lookup path returns the deny rule for that agent.
+- **And** The returned rule effect is `DENY`.
 
 ### E2E-GO-CORE-100
 
@@ -1249,8 +1255,12 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 
 **Scenario:** TestEgressGatewayDeploymentWiring
 
-- **Given** Egress Gateway deployment wiring is installed with the platform runner.
-- **When** the suite checks the gateway health endpoint, CA and Ziti identity Secrets, NetworkPolicy, and inline CA workload path.
-- **Then** the deployment exposes the required data-plane wiring for Egress Gateway traffic.
+- **Given** The platform installation includes egress gateway and k8s-runner workload wiring.
+- **When** The suite inspects the gateway deployment, health endpoint, CA/Ziti identity secrets, workload NetworkPolicy, and inline CA workload path.
+- **Then** The gateway exposes the expected health/admin wiring and required data-plane environment/mount configuration.
+- **And** The egress CA and Ziti identity/enrollment secrets exist with required data.
+- **And** The managed workload NetworkPolicy selects Agyn-managed pods, includes Egress policy type, allows OpenZiti CIDR, and allows DNS over TCP/UDP 53.
+- **And** The public internet egress rule allows `0.0.0.0/0` with blocked CIDR exceptions for `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, and `127.0.0.0/8`.
+- **And** A k8s-runner workload can receive and use the egress CA via inline file/env contract.
 
 **Current framework limitation:** full outbound HTTP forwarding through Egress Gateway is not covered here because the current `egress-gateway` service process exposes only its admin health listener; the pure request-processing runtime exists in source but is not wired to an OpenZiti data-plane listener yet. These cases cover the highest-value feasible path: Egress control-plane rule lookup, Secrets referential integrity, deny/no-rule state, Egress Gateway CA/Ziti wiring, and workload NetworkPolicy defaults.
