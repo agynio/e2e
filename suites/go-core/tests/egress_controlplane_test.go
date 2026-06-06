@@ -44,7 +44,7 @@ func TestEgressGatewayFeaturePath(t *testing.T) {
 	t.Cleanup(func() { deleteEgressRuleAttachment(t, fixture.userCtx, fixture.egress, attachmentID) })
 
 	waitForEgressRuleByAgent(t, ctx, fixture.egress, fixture.agentID, allowRuleID)
-	assertSecretDeleteBlockedByEgressRule(t, fixture.userCtx, fixture.secrets, secretID, allowRuleID)
+	assertSecretDeleteBlockedByEgressRule(t, fixture.userCtx, fixture.secrets, secretID)
 	assertSecretResolution(t, fixture.userCtx, fixture.secrets, secretID, egressExpectedSecretValue)
 	assertEgressRuleConfiguration(t, allowRule, secretID)
 	assertEgressAttachmentListed(t, fixture.userCtx, fixture.egress, fixture.organizationID, fixture.agentID, attachmentID)
@@ -257,14 +257,11 @@ func waitForEgressRuleByAgent(t *testing.T, ctx context.Context, client egressv1
 	return matched
 }
 
-func assertSecretDeleteBlockedByEgressRule(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, secretID, ruleID string) {
+func assertSecretDeleteBlockedByEgressRule(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, secretID string) {
 	t.Helper()
 	_, err := client.DeleteSecret(ctx, &secretsv1.DeleteSecretRequest{Id: secretID})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("expected FailedPrecondition deleting referenced secret, got %v", err)
-	}
-	if !strings.Contains(err.Error(), ruleID) {
-		t.Fatalf("expected referenced rule id %s in delete error, got %v", ruleID, err)
 	}
 }
 

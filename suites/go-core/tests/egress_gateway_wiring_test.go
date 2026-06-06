@@ -29,7 +29,16 @@ const (
 	egressZitiEnrollmentSecret     = "egress-gateway-enrollment"
 	egressCACertPath               = "/etc/agyn/egress-ca/ca.crt"
 	egressOpenZitiCIDR             = "100.64.0.0/10"
+	egressPublicInternetCIDR       = "0.0.0.0/0"
 )
+
+var egressDefaultBlockedCIDRs = []string{
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"169.254.0.0/16",
+	"127.0.0.0/8",
+}
 
 func TestEgressGatewayDeploymentWiring(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), egressGatewayWiringTestTimeout)
@@ -111,6 +120,9 @@ func assertEgressWorkloadNetworkPolicy(t *testing.T, ctx context.Context) {
 	if !networkPolicyAllowsDNS(policy) {
 		t.Fatalf("network policy %s must allow DNS", egressNetworkPolicyName)
 	}
+	if !networkPolicyAllowsPublicInternetExceptBlockedCIDRs(policy, egressDefaultBlockedCIDRs) {
+		t.Fatalf("network policy %s must allow public internet %s with blocked CIDR exceptions %v", egressNetworkPolicyName, egressPublicInternetCIDR, egressDefaultBlockedCIDRs)
+	}
 }
 
 func assertEgressCAInlineWorkloadPath(t *testing.T, ctx context.Context) {
@@ -164,6 +176,33 @@ func networkPolicyAllowsCIDR(policy *networkingv1.NetworkPolicy, cidr string) bo
 		}
 	}
 	return false
+}
+
+func networkPolicyAllowsPublicInternetExceptBlockedCIDRs(policy *networkingv1.NetworkPolicy, blockedCIDRs []string) bool {
+	for _, rule := range policy.Spec.Egress {
+		for _, peer := range rule.To {
+			if peer.IPBlock == nil || peer.IPBlock.CIDR != egressPublicInternetCIDR {
+				continue
+			}
+			if cidrSetContainsAll(peer.IPBlock.Except, blockedCIDRs) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func cidrSetContainsAll(actual []string, expected []string) bool {
+	actualSet := make(map[string]struct{}, len(actual))
+	for _, cidr := range actual {
+		actualSet[cidr] = struct{}{}
+	}
+	for _, cidr := range expected {
+		if _, ok := actualSet[cidr]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func networkPolicyAllowsDNS(policy *networkingv1.NetworkPolicy) bool {
