@@ -1,4 +1,4 @@
-//go:build e2e && (svc_egress || svc_egress_gateway) && !(svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_llm || svc_llm_proxy || smoke)
+//go:build e2e && (((svc_egress || svc_egress_gateway) && !(svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_llm || svc_llm_proxy || smoke)) || (svc_egress && svc_egress_gateway))
 
 package tests
 

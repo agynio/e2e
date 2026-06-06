@@ -40,3 +40,11 @@ jobs:
         with:
           tag: svc_metering
           include_smoke: false
+
+      - name: Run egress data-plane E2E test
+        uses: ./.github/actions/run-tests
+        env:
+          E2E_GO_TEST_RUN: TestEgressGatewayDataPlaneSecretInjection
+        with:
+          tag: svc_egress,svc_egress_gateway
+          include_smoke: false

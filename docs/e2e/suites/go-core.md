@@ -13,7 +13,7 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 
 - Source directory: `suites/go-core`
 - Test inventory pattern: `tests/*_test.go`
-- Included case count: 92
+- Included case count: 93
 
 ## Actors
 
@@ -146,6 +146,7 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 | [E2E-GO-CORE-098](#e2e-go-core-098) | `TestEgressGatewayFeaturePath` | @svc_egress |
 | [E2E-GO-CORE-099](#e2e-go-core-099) | `TestEgressGatewayDenyAndNoRulePaths` | @svc_egress |
 | [E2E-GO-CORE-100](#e2e-go-core-100) | `TestEgressGatewayDeploymentWiring` | @svc_egress_gateway |
+| [E2E-GO-CORE-101](#e2e-go-core-101) | `TestEgressGatewayDataPlaneSecretInjection` | @svc_egress, @svc_egress_gateway |
 
 ## Scenarios
 
@@ -1263,4 +1264,16 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - **And** The public internet egress rule allows `0.0.0.0/0` with blocked CIDR exceptions for `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, and `127.0.0.0/8`.
 - **And** A k8s-runner workload can receive and use the egress CA via inline file/env contract.
 
-**Current framework limitation:** full outbound HTTP forwarding through Egress Gateway is not covered here because the current `egress-gateway` service process exposes only its admin health listener; the pure request-processing runtime exists in source but is not wired to an OpenZiti data-plane listener yet. These cases cover the highest-value feasible path: Egress control-plane rule lookup, Secrets referential integrity, deny/no-rule state, Egress Gateway CA/Ziti wiring, and workload NetworkPolicy defaults.
+### E2E-GO-CORE-101
+
+- **Source:** `suites/go-core/tests/egress_dataplane_test.go`
+- **Test:** `TestEgressGatewayDataPlaneSecretInjection`
+- **Tags:** @svc_egress, @svc_egress_gateway
+
+**Scenario:** TestEgressGatewayDataPlaneSecretInjection
+
+- **Given** An authorized agent workload has no authorization token in its command or environment and an allow EgressRule references a platform Secret for `postman-echo.com:443`.
+- **When** The workload sends an HTTPS request to Postman Echo without an Authorization header.
+- **Then** The request is routed through Egress Gateway.
+- **And** Postman Echo reports that the upstream destination received `Authorization: Bearer <secret-value>`.
+- **And** The echoed query marker matches the test request.

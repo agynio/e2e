@@ -150,11 +150,16 @@ func ensureEgressAgentAuthorization(t *testing.T, ctx context.Context, client au
 
 func createEgressSecret(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, organizationID string) *secretsv1.Secret {
 	t.Helper()
+	return createEgressSecretWithValue(t, ctx, client, organizationID, egressExpectedSecretValue)
+}
+
+func createEgressSecretWithValue(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, organizationID, value string) *secretsv1.Secret {
+	t.Helper()
 	resp, err := client.CreateSecret(ctx, &secretsv1.CreateSecretRequest{
 		Title:          "e2e-egress-secret-" + uuid.NewString(),
 		Description:    "E2E Egress Gateway secret",
 		OrganizationId: organizationID,
-		Value:          egressExpectedSecretValue,
+		Value:          value,
 	})
 	if err != nil {
 		t.Fatalf("create egress secret: %v", err)
