@@ -131,8 +131,7 @@ func ensureEgressAgentAuthorization(t *testing.T, ctx context.Context, client au
 	t.Helper()
 	ensureClusterAdmin(t, ctx, client)
 	tuples := []*authorizationv1.TupleKey{
-		{User: authorizationIdentityPrefix + identityID, Relation: "can_edit_config", Object: "agent:" + agentID},
-		{User: authorizationIdentityPrefix + identityID, Relation: "can_read_config", Object: "agent:" + agentID},
+		{User: authorizationIdentityPrefix + identityID, Relation: authorizationOwnerRelation, Object: "agent:" + agentID},
 		{User: authorizationOrganizationPrefix + organizationID, Relation: "org", Object: "agent:" + agentID},
 	}
 	adminCtx := adminContext(ctx)

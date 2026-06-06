@@ -17,6 +17,7 @@ const (
 	authorizationIdentityPrefix     = "identity:"
 	authorizationOrganizationPrefix = "organization:"
 	authorizationMemberRelation     = "member"
+	authorizationOwnerRelation      = "owner"
 	authorizationAdminRelation      = "admin"
 	authorizationGlobalCluster      = "cluster:global"
 )
