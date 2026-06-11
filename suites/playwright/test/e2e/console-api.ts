@@ -23,6 +23,7 @@ const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
 const SECRETS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.SecretsGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
+const EGRESS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.EgressRulesGateway';
 const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const RUNNERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.RunnersGateway';
 const THREADS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ThreadsGateway';
@@ -210,6 +211,26 @@ type CreateSecretResponseWire = {
 };
 type CreateImagePullSecretResponseWire = {
   imagePullSecret?: { meta?: { id?: string } };
+};
+
+type EgressRuleWire = {
+  meta?: { id?: string };
+  name?: string;
+  matcher?: { domainPattern?: string };
+};
+
+type EgressRuleAttachmentWire = {
+  meta?: { id?: string };
+  ruleId?: string;
+  agentId?: string;
+};
+
+type CreateEgressRuleResponseWire = {
+  egressRule?: EgressRuleWire;
+};
+
+type CreateEgressRuleAttachmentResponseWire = {
+  egressRuleAttachment?: EgressRuleAttachmentWire;
 };
 
 type ListSecretsResponseWire = {
@@ -928,6 +949,60 @@ export async function createImagePullSecret(
     throw new Error('CreateImagePullSecret response missing image pull secret id.');
   }
   return secretId;
+}
+
+export async function createEgressRule(
+  page: Page,
+  opts: { organizationId: string; name: string; domainPattern: string; secretId?: string },
+): Promise<string> {
+  const response = await postConnect<CreateEgressRuleResponseWire>(page, EGRESS_GATEWAY_PATH, 'CreateEgressRule', {
+    organizationId: opts.organizationId,
+    name: opts.name,
+    description: `E2E egress rule for ${opts.name}`,
+    matcher: {
+      domainPattern: opts.domainPattern,
+      ports: [443],
+      methods: ['GET'],
+      pathPattern: '/v1/*',
+    },
+    effect: {
+      action: 'EGRESS_RULE_ACTION_ALLOW',
+      inject: opts.secretId
+        ? [
+            {
+              name: 'Authorization',
+              scheme: 'HEADER_AUTH_SCHEME_BEARER',
+              secretId: opts.secretId,
+            },
+          ]
+        : [],
+    },
+  });
+  const ruleId = response.egressRule?.meta?.id;
+  if (!ruleId) {
+    throw new Error('CreateEgressRule response missing rule id.');
+  }
+  return ruleId;
+}
+
+export async function createEgressRuleAttachment(
+  page: Page,
+  opts: { ruleId: string; agentId: string },
+): Promise<string> {
+  const response = await postConnect<CreateEgressRuleAttachmentResponseWire>(
+    page,
+    EGRESS_GATEWAY_PATH,
+    'CreateEgressRuleAttachment',
+    {
+      ruleId: opts.ruleId,
+      agentId: opts.agentId,
+    },
+  );
+  const attachmentId = response.egressRuleAttachment?.meta?.id;
+  if (!attachmentId) {
+    throw new Error('CreateEgressRuleAttachment response missing attachment id.');
+  }
+  return attachmentId;
 }
 
 export function buildCreateAgentPayload(opts: CreateAgentOptions, modelId: string): CreateAgentPayload {
