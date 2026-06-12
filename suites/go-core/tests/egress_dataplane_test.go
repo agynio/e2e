@@ -4,7 +4,9 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -26,7 +28,7 @@ func TestEgressGatewayDataPlaneHTTPBehavior(t *testing.T) {
 	assertEgressHTTPStatus(t, ctx, client, baseURL+"/allowed", http.StatusOK)
 	assertEgressInjectedHeader(t, ctx, client, baseURL+"/allowed")
 	assertEgressHTTPStatus(t, ctx, client, baseURL+"/denied", http.StatusForbidden)
-	assertUnmatchedBypassesGateway(t, ctx, client, baseURL+"/unmatched")
+	assertUnmatchedBypassesGateway(t, ctx, client, baseURL)
 	assertWebsocketUpgradeRequired(t, ctx, client, baseURL+"/ws")
 }
 
@@ -62,25 +64,73 @@ func assertEgressInjectedHeader(t *testing.T, ctx context.Context, client *http.
 	}
 }
 
-func assertUnmatchedBypassesGateway(t *testing.T, ctx context.Context, client *http.Client, url string) {
+func assertUnmatchedBypassesGateway(t *testing.T, ctx context.Context, client *http.Client, dataPlaneBaseURL string) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	directURL := strings.TrimSpace(os.Getenv("EGRESS_DIRECT_BYPASS_URL"))
+	if directURL == "" {
+		t.Fatal("EGRESS_DIRECT_BYPASS_URL is required to prove unmatched destinations bypass the gateway")
+	}
+	assertDistinctURLOrigin(t, dataPlaneBaseURL, directURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, directURL, nil)
 	if err != nil {
-		t.Fatalf("build unmatched request: %v", err)
+		t.Fatalf("build direct bypass request: %v", err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("perform unmatched request: %v", err)
+		t.Fatalf("perform direct bypass request: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected unmatched request to return %d, got %d", http.StatusOK, resp.StatusCode)
+		t.Fatalf("expected direct bypass request to return %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 	if resp.Header.Get("X-E2E-Egress-Injected") != "" {
-		t.Fatalf("unmatched request included gateway injected header marker")
+		t.Fatalf("direct bypass request included gateway injected header marker")
 	}
 	if resp.Header.Get("X-E2E-Egress-Gateway") != "" {
-		t.Fatalf("unmatched request included gateway marker")
+		t.Fatalf("direct bypass request included gateway marker")
+	}
+	assertExpectedDirectBypassHeader(t, resp.Header)
+}
+
+func assertDistinctURLOrigin(t *testing.T, dataPlaneBaseURL string, directURL string) {
+	t.Helper()
+	dataPlaneOrigin, err := urlOrigin(dataPlaneBaseURL)
+	if err != nil {
+		t.Fatalf("parse EGRESS_DATAPLANE_BASE_URL: %v", err)
+	}
+	directOrigin, err := urlOrigin(directURL)
+	if err != nil {
+		t.Fatalf("parse EGRESS_DIRECT_BYPASS_URL: %v", err)
+	}
+	if dataPlaneOrigin == directOrigin {
+		t.Fatalf("EGRESS_DIRECT_BYPASS_URL origin %s must differ from EGRESS_DATAPLANE_BASE_URL origin", directOrigin)
+	}
+}
+
+func urlOrigin(rawURL string) (string, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("absolute URL required")
+	}
+	return strings.ToLower(parsed.Scheme + "://" + parsed.Host), nil
+}
+
+func assertExpectedDirectBypassHeader(t *testing.T, header http.Header) {
+	t.Helper()
+	headerName := strings.TrimSpace(os.Getenv("EGRESS_DIRECT_BYPASS_HEADER"))
+	if headerName == "" {
+		return
+	}
+	expectedValue := strings.TrimSpace(os.Getenv("EGRESS_DIRECT_BYPASS_HEADER_VALUE"))
+	actualValue := header.Get(headerName)
+	if actualValue == "" {
+		t.Fatalf("expected direct bypass response header %s", headerName)
+	}
+	if expectedValue != "" && actualValue != expectedValue {
+		t.Fatalf("expected direct bypass response header %s=%q, got %q", headerName, expectedValue, actualValue)
 	}
 }
 
