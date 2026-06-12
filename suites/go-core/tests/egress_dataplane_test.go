@@ -3,10 +3,7 @@
 package tests
 
 import (
-	"bufio"
 	"context"
-	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -29,8 +26,8 @@ func TestEgressGatewayDataPlaneHTTPBehavior(t *testing.T) {
 	assertEgressHTTPStatus(t, ctx, client, baseURL+"/allowed", http.StatusOK)
 	assertEgressInjectedHeader(t, ctx, client, baseURL+"/allowed")
 	assertEgressHTTPStatus(t, ctx, client, baseURL+"/denied", http.StatusForbidden)
-	assertEgressHTTPStatus(t, ctx, client, baseURL+"/unmatched", http.StatusOK)
-	assertWebsocketUpgradeRequired(t, baseURL+"/ws")
+	assertUnmatchedBypassesGateway(t, ctx, client, baseURL+"/unmatched")
+	assertWebsocketUpgradeRequired(t, ctx, client, baseURL+"/ws")
 }
 
 func assertEgressHTTPStatus(t *testing.T, ctx context.Context, client *http.Client, url string, expected int) {
@@ -65,25 +62,41 @@ func assertEgressInjectedHeader(t *testing.T, ctx context.Context, client *http.
 	}
 }
 
-func assertWebsocketUpgradeRequired(t *testing.T, url string) {
+func assertUnmatchedBypassesGateway(t *testing.T, ctx context.Context, client *http.Client, url string) {
 	t.Helper()
-	requestURL := strings.TrimPrefix(strings.TrimPrefix(url, "http://"), "https://")
-	host, path, ok := strings.Cut(requestURL, "/")
-	if !ok {
-		path = ""
-	}
-	conn, err := net.DialTimeout("tcp", host, 10*time.Second)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		t.Fatalf("dial websocket target: %v", err)
+		t.Fatalf("build unmatched request: %v", err)
 	}
-	defer conn.Close()
-	_, err = fmt.Fprintf(conn, "GET /%s HTTP/1.1\r\nHost: %s\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n", path, host)
+	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("write websocket request: %v", err)
+		t.Fatalf("perform unmatched request: %v", err)
 	}
-	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected unmatched request to return %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	if resp.Header.Get("X-E2E-Egress-Injected") != "" {
+		t.Fatalf("unmatched request included gateway injected header marker")
+	}
+	if resp.Header.Get("X-E2E-Egress-Gateway") != "" {
+		t.Fatalf("unmatched request included gateway marker")
+	}
+}
+
+func assertWebsocketUpgradeRequired(t *testing.T, ctx context.Context, client *http.Client, url string) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		t.Fatalf("read websocket response: %v", err)
+		t.Fatalf("build websocket request: %v", err)
+	}
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Sec-WebSocket-Version", "13")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("perform websocket request: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusUpgradeRequired {
