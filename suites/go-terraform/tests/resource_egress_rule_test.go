@@ -83,7 +83,7 @@ resource "agyn_egress_rule" "test" {
 	  description     = "Terraform acceptance egress rule"
 	  domain_pattern  = "api.example.com"
 	  ports           = [443]
-	  methods         = ["get"]
+	  methods         = ["GET"]
 	  path_pattern    = "/v1/*"
 	  action          = %q
 

@@ -24,7 +24,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: agynio/e2e
-        ref: main
+        ref: noa/bootstrap-568-egress-method-state
         path: e2e
 
     - name: Stage provider binary
