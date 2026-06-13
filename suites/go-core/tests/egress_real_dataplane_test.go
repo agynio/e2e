@@ -29,6 +29,12 @@ const (
 	egressDefaultZitiSidecarImage    = "openziti/ziti-tunnel:2.0.0-pre8"
 	egressWorkloadDNSUpstreamEnvKey  = "WORKLOAD_DNS_UPSTREAM"
 	egressDefaultWorkloadDNSUpstream = "10.96.0.10"
+	egressZitiControllerHostEnvKey   = "ZITI_CONTROLLER_HOST"
+	egressDefaultZitiControllerHost  = "ziti.agyn.dev"
+	egressZitiNamespaceEnvKey        = "ZITI_NAMESPACE"
+	egressDefaultZitiNamespace       = "ziti"
+	egressZitiControllerService      = "ziti-controller-client"
+	egressZitiControllerIPEnvVar     = "ZITI_CONTROLLER_IP"
 	egressZitiIdentityVolumeName     = "ziti-identity"
 	egressZitiIdentityMountPath      = "/netfoundry"
 	egressZitiIdentityBasename       = "agent"
@@ -150,6 +156,7 @@ func deleteEgressZitiIdentity(t *testing.T, zitiIdentityID string) {
 func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT, queryMarker string) *runnerv1.StartWorkloadRequest {
 	t.Helper()
 	caBytes := egressCABytes(t, ctx)
+	zitiControllerIP := egressZitiControllerClusterIP(t, ctx)
 	return &runnerv1.StartWorkloadRequest{
 		Main: &runnerv1.ContainerSpec{
 			Image:      egressCurlImage,
@@ -166,7 +173,7 @@ func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT
 			Kind: runnerv1.VolumeKind_VOLUME_KIND_EPHEMERAL,
 		}},
 		InitContainers: []*runnerv1.ContainerSpec{
-			egressZitiEnrollContainer(enrollmentJWT),
+			egressZitiEnrollContainer(enrollmentJWT, zitiControllerIP),
 		},
 		Sidecars: []*runnerv1.ContainerSpec{
 			egressZitiSidecarContainer(),
@@ -195,7 +202,19 @@ func egressCABytes(t *testing.T, ctx context.Context) []byte {
 	return caBytes
 }
 
-func egressZitiEnrollContainer(enrollmentJWT string) *runnerv1.ContainerSpec {
+func egressZitiControllerClusterIP(t *testing.T, ctx context.Context) string {
+	t.Helper()
+	service, err := egressKubeClientset(t).CoreV1().Services(envOrDefault(egressZitiNamespaceEnvKey, egressDefaultZitiNamespace)).Get(ctx, egressZitiControllerService, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get ziti controller service: %v", err)
+	}
+	if service.Spec.ClusterIP == "" || service.Spec.ClusterIP == corev1.ClusterIPNone {
+		t.Fatalf("%s service missing cluster IP", egressZitiControllerService)
+	}
+	return service.Spec.ClusterIP
+}
+
+func egressZitiEnrollContainer(enrollmentJWT, zitiControllerIP string) *runnerv1.ContainerSpec {
 	return &runnerv1.ContainerSpec{
 		Image:      envOrDefault(egressZitiSidecarImageEnvKey, egressDefaultZitiSidecarImage),
 		Name:       egressZitiEnrollContainerName,
@@ -209,6 +228,8 @@ func egressZitiEnrollContainer(enrollmentJWT string) *runnerv1.ContainerSpec {
 			{Name: egressZitiEnrollmentTokenEnvVar, Value: enrollmentJWT},
 			{Name: egressZitiIdentityBasenameEnvVar, Value: egressZitiIdentityBasename},
 			{Name: egressZitiIdentityDirEnvVar, Value: egressZitiIdentityMountPath},
+			{Name: egressZitiControllerHostEnvKey, Value: envOrDefault(egressZitiControllerHostEnvKey, egressDefaultZitiControllerHost)},
+			{Name: egressZitiControllerIPEnvVar, Value: zitiControllerIP},
 		},
 		Mounts: []*runnerv1.VolumeMount{{
 			Volume:    egressZitiIdentityVolumeName,
@@ -246,6 +267,8 @@ identity_file="${identity_dir}/${identity_basename}.json"
 jwt_file="${identity_dir}/${identity_basename}.jwt"
 resolv_file="${ZITI_RESOLV_CONF:-/etc/resolv.conf}"
 hosts_file="${ZITI_HOSTS_FILE:-/etc/hosts}"
+ziti_controller_host="${ZITI_CONTROLLER_HOST}"
+ziti_controller_ip="${ZITI_CONTROLLER_IP}"
 
 mkdir -p "${identity_dir}"
 
@@ -264,11 +287,17 @@ if [[ ! -s "${identity_file}" ]]; then
     3) jwt_payload="${jwt_payload}=" ;;
   esac
   jwt_payload_json="$(printf '%s' "${jwt_payload}" | base64 -d 2>/dev/null || true)"
-  ziti_controller_host="$(printf '%s' "${jwt_payload_json}" | sed -nE 's/.*"iss"[[:space:]]*:[[:space:]]*"https?:\/\/([^"\/:]+).*/\1/p' | head -n 1)"
+  jwt_controller_host="$(printf '%s' "${jwt_payload_json}" | sed -nE 's/.*"iss"[[:space:]]*:[[:space:]]*"https?:\/\/([^"\/:]+).*/\1/p' | head -n 1)"
+  if [[ -z "${ziti_controller_host}" ]]; then
+    ziti_controller_host="${jwt_controller_host}"
+  fi
   if [[ -n "${ziti_controller_host}" ]]; then
     awk -v host="${ziti_controller_host}" '($1 ~ /^(127\.|::1$)/) { for (i = 2; i <= NF; i++) if ($i == host) next } { print }' "${hosts_file}" > "${hosts_file}.tmp"
     cat "${hosts_file}.tmp" > "${hosts_file}"
     rm -f "${hosts_file}.tmp"
+  fi
+  if [[ -n "${ziti_controller_ip}" && -n "${ziti_controller_host}" ]]; then
+    printf '%s %s\n' "${ziti_controller_ip}" "${ziti_controller_host}" >> "${hosts_file}"
   fi
 
   ziti edge enroll --jwt "${jwt_file}" --out "${identity_file}"
