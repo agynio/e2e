@@ -23,14 +23,15 @@ jobs:
       AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
+      TF_VAR_egress_image_tag: 65c555d6eeba18ff319ce1e26edae495c9bc4a49
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@noa/issue-153-bootstrap-enrollment
+        uses: agynio/bootstrap/.github/actions/provision@9bd0b1cee6c37881bfabfd34cd9ac9066692327f
         with:
-          ref: noa/issue-153-bootstrap-enrollment
+          ref: 9bd0b1cee6c37881bfabfd34cd9ac9066692327f
 
       - name: Run platform usage E2E test
         uses: ./.github/actions/run-tests
