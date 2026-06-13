@@ -71,6 +71,7 @@ func waitRunning(t *testing.T, ctx context.Context, client runnerv1.RunnerServic
 				return resp
 			}
 		} else if status.Code(err) != codes.NotFound {
+			logEgressWorkloadPodDiagnostics(t, context.Background(), workloadID)
 			require.NoError(t, err)
 		}
 
