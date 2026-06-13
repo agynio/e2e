@@ -28,9 +28,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@main
+        uses: agynio/bootstrap/.github/actions/provision@noa/issue-153-bootstrap-enrollment
         with:
-          ref: main
+          ref: noa/issue-153-bootstrap-enrollment
 
       - name: Run platform usage E2E test
         uses: ./.github/actions/run-tests
