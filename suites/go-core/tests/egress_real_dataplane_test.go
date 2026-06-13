@@ -71,8 +71,14 @@ func TestEgressGatewayDataPlaneSecretInjection(t *testing.T) {
 
 	request := postmanEchoWorkloadRequest(t, ctx, enrollmentJWT, queryMarker)
 	response := startWorkloadWithCleanup(t, ctx, runnerClient, request)
+	workloadID := response.GetId()
+	waitRunning(t, ctx, runnerClient, workloadID)
+	targetID := response.GetContainers().GetMain()
+	if targetID == "" {
+		t.Fatal("start postman echo workload: missing main container target id")
+	}
 
-	execResult := waitForPostmanEchoOutput(t, ctx, runnerClient, response.GetId())
+	execResult := waitForPostmanEchoOutput(t, ctx, runnerClient, targetID)
 	if execResult.exit == nil || execResult.exit.GetExitCode() != 0 {
 		t.Fatalf("postman echo request failed: exit=%v stdout=%q stderr=%q", execResult.exit, execResult.stdout, execResult.stderr)
 	}
