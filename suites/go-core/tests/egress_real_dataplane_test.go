@@ -38,8 +38,6 @@ const (
 	egressZitiEnrollContainerName    = "ziti-enroll"
 	egressZitiSidecarContainerName   = "ziti-sidecar"
 	egressZitiRequiredNetAdmin       = "NET_ADMIN"
-	egressZitiRestartPolicyKey       = "restart_policy"
-	egressZitiRestartPolicyAlways    = "Always"
 	egressZitiEnrollmentTokenEnvVar  = "ZITI_ENROLL_TOKEN"
 	egressZitiIdentityBasenameEnvVar = "ZITI_IDENTITY_BASENAME"
 	egressZitiIdentityDirEnvVar      = "ZITI_IDENTITY_DIR"
@@ -163,6 +161,8 @@ func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT
 		}},
 		InitContainers: []*runnerv1.ContainerSpec{
 			egressZitiEnrollContainer(enrollmentJWT),
+		},
+		Sidecars: []*runnerv1.ContainerSpec{
 			egressZitiSidecarContainer(),
 		},
 		DnsConfig: &runnerv1.DnsConfig{
@@ -229,7 +229,6 @@ func egressZitiSidecarContainer() *runnerv1.ContainerSpec {
 			MountPath: egressZitiIdentityMountPath,
 		}},
 		RequiredCapabilities: []string{egressZitiRequiredNetAdmin},
-		AdditionalProperties: map[string]string{egressZitiRestartPolicyKey: egressZitiRestartPolicyAlways},
 	}
 }
 

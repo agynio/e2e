@@ -1,322 +1,155 @@
-//go:build e2e && svc_egress && svc_egress_gateway
+//go:build e2e && svc_egress_gateway && !(svc_k8s_runner || smoke)
 
 package tests
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
-
-	egressv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/egress/v1"
-	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
-	zitimgmtv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/ziti_management/v1"
-	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	egressDataPlaneTestTimeout       = 5 * time.Minute
-	egressPostmanEchoHost            = "postman-echo.com"
-	egressPostmanEchoPort            = int32(443)
-	egressCurlImage                  = "curlimages/curl:8.17.0"
-	egressZitiSidecarImageEnvKey     = "ZITI_SIDECAR_IMAGE"
-	egressDefaultZitiSidecarImage    = "openziti/ziti-tunnel:2.0.0-pre8"
-	egressWorkloadDNSUpstreamEnvKey  = "WORKLOAD_DNS_UPSTREAM"
-	egressDefaultWorkloadDNSUpstream = "10.96.0.10"
-	egressZitiIdentityVolumeName     = "ziti-identity"
-	egressZitiIdentityMountPath      = "/netfoundry"
-	egressZitiIdentityBasename       = "agent"
-	egressZitiDNSNameserver          = "127.0.0.1"
-	egressZitiDNSSearchService       = "svc.cluster.local"
-	egressZitiDNSSearchCluster       = "cluster.local"
-	egressZitiEnrollContainerName    = "ziti-enroll"
-	egressZitiSidecarContainerName   = "ziti-sidecar"
-	egressZitiRequiredNetAdmin       = "NET_ADMIN"
-	egressZitiEnrollmentTokenEnvVar  = "ZITI_ENROLL_TOKEN"
-	egressZitiIdentityBasenameEnvVar = "ZITI_IDENTITY_BASENAME"
-	egressZitiIdentityDirEnvVar      = "ZITI_IDENTITY_DIR"
-)
+const egressDataPlaneTimeout = 2 * time.Minute
 
-func TestEgressGatewayDataPlaneSecretInjection(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), egressDataPlaneTestTimeout)
+func TestEgressGatewayDataPlaneHTTPBehavior(t *testing.T) {
+	baseURL := strings.TrimRight(os.Getenv("EGRESS_DATAPLANE_BASE_URL"), "/")
+	if baseURL == "" {
+		t.Skip("EGRESS_DATAPLANE_BASE_URL is required for live egress data-plane checks")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), egressDataPlaneTimeout)
 	t.Cleanup(cancel)
 
-	fixture := setupEgressFixture(t, ctx)
-	tokenValue := "e2e-egress-token-" + uuid.NewString()
-	queryMarker := uuid.NewString()
-
-	secret := createEgressSecretWithValue(t, fixture.userCtx, fixture.secrets, fixture.organizationID, tokenValue)
-	secretID := secret.GetMeta().GetId()
-	t.Cleanup(func() { deleteEgressSecret(t, fixture.userCtx, fixture.secrets, secretID) })
-
-	allowRule := createPostmanEchoEgressRule(t, fixture.userCtx, fixture, secretID)
-	allowRuleID := allowRule.GetMeta().GetId()
-	t.Cleanup(func() { deleteEgressRule(t, fixture.userCtx, fixture.egress, allowRuleID) })
-
-	attachment := createEgressRuleAttachment(t, fixture.userCtx, fixture.egress, allowRuleID, fixture.agentID)
-	attachmentID := attachment.GetMeta().GetId()
-	t.Cleanup(func() { deleteEgressRuleAttachment(t, fixture.userCtx, fixture.egress, attachmentID) })
-
-	waitForEgressRuleByAgent(t, ctx, fixture.egress, fixture.agentID, allowRuleID)
-
-	runnerClient := newK8sRunnerClient(t)
-	zitiIdentityID, enrollmentJWT := createEgressZitiAgentIdentity(t, ctx, fixture.agentID)
-	t.Cleanup(func() { deleteEgressZitiIdentity(t, zitiIdentityID) })
-
-	request := postmanEchoWorkloadRequest(t, ctx, enrollmentJWT, queryMarker)
-	response := startWorkloadWithCleanup(t, ctx, runnerClient, request)
-
-	execResult := waitForPostmanEchoOutput(t, ctx, runnerClient, response.GetId())
-	if execResult.exit == nil || execResult.exit.GetExitCode() != 0 {
-		t.Fatalf("postman echo request failed: exit=%v stdout=%q stderr=%q", execResult.exit, execResult.stdout, execResult.stderr)
-	}
-	assertPostmanEchoAuthorization(t, execResult.stdout, queryMarker, tokenValue)
+	client := &http.Client{Timeout: 10 * time.Second}
+	assertEgressHTTPStatus(t, ctx, client, baseURL+"/allowed", http.StatusOK)
+	assertEgressInjectedHeader(t, ctx, client, baseURL+"/allowed")
+	assertEgressHTTPStatus(t, ctx, client, baseURL+"/denied", http.StatusForbidden)
+	assertUnmatchedBypassesGateway(t, ctx, client, baseURL)
+	assertWebsocketUpgradeRequired(t, ctx, client, baseURL+"/ws")
 }
 
-func createPostmanEchoEgressRule(t *testing.T, ctx context.Context, fixture egressFixture, secretID string) *egressv1.EgressRule {
+func assertEgressHTTPStatus(t *testing.T, ctx context.Context, client *http.Client, url string, expected int) {
 	t.Helper()
-	resp, err := fixture.egress.CreateEgressRule(ctx, &egressv1.CreateEgressRuleRequest{
-		OrganizationId: fixture.organizationID,
-		Name:           "e2e-egress-postman-echo-" + uuid.NewString(),
-		Description:    "E2E Egress Gateway data-plane Postman Echo rule",
-		Matcher: &egressv1.EgressRuleMatcher{
-			DomainPattern: egressPostmanEchoHost,
-			Ports:         []int32{egressPostmanEchoPort},
-			Methods:       []string{"GET"},
-			PathPattern:   "/get",
-		},
-		Effect: &egressv1.EgressRuleEffect{
-			Action: egressv1.EgressRuleAction_EGRESS_RULE_ACTION_ALLOW.Enum(),
-			Inject: []*egressv1.EgressRuleHeader{{
-				Name:       "Authorization",
-				Scheme:     egressv1.HeaderAuthScheme_HEADER_AUTH_SCHEME_BEARER,
-				Credential: &egressv1.EgressRuleHeader_SecretId{SecretId: secretID},
-			}},
-		},
-	})
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		t.Fatalf("create postman echo egress rule: %v", err)
+		t.Fatalf("build request: %v", err)
 	}
-	rule := resp.GetEgressRule()
-	if rule == nil || rule.GetMeta() == nil || rule.GetMeta().GetId() == "" {
-		t.Fatal("create postman echo egress rule: missing id")
-	}
-	return rule
-}
-
-func createEgressZitiAgentIdentity(t *testing.T, ctx context.Context, agentID string) (string, string) {
-	t.Helper()
-	conn := dialGRPC(t, zitiManagementAddr(t))
-	client := zitimgmtv1.NewZitiManagementServiceClient(conn)
-	resp, err := client.CreateAgentIdentity(ctx, &zitimgmtv1.CreateAgentIdentityRequest{
-		AgentId:    agentID,
-		WorkloadId: uuid.NewString(),
-	})
+	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("create egress ziti agent identity: %v", err)
+		t.Fatalf("perform egress request %s: %v", url, err)
 	}
-	zitiIdentityID := strings.TrimSpace(resp.GetZitiIdentityId())
-	enrollmentJWT := strings.TrimSpace(resp.GetEnrollmentJwt())
-	if zitiIdentityID == "" || enrollmentJWT == "" {
-		t.Fatalf("create egress ziti agent identity: missing id or enrollment jwt: id=%q jwt_present=%t", zitiIdentityID, enrollmentJWT != "")
-	}
-	return zitiIdentityID, enrollmentJWT
-}
-
-func deleteEgressZitiIdentity(t *testing.T, zitiIdentityID string) {
-	t.Helper()
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	conn := dialGRPC(t, zitiManagementAddr(t))
-	client := zitimgmtv1.NewZitiManagementServiceClient(conn)
-	_, err := client.DeleteIdentity(cleanupCtx, &zitimgmtv1.DeleteIdentityRequest{ZitiIdentityId: zitiIdentityID})
-	if err != nil && status.Code(err) != codes.NotFound {
-		t.Logf("cleanup: delete ziti identity %s: %v", zitiIdentityID, err)
+	defer resp.Body.Close()
+	if resp.StatusCode != expected {
+		t.Fatalf("expected %s to return %d, got %d", url, expected, resp.StatusCode)
 	}
 }
 
-func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT, queryMarker string) *runnerv1.StartWorkloadRequest {
+func assertEgressInjectedHeader(t *testing.T, ctx context.Context, client *http.Client, url string) {
 	t.Helper()
-	caBytes := egressCABytes(t, ctx)
-	return &runnerv1.StartWorkloadRequest{
-		Main: &runnerv1.ContainerSpec{
-			Image:      egressCurlImage,
-			Entrypoint: "/bin/sh",
-			Cmd:        []string{"-c", postmanEchoCurlScript(queryMarker)},
-			Env: []*runnerv1.EnvVar{
-				{Name: "SSL_CERT_FILE", Value: egressCACertPath},
-				{Name: "CURL_CA_BUNDLE", Value: egressCACertPath},
-			},
-			InlineFileMounts: []*runnerv1.InlineFileMount{{Path: egressCACertPath}},
-		},
-		Volumes: []*runnerv1.VolumeSpec{{
-			Name: egressZitiIdentityVolumeName,
-			Kind: runnerv1.VolumeKind_VOLUME_KIND_EPHEMERAL,
-		}},
-		InitContainers: []*runnerv1.ContainerSpec{
-			egressZitiEnrollContainer(enrollmentJWT),
-		},
-		Sidecars: []*runnerv1.ContainerSpec{
-			egressZitiSidecarContainer(),
-		},
-		DnsConfig: &runnerv1.DnsConfig{
-			Nameservers: []string{egressZitiDNSNameserver},
-			Searches:    []string{egressZitiDNSSearchService, egressZitiDNSSearchCluster},
-		},
-		InlineFiles: map[string][]byte{egressCACertPath: caBytes},
-		AdditionalProperties: map[string]string{
-			"label.agyn.dev/managed-by": egressManagedByValue,
-		},
-	}
-}
-
-func egressCABytes(t *testing.T, ctx context.Context) []byte {
-	t.Helper()
-	secret, err := egressKubeClientset(t).CoreV1().Secrets(platformNamespace()).Get(ctx, egressCASecretName, metav1.GetOptions{})
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		t.Fatalf("get egress ca secret: %v", err)
+		t.Fatalf("build injected-header request: %v", err)
 	}
-	caBytes := secret.Data[corev1.TLSCertKey]
-	if len(caBytes) == 0 {
-		t.Fatalf("%s/%s missing %s", platformNamespace(), egressCASecretName, corev1.TLSCertKey)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("perform injected-header request: %v", err)
 	}
-	return caBytes
-}
-
-func egressZitiEnrollContainer(enrollmentJWT string) *runnerv1.ContainerSpec {
-	return &runnerv1.ContainerSpec{
-		Image:      envOrDefault(egressZitiSidecarImageEnvKey, egressDefaultZitiSidecarImage),
-		Name:       egressZitiEnrollContainerName,
-		Entrypoint: "/usr/bin/bash",
-		Cmd: []string{
-			"-ec",
-			egressZitiEnrollScript(),
-			egressZitiDNSNameserver,
-		},
-		Env: []*runnerv1.EnvVar{
-			{Name: egressZitiEnrollmentTokenEnvVar, Value: enrollmentJWT},
-			{Name: egressZitiIdentityBasenameEnvVar, Value: egressZitiIdentityBasename},
-			{Name: egressZitiIdentityDirEnvVar, Value: egressZitiIdentityMountPath},
-		},
-		Mounts: []*runnerv1.VolumeMount{{
-			Volume:    egressZitiIdentityVolumeName,
-			MountPath: egressZitiIdentityMountPath,
-		}},
+	defer resp.Body.Close()
+	if resp.Header.Get("X-E2E-Egress-Injected") == "" {
+		t.Fatalf("expected response to expose X-E2E-Egress-Injected marker")
 	}
 }
 
-func egressZitiSidecarContainer() *runnerv1.ContainerSpec {
-	return &runnerv1.ContainerSpec{
-		Image: envOrDefault(egressZitiSidecarImageEnvKey, egressDefaultZitiSidecarImage),
-		Name:  egressZitiSidecarContainerName,
-		Cmd: []string{
-			"tproxy",
-			"--dnsUpstream",
-			"udp://" + envOrDefault(egressWorkloadDNSUpstreamEnvKey, egressDefaultWorkloadDNSUpstream) + ":53",
-		},
-		Env: []*runnerv1.EnvVar{
-			{Name: egressZitiIdentityBasenameEnvVar, Value: egressZitiIdentityBasename},
-			{Name: egressZitiIdentityDirEnvVar, Value: egressZitiIdentityMountPath},
-		},
-		Mounts: []*runnerv1.VolumeMount{{
-			Volume:    egressZitiIdentityVolumeName,
-			MountPath: egressZitiIdentityMountPath,
-		}},
-		RequiredCapabilities: []string{egressZitiRequiredNetAdmin},
-	}
-}
-
-func egressZitiEnrollScript() string {
-	return `workload_dns_nameserver="$1"
-identity_dir="${ZITI_IDENTITY_DIR}"
-identity_basename="${ZITI_IDENTITY_BASENAME}"
-identity_file="${identity_dir}/${identity_basename}.json"
-jwt_file="${identity_dir}/${identity_basename}.jwt"
-resolv_file="${ZITI_RESOLV_CONF:-/etc/resolv.conf}"
-hosts_file="${ZITI_HOSTS_FILE:-/etc/hosts}"
-
-mkdir -p "${identity_dir}"
-
-if [[ ! -s "${identity_file}" ]]; then
-  if [[ -z "${ZITI_ENROLL_TOKEN}" ]]; then
-    echo "ZITI_ENROLL_TOKEN is required" >&2
-    exit 1
-  fi
-  printf '%s\n' "${ZITI_ENROLL_TOKEN}" > "${jwt_file}"
-
-  jwt_payload="${ZITI_ENROLL_TOKEN#*.}"
-  jwt_payload="${jwt_payload%%.*}"
-  jwt_payload="$(printf '%s' "${jwt_payload}" | tr '_-' '/+')"
-  case $(( ${#jwt_payload} % 4 )) in
-    2) jwt_payload="${jwt_payload}==" ;;
-    3) jwt_payload="${jwt_payload}=" ;;
-  esac
-  jwt_payload_json="$(printf '%s' "${jwt_payload}" | base64 -d 2>/dev/null || true)"
-  ziti_controller_host="$(printf '%s' "${jwt_payload_json}" | sed -nE 's/.*"iss"[[:space:]]*:[[:space:]]*"https?:\/\/([^"\/:]+).*/\1/p' | head -n 1)"
-  if [[ -n "${ziti_controller_host}" ]]; then
-    awk -v host="${ziti_controller_host}" '($1 ~ /^(127\.|::1$)/) { for (i = 2; i <= NF; i++) if ($i == host) next } { print }' "${hosts_file}" > "${hosts_file}.tmp"
-    cat "${hosts_file}.tmp" > "${hosts_file}"
-    rm -f "${hosts_file}.tmp"
-  fi
-
-  ziti edge enroll --jwt "${jwt_file}" --out "${identity_file}"
-fi
-
-if [[ ! -s "${identity_file}" ]]; then
-  echo "expected identity file ${identity_file}" >&2
-  exit 1
-fi
-
-printf 'nameserver %s\nsearch svc.cluster.local cluster.local\noptions ndots:5\n' "${workload_dns_nameserver}" > "${resolv_file}"`
-}
-
-func postmanEchoCurlScript(queryMarker string) string {
-	url := fmt.Sprintf("https://%s/get?egress_e2e=%s", egressPostmanEchoHost, queryMarker)
-	return fmt.Sprintf("curl --fail --silent --show-error --location --connect-timeout 20 --max-time 60 %q > /tmp/postman-echo.json; sleep 300", url)
-}
-
-func waitForPostmanEchoOutput(t *testing.T, ctx context.Context, client runnerv1.RunnerServiceClient, workloadID string) execResult {
+func assertUnmatchedBypassesGateway(t *testing.T, ctx context.Context, client *http.Client, dataPlaneBaseURL string) {
 	t.Helper()
-	var result execResult
-	pollCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
-	defer cancel()
-	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
-		result = collectExecOutput(t, ctx, client, &runnerv1.ExecStartRequest{
-			TargetId:     workloadID,
-			CommandShell: "cat /tmp/postman-echo.json",
-		})
-		if result.exit == nil || result.exit.GetExitCode() != 0 {
-			return fmt.Errorf("postman echo output unavailable: exit=%v stdout=%q stderr=%q", result.exit, result.stdout, result.stderr)
-		}
-		return nil
-	}); err != nil {
-		t.Fatalf("wait for postman echo output: %v", err)
+	directURL := strings.TrimSpace(os.Getenv("EGRESS_DIRECT_BYPASS_URL"))
+	if directURL == "" {
+		t.Fatal("EGRESS_DIRECT_BYPASS_URL is required to prove unmatched destinations bypass the gateway")
 	}
-	return result
+	assertDistinctURLOrigin(t, dataPlaneBaseURL, directURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, directURL, nil)
+	if err != nil {
+		t.Fatalf("build direct bypass request: %v", err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("perform direct bypass request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected direct bypass request to return %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	if resp.Header.Get("X-E2E-Egress-Injected") != "" {
+		t.Fatalf("direct bypass request included gateway injected header marker")
+	}
+	if resp.Header.Get("X-E2E-Egress-Gateway") != "" {
+		t.Fatalf("direct bypass request included gateway marker")
+	}
+	assertExpectedDirectBypassHeader(t, resp.Header)
 }
 
-type postmanEchoResponse struct {
-	Args    map[string]string `json:"args"`
-	Headers map[string]string `json:"headers"`
-}
-
-func assertPostmanEchoAuthorization(t *testing.T, body, queryMarker, tokenValue string) {
+func assertDistinctURLOrigin(t *testing.T, dataPlaneBaseURL string, directURL string) {
 	t.Helper()
-	var echo postmanEchoResponse
-	if err := json.Unmarshal([]byte(body), &echo); err != nil {
-		t.Fatalf("parse postman echo response: %v body=%q", err, body)
+	dataPlaneOrigin, err := urlOrigin(dataPlaneBaseURL)
+	if err != nil {
+		t.Fatalf("parse EGRESS_DATAPLANE_BASE_URL: %v", err)
 	}
-	if echo.Args["egress_e2e"] != queryMarker {
-		t.Fatalf("postman echo query marker mismatch: got %q want %q body=%q", echo.Args["egress_e2e"], queryMarker, body)
+	directOrigin, err := urlOrigin(directURL)
+	if err != nil {
+		t.Fatalf("parse EGRESS_DIRECT_BYPASS_URL: %v", err)
 	}
-	wantAuthorization := "Bearer " + tokenValue
-	if echo.Headers["authorization"] != wantAuthorization {
-		t.Fatalf("postman echo authorization mismatch: got %q want %q", echo.Headers["authorization"], wantAuthorization)
+	if dataPlaneOrigin == directOrigin {
+		t.Fatalf("EGRESS_DIRECT_BYPASS_URL origin %s must differ from EGRESS_DATAPLANE_BASE_URL origin", directOrigin)
+	}
+}
+
+func urlOrigin(rawURL string) (string, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("absolute URL required")
+	}
+	return strings.ToLower(parsed.Scheme + "://" + parsed.Host), nil
+}
+
+func assertExpectedDirectBypassHeader(t *testing.T, header http.Header) {
+	t.Helper()
+	headerName := strings.TrimSpace(os.Getenv("EGRESS_DIRECT_BYPASS_HEADER"))
+	if headerName == "" {
+		return
+	}
+	expectedValue := strings.TrimSpace(os.Getenv("EGRESS_DIRECT_BYPASS_HEADER_VALUE"))
+	actualValue := header.Get(headerName)
+	if actualValue == "" {
+		t.Fatalf("expected direct bypass response header %s", headerName)
+	}
+	if expectedValue != "" && actualValue != expectedValue {
+		t.Fatalf("expected direct bypass response header %s=%q, got %q", headerName, expectedValue, actualValue)
+	}
+}
+
+func assertWebsocketUpgradeRequired(t *testing.T, ctx context.Context, client *http.Client, url string) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatalf("build websocket request: %v", err)
+	}
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Sec-WebSocket-Version", "13")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("perform websocket request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUpgradeRequired {
+		t.Fatalf("expected websocket upgrade to return 426, got %d", resp.StatusCode)
 	}
 }

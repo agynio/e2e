@@ -19,22 +19,30 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ZitiManagementService_CreateAgentIdentity_FullMethodName    = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateAgentIdentity"
-	ZitiManagementService_CreateAppIdentity_FullMethodName      = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateAppIdentity"
-	ZitiManagementService_CreateService_FullMethodName          = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateService"
-	ZitiManagementService_DeleteIdentity_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteIdentity"
-	ZitiManagementService_DeleteAppIdentity_FullMethodName      = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteAppIdentity"
-	ZitiManagementService_CreateRunnerIdentity_FullMethodName   = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateRunnerIdentity"
-	ZitiManagementService_DeleteRunnerIdentity_FullMethodName   = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteRunnerIdentity"
-	ZitiManagementService_ListManagedIdentities_FullMethodName  = "/agynio.api.ziti_management.v1.ZitiManagementService/ListManagedIdentities"
-	ZitiManagementService_ResolveIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/ResolveIdentity"
-	ZitiManagementService_RequestServiceIdentity_FullMethodName = "/agynio.api.ziti_management.v1.ZitiManagementService/RequestServiceIdentity"
-	ZitiManagementService_ExtendIdentityLease_FullMethodName    = "/agynio.api.ziti_management.v1.ZitiManagementService/ExtendIdentityLease"
-	ZitiManagementService_CreateServicePolicy_FullMethodName    = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateServicePolicy"
-	ZitiManagementService_DeleteServicePolicy_FullMethodName    = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteServicePolicy"
-	ZitiManagementService_DeleteService_FullMethodName          = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteService"
-	ZitiManagementService_CreateDeviceIdentity_FullMethodName   = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateDeviceIdentity"
-	ZitiManagementService_DeleteDeviceIdentity_FullMethodName   = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteDeviceIdentity"
+	ZitiManagementService_CreateAgentIdentity_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateAgentIdentity"
+	ZitiManagementService_CreateAppIdentity_FullMethodName           = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateAppIdentity"
+	ZitiManagementService_CreateService_FullMethodName               = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateService"
+	ZitiManagementService_DeleteIdentity_FullMethodName              = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteIdentity"
+	ZitiManagementService_DeleteAppIdentity_FullMethodName           = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteAppIdentity"
+	ZitiManagementService_CreateRunnerIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateRunnerIdentity"
+	ZitiManagementService_DeleteRunnerIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteRunnerIdentity"
+	ZitiManagementService_ListManagedIdentities_FullMethodName       = "/agynio.api.ziti_management.v1.ZitiManagementService/ListManagedIdentities"
+	ZitiManagementService_ResolveIdentity_FullMethodName             = "/agynio.api.ziti_management.v1.ZitiManagementService/ResolveIdentity"
+	ZitiManagementService_RequestServiceIdentity_FullMethodName      = "/agynio.api.ziti_management.v1.ZitiManagementService/RequestServiceIdentity"
+	ZitiManagementService_ExtendIdentityLease_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/ExtendIdentityLease"
+	ZitiManagementService_CreateServicePolicy_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateServicePolicy"
+	ZitiManagementService_DeleteServicePolicy_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteServicePolicy"
+	ZitiManagementService_DeleteService_FullMethodName               = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteService"
+	ZitiManagementService_CreateDeviceIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateDeviceIdentity"
+	ZitiManagementService_DeleteDeviceIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteDeviceIdentity"
+	ZitiManagementService_CreateTunnelIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateTunnelIdentity"
+	ZitiManagementService_DeleteTunnelIdentity_FullMethodName        = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteTunnelIdentity"
+	ZitiManagementService_PatchIdentityRoleAttributes_FullMethodName = "/agynio.api.ziti_management.v1.ZitiManagementService/PatchIdentityRoleAttributes"
+	ZitiManagementService_GetIdentityLiveness_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/GetIdentityLiveness"
+	ZitiManagementService_ListServicesByTag_FullMethodName           = "/agynio.api.ziti_management.v1.ZitiManagementService/ListServicesByTag"
+	ZitiManagementService_ListIdentitiesByTag_FullMethodName         = "/agynio.api.ziti_management.v1.ZitiManagementService/ListIdentitiesByTag"
+	ZitiManagementService_ListServicePoliciesByTag_FullMethodName    = "/agynio.api.ziti_management.v1.ZitiManagementService/ListServicePoliciesByTag"
+	ZitiManagementService_UpdateService_FullMethodName               = "/agynio.api.ziti_management.v1.ZitiManagementService/UpdateService"
 )
 
 // ZitiManagementServiceClient is the client API for ZitiManagementService service.
@@ -85,6 +93,22 @@ type ZitiManagementServiceClient interface {
 	CreateDeviceIdentity(ctx context.Context, in *CreateDeviceIdentityRequest, opts ...grpc.CallOption) (*CreateDeviceIdentityResponse, error)
 	// Users Service -> delete a device's OpenZiti identity.
 	DeleteDeviceIdentity(ctx context.Context, in *DeleteDeviceIdentityRequest, opts ...grpc.CallOption) (*DeleteDeviceIdentityResponse, error)
+	// Networks Service -> create an OpenZiti identity for a private-network tunnel.
+	CreateTunnelIdentity(ctx context.Context, in *CreateTunnelIdentityRequest, opts ...grpc.CallOption) (*CreateTunnelIdentityResponse, error)
+	// Networks Service -> delete a tunnel's OpenZiti identity.
+	DeleteTunnelIdentity(ctx context.Context, in *DeleteTunnelIdentityRequest, opts ...grpc.CallOption) (*DeleteTunnelIdentityResponse, error)
+	// Users Service, Apps Service, Agents Orchestrator -> add and remove role attributes.
+	PatchIdentityRoleAttributes(ctx context.Context, in *PatchIdentityRoleAttributesRequest, opts ...grpc.CallOption) (*PatchIdentityRoleAttributesResponse, error)
+	// Networks Service -> fetch identity enrollment and connectivity state.
+	GetIdentityLiveness(ctx context.Context, in *GetIdentityLivenessRequest, opts ...grpc.CallOption) (*GetIdentityLivenessResponse, error)
+	// Services managing OpenZiti resources -> list services matching tag filters.
+	ListServicesByTag(ctx context.Context, in *ListServicesByTagRequest, opts ...grpc.CallOption) (*ListServicesByTagResponse, error)
+	// Networks Service -> list identities matching tag filters.
+	ListIdentitiesByTag(ctx context.Context, in *ListIdentitiesByTagRequest, opts ...grpc.CallOption) (*ListIdentitiesByTagResponse, error)
+	// Services managing OpenZiti resources -> list service policies matching tag filters.
+	ListServicePoliciesByTag(ctx context.Context, in *ListServicePoliciesByTagRequest, opts ...grpc.CallOption) (*ListServicePoliciesByTagResponse, error)
+	// Networks Service -> update an existing OpenZiti service's attached configs.
+	UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*UpdateServiceResponse, error)
 }
 
 type zitiManagementServiceClient struct {
@@ -255,6 +279,86 @@ func (c *zitiManagementServiceClient) DeleteDeviceIdentity(ctx context.Context, 
 	return out, nil
 }
 
+func (c *zitiManagementServiceClient) CreateTunnelIdentity(ctx context.Context, in *CreateTunnelIdentityRequest, opts ...grpc.CallOption) (*CreateTunnelIdentityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateTunnelIdentityResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_CreateTunnelIdentity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) DeleteTunnelIdentity(ctx context.Context, in *DeleteTunnelIdentityRequest, opts ...grpc.CallOption) (*DeleteTunnelIdentityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteTunnelIdentityResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_DeleteTunnelIdentity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) PatchIdentityRoleAttributes(ctx context.Context, in *PatchIdentityRoleAttributesRequest, opts ...grpc.CallOption) (*PatchIdentityRoleAttributesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PatchIdentityRoleAttributesResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_PatchIdentityRoleAttributes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) GetIdentityLiveness(ctx context.Context, in *GetIdentityLivenessRequest, opts ...grpc.CallOption) (*GetIdentityLivenessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetIdentityLivenessResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_GetIdentityLiveness_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) ListServicesByTag(ctx context.Context, in *ListServicesByTagRequest, opts ...grpc.CallOption) (*ListServicesByTagResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListServicesByTagResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_ListServicesByTag_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) ListIdentitiesByTag(ctx context.Context, in *ListIdentitiesByTagRequest, opts ...grpc.CallOption) (*ListIdentitiesByTagResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListIdentitiesByTagResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_ListIdentitiesByTag_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) ListServicePoliciesByTag(ctx context.Context, in *ListServicePoliciesByTagRequest, opts ...grpc.CallOption) (*ListServicePoliciesByTagResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListServicePoliciesByTagResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_ListServicePoliciesByTag_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *zitiManagementServiceClient) UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*UpdateServiceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateServiceResponse)
+	err := c.cc.Invoke(ctx, ZitiManagementService_UpdateService_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ZitiManagementServiceServer is the server API for ZitiManagementService service.
 // All implementations should embed UnimplementedZitiManagementServiceServer
 // for forward compatibility.
@@ -303,6 +407,22 @@ type ZitiManagementServiceServer interface {
 	CreateDeviceIdentity(context.Context, *CreateDeviceIdentityRequest) (*CreateDeviceIdentityResponse, error)
 	// Users Service -> delete a device's OpenZiti identity.
 	DeleteDeviceIdentity(context.Context, *DeleteDeviceIdentityRequest) (*DeleteDeviceIdentityResponse, error)
+	// Networks Service -> create an OpenZiti identity for a private-network tunnel.
+	CreateTunnelIdentity(context.Context, *CreateTunnelIdentityRequest) (*CreateTunnelIdentityResponse, error)
+	// Networks Service -> delete a tunnel's OpenZiti identity.
+	DeleteTunnelIdentity(context.Context, *DeleteTunnelIdentityRequest) (*DeleteTunnelIdentityResponse, error)
+	// Users Service, Apps Service, Agents Orchestrator -> add and remove role attributes.
+	PatchIdentityRoleAttributes(context.Context, *PatchIdentityRoleAttributesRequest) (*PatchIdentityRoleAttributesResponse, error)
+	// Networks Service -> fetch identity enrollment and connectivity state.
+	GetIdentityLiveness(context.Context, *GetIdentityLivenessRequest) (*GetIdentityLivenessResponse, error)
+	// Services managing OpenZiti resources -> list services matching tag filters.
+	ListServicesByTag(context.Context, *ListServicesByTagRequest) (*ListServicesByTagResponse, error)
+	// Networks Service -> list identities matching tag filters.
+	ListIdentitiesByTag(context.Context, *ListIdentitiesByTagRequest) (*ListIdentitiesByTagResponse, error)
+	// Services managing OpenZiti resources -> list service policies matching tag filters.
+	ListServicePoliciesByTag(context.Context, *ListServicePoliciesByTagRequest) (*ListServicePoliciesByTagResponse, error)
+	// Networks Service -> update an existing OpenZiti service's attached configs.
+	UpdateService(context.Context, *UpdateServiceRequest) (*UpdateServiceResponse, error)
 }
 
 // UnimplementedZitiManagementServiceServer should be embedded to have
@@ -359,6 +479,30 @@ func (UnimplementedZitiManagementServiceServer) CreateDeviceIdentity(context.Con
 }
 func (UnimplementedZitiManagementServiceServer) DeleteDeviceIdentity(context.Context, *DeleteDeviceIdentityRequest) (*DeleteDeviceIdentityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteDeviceIdentity not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) CreateTunnelIdentity(context.Context, *CreateTunnelIdentityRequest) (*CreateTunnelIdentityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateTunnelIdentity not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) DeleteTunnelIdentity(context.Context, *DeleteTunnelIdentityRequest) (*DeleteTunnelIdentityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteTunnelIdentity not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) PatchIdentityRoleAttributes(context.Context, *PatchIdentityRoleAttributesRequest) (*PatchIdentityRoleAttributesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PatchIdentityRoleAttributes not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) GetIdentityLiveness(context.Context, *GetIdentityLivenessRequest) (*GetIdentityLivenessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetIdentityLiveness not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) ListServicesByTag(context.Context, *ListServicesByTagRequest) (*ListServicesByTagResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListServicesByTag not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) ListIdentitiesByTag(context.Context, *ListIdentitiesByTagRequest) (*ListIdentitiesByTagResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListIdentitiesByTag not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) ListServicePoliciesByTag(context.Context, *ListServicePoliciesByTagRequest) (*ListServicePoliciesByTagResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListServicePoliciesByTag not implemented")
+}
+func (UnimplementedZitiManagementServiceServer) UpdateService(context.Context, *UpdateServiceRequest) (*UpdateServiceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateService not implemented")
 }
 func (UnimplementedZitiManagementServiceServer) testEmbeddedByValue() {}
 
@@ -668,6 +812,150 @@ func _ZitiManagementService_DeleteDeviceIdentity_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ZitiManagementService_CreateTunnelIdentity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTunnelIdentityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).CreateTunnelIdentity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_CreateTunnelIdentity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).CreateTunnelIdentity(ctx, req.(*CreateTunnelIdentityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_DeleteTunnelIdentity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTunnelIdentityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).DeleteTunnelIdentity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_DeleteTunnelIdentity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).DeleteTunnelIdentity(ctx, req.(*DeleteTunnelIdentityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_PatchIdentityRoleAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchIdentityRoleAttributesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).PatchIdentityRoleAttributes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_PatchIdentityRoleAttributes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).PatchIdentityRoleAttributes(ctx, req.(*PatchIdentityRoleAttributesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_GetIdentityLiveness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetIdentityLivenessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).GetIdentityLiveness(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_GetIdentityLiveness_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).GetIdentityLiveness(ctx, req.(*GetIdentityLivenessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_ListServicesByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServicesByTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).ListServicesByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_ListServicesByTag_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).ListServicesByTag(ctx, req.(*ListServicesByTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_ListIdentitiesByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListIdentitiesByTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).ListIdentitiesByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_ListIdentitiesByTag_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).ListIdentitiesByTag(ctx, req.(*ListIdentitiesByTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_ListServicePoliciesByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServicePoliciesByTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).ListServicePoliciesByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_ListServicePoliciesByTag_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).ListServicePoliciesByTag(ctx, req.(*ListServicePoliciesByTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ZitiManagementService_UpdateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ZitiManagementServiceServer).UpdateService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ZitiManagementService_UpdateService_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ZitiManagementServiceServer).UpdateService(ctx, req.(*UpdateServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ZitiManagementService_ServiceDesc is the grpc.ServiceDesc for ZitiManagementService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -738,6 +1026,38 @@ var ZitiManagementService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteDeviceIdentity",
 			Handler:    _ZitiManagementService_DeleteDeviceIdentity_Handler,
+		},
+		{
+			MethodName: "CreateTunnelIdentity",
+			Handler:    _ZitiManagementService_CreateTunnelIdentity_Handler,
+		},
+		{
+			MethodName: "DeleteTunnelIdentity",
+			Handler:    _ZitiManagementService_DeleteTunnelIdentity_Handler,
+		},
+		{
+			MethodName: "PatchIdentityRoleAttributes",
+			Handler:    _ZitiManagementService_PatchIdentityRoleAttributes_Handler,
+		},
+		{
+			MethodName: "GetIdentityLiveness",
+			Handler:    _ZitiManagementService_GetIdentityLiveness_Handler,
+		},
+		{
+			MethodName: "ListServicesByTag",
+			Handler:    _ZitiManagementService_ListServicesByTag_Handler,
+		},
+		{
+			MethodName: "ListIdentitiesByTag",
+			Handler:    _ZitiManagementService_ListIdentitiesByTag_Handler,
+		},
+		{
+			MethodName: "ListServicePoliciesByTag",
+			Handler:    _ZitiManagementService_ListServicePoliciesByTag_Handler,
+		},
+		{
+			MethodName: "UpdateService",
+			Handler:    _ZitiManagementService_UpdateService_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
