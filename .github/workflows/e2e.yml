@@ -24,6 +24,7 @@ jobs:
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
       TF_VAR_egress_image_tag: pr-14-1df3c611e8474c71de8f611f6dde1edf62f64719
+      TF_VAR_ziti_management_image_tag: pr-61-c1d860ed955c62e06ef06be5ce1bb1befc07c5e5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,10 +44,25 @@ jobs:
           echo "Timed out waiting for ${image_ref}" >&2
           exit 1
 
+      - name: Wait for ziti-management PR image
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/agynio/ziti-management:${TF_VAR_ziti_management_image_tag}"
+          for attempt in {1..60}; do
+            if docker buildx imagetools inspect "${image_ref}" >/dev/null 2>&1; then
+              echo "Found ${image_ref}"
+              exit 0
+            fi
+            echo "Waiting for ${image_ref} (${attempt}/60)"
+            sleep 10
+          done
+          echo "Timed out waiting for ${image_ref}" >&2
+          exit 1
+
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@2a8440e6fbff85e2ebb5e7934a9a2258a8193c95
+        uses: agynio/bootstrap/.github/actions/provision@noa/issue-153-bootstrap-enrollment
         with:
-          ref: 2a8440e6fbff85e2ebb5e7934a9a2258a8193c95
+          ref: noa/issue-153-bootstrap-enrollment
 
       - name: Run platform usage E2E test
         uses: ./.github/actions/run-tests
