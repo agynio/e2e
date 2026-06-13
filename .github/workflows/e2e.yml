@@ -23,7 +23,7 @@ jobs:
       AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
-      TF_VAR_egress_image_tag: 65c555d6eeba18ff319ce1e26edae495c9bc4a49
+      TF_VAR_egress_image_tag: pr-14-75d68527f7f2ac9e69f7e036c39fe9d0af956e19
     steps:
       - name: Checkout
         uses: actions/checkout@v4
