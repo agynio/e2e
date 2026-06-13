@@ -76,7 +76,7 @@ func waitRunning(t *testing.T, ctx context.Context, client runnerv1.RunnerServic
 
 		select {
 		case <-waitCtx.Done():
-			logWorkloadPodDiagnostics(t, context.Background(), workloadID)
+			logEgressWorkloadPodDiagnostics(t, context.Background(), workloadID)
 			t.Fatalf("workload %s not running: %v", workloadID, waitCtx.Err())
 		case <-ticker.C:
 		}
