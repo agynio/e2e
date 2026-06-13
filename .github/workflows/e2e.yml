@@ -24,6 +24,7 @@ jobs:
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
       TF_VAR_egress_image_tag: pr-14-471fd0cff8d7aa2e49c1a6ecbe296cc7afe3ecdd
+      TF_VAR_egress_gateway_image_tag: pr-10-0b4a11ac2d3ecc123d05b331acfd0336d3bcdb5b
       TF_VAR_ziti_management_image_tag: pr-61-d81d5dc495ac4860c88206418cbbb9fccb59b0c3
     steps:
       - name: Checkout
@@ -33,6 +34,21 @@ jobs:
         run: |
           set -euo pipefail
           image_ref="ghcr.io/agynio/egress:${TF_VAR_egress_image_tag}"
+          for attempt in {1..60}; do
+            if docker buildx imagetools inspect "${image_ref}" >/dev/null 2>&1; then
+              echo "Found ${image_ref}"
+              exit 0
+            fi
+            echo "Waiting for ${image_ref} (${attempt}/60)"
+            sleep 10
+          done
+          echo "Timed out waiting for ${image_ref}" >&2
+          exit 1
+
+      - name: Wait for egress-gateway PR image
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/agynio/egress-gateway:${TF_VAR_egress_gateway_image_tag}"
           for attempt in {1..60}; do
             if docker buildx imagetools inspect "${image_ref}" >/dev/null 2>&1; then
               echo "Found ${image_ref}"
