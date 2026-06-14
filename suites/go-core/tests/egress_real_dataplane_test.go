@@ -67,6 +67,7 @@ func TestEgressGatewayDataPlaneSecretInjection(t *testing.T) {
 	runnerClient := newK8sRunnerClient(t)
 	zitiIdentityID, enrollmentJWT := createEgressZitiAgentIdentity(t, ctx, fixture.agentID)
 	t.Cleanup(func() { deleteEgressZitiIdentity(t, zitiIdentityID) })
+	logEgressEnrollmentDiagnostics(t, ctx, zitiIdentityID, enrollmentJWT)
 
 	request := postmanEchoWorkloadRequest(t, ctx, enrollmentJWT, queryMarker)
 	response := startWorkloadWithCleanup(t, ctx, runnerClient, request)
