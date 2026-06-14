@@ -31,10 +31,6 @@ const (
 	egressDefaultWorkloadDNSUpstream = "10.96.0.10"
 	egressZitiControllerHostEnvKey   = "ZITI_CONTROLLER_HOST"
 	egressDefaultZitiControllerHost  = "ziti.agyn.dev"
-	egressZitiNamespaceEnvKey        = "ZITI_NAMESPACE"
-	egressDefaultZitiNamespace       = "ziti"
-	egressZitiControllerService      = "ziti-controller-client"
-	egressZitiControllerIPEnvVar     = "ZITI_CONTROLLER_IP"
 	egressZitiIdentityVolumeName     = "ziti-identity"
 	egressZitiIdentityMountPath      = "/netfoundry"
 	egressZitiIdentityBasename       = "agent"
@@ -156,7 +152,6 @@ func deleteEgressZitiIdentity(t *testing.T, zitiIdentityID string) {
 func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT, queryMarker string) *runnerv1.StartWorkloadRequest {
 	t.Helper()
 	caBytes := egressCABytes(t, ctx)
-	zitiControllerIP := egressZitiControllerClusterIP(t, ctx)
 	return &runnerv1.StartWorkloadRequest{
 		Main: &runnerv1.ContainerSpec{
 			Image:      egressCurlImage,
@@ -173,7 +168,7 @@ func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT
 			Kind: runnerv1.VolumeKind_VOLUME_KIND_EPHEMERAL,
 		}},
 		InitContainers: []*runnerv1.ContainerSpec{
-			egressZitiEnrollContainer(enrollmentJWT, zitiControllerIP),
+			egressZitiEnrollContainer(enrollmentJWT),
 		},
 		Sidecars: []*runnerv1.ContainerSpec{
 			egressZitiSidecarContainer(),
@@ -202,19 +197,7 @@ func egressCABytes(t *testing.T, ctx context.Context) []byte {
 	return caBytes
 }
 
-func egressZitiControllerClusterIP(t *testing.T, ctx context.Context) string {
-	t.Helper()
-	service, err := egressKubeClientset(t).CoreV1().Services(envOrDefault(egressZitiNamespaceEnvKey, egressDefaultZitiNamespace)).Get(ctx, egressZitiControllerService, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("get ziti controller service: %v", err)
-	}
-	if service.Spec.ClusterIP == "" || service.Spec.ClusterIP == corev1.ClusterIPNone {
-		t.Fatalf("%s service missing cluster IP", egressZitiControllerService)
-	}
-	return service.Spec.ClusterIP
-}
-
-func egressZitiEnrollContainer(enrollmentJWT, zitiControllerIP string) *runnerv1.ContainerSpec {
+func egressZitiEnrollContainer(enrollmentJWT string) *runnerv1.ContainerSpec {
 	return &runnerv1.ContainerSpec{
 		Image:      envOrDefault(egressZitiSidecarImageEnvKey, egressDefaultZitiSidecarImage),
 		Name:       egressZitiEnrollContainerName,
@@ -229,7 +212,6 @@ func egressZitiEnrollContainer(enrollmentJWT, zitiControllerIP string) *runnerv1
 			{Name: egressZitiIdentityBasenameEnvVar, Value: egressZitiIdentityBasename},
 			{Name: egressZitiIdentityDirEnvVar, Value: egressZitiIdentityMountPath},
 			{Name: egressZitiControllerHostEnvKey, Value: envOrDefault(egressZitiControllerHostEnvKey, egressDefaultZitiControllerHost)},
-			{Name: egressZitiControllerIPEnvVar, Value: zitiControllerIP},
 		},
 		Mounts: []*runnerv1.VolumeMount{{
 			Volume:    egressZitiIdentityVolumeName,
@@ -268,7 +250,7 @@ jwt_file="${identity_dir}/${identity_basename}.jwt"
 resolv_file="${ZITI_RESOLV_CONF:-/etc/resolv.conf}"
 hosts_file="${ZITI_HOSTS_FILE:-/etc/hosts}"
 ziti_controller_host="${ZITI_CONTROLLER_HOST}"
-ziti_controller_ip="${ZITI_CONTROLLER_IP}"
+ziti_controller_ip="${ZITI_CONTROLLER_IP:-}"
 
 mkdir -p "${identity_dir}"
 

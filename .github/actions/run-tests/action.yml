@@ -98,6 +98,7 @@ runs:
         k8s_stack="$bootstrap_dir/stacks/k8s"
         platform_stack="$bootstrap_dir/stacks/platform"
         apps_stack="$bootstrap_dir/stacks/apps"
+        platform_stack_outputs_available="false"
 
         if [ -d "$k8s_stack" ]; then
           if ! domain=$(terraform -chdir="$k8s_stack" output -raw domain); then
@@ -136,6 +137,22 @@ runs:
         if [ "$gateway_status" = "000" ]; then
           echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
           exit 1
+        fi
+
+        if [ -d "$platform_stack" ]; then
+          platform_stack_outputs_available="true"
+        fi
+
+        if [ -z "${WORKLOAD_DNS_UPSTREAM:-}" ] && [ "$platform_stack_outputs_available" = "true" ]; then
+          if ! WORKLOAD_DNS_UPSTREAM=$(terraform -chdir="$platform_stack" output -raw ziti_workload_dns_service_ip); then
+            echo "Failed to read ziti_workload_dns_service_ip output from ${platform_stack}." >&2
+            exit 1
+          fi
+          if [ -z "$WORKLOAD_DNS_UPSTREAM" ]; then
+            echo "ziti_workload_dns_service_ip output was empty." >&2
+            exit 1
+          fi
+          echo "WORKLOAD_DNS_UPSTREAM=$WORKLOAD_DNS_UPSTREAM" >> "$GITHUB_ENV"
         fi
 
         if [ -z "${AGYN_API_TOKEN:-}" ]; then
