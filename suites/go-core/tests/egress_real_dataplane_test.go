@@ -34,9 +34,6 @@ const (
 	egressZitiIdentityVolumeName     = "ziti-identity"
 	egressZitiIdentityMountPath      = "/netfoundry"
 	egressZitiIdentityBasename       = "agent"
-	egressZitiDNSNameserver          = "127.0.0.1"
-	egressZitiDNSSearchService       = "svc.cluster.local"
-	egressZitiDNSSearchCluster       = "cluster.local"
 	egressZitiEnrollContainerName    = "ziti-enroll"
 	egressZitiSidecarContainerName   = "ziti-sidecar"
 	egressZitiRequiredNetAdmin       = "NET_ADMIN"
@@ -173,10 +170,6 @@ func postmanEchoWorkloadRequest(t *testing.T, ctx context.Context, enrollmentJWT
 		Sidecars: []*runnerv1.ContainerSpec{
 			egressZitiSidecarContainer(),
 		},
-		DnsConfig: &runnerv1.DnsConfig{
-			Nameservers: []string{egressZitiDNSNameserver},
-			Searches:    []string{egressZitiDNSSearchService, egressZitiDNSSearchCluster},
-		},
 		InlineFiles: map[string][]byte{egressCACertPath: caBytes},
 		AdditionalProperties: map[string]string{
 			"label.agyn.dev/managed-by": egressManagedByValue,
@@ -204,9 +197,7 @@ func egressZitiEnrollContainer(enrollmentJWT string) *runnerv1.ContainerSpec {
 		Entrypoint: "/usr/bin/bash",
 		Cmd: []string{
 			"-ec",
-			egressZitiEnrollScript(),
-			egressZitiDNSNameserver,
-		},
+			egressZitiEnrollScript()},
 		Env: []*runnerv1.EnvVar{
 			{Name: egressZitiEnrollmentTokenEnvVar, Value: enrollmentJWT},
 			{Name: egressZitiIdentityBasenameEnvVar, Value: egressZitiIdentityBasename},
@@ -242,12 +233,10 @@ func egressZitiSidecarContainer() *runnerv1.ContainerSpec {
 }
 
 func egressZitiEnrollScript() string {
-	return `workload_dns_nameserver="$1"
-identity_dir="${ZITI_IDENTITY_DIR}"
+	return `identity_dir="${ZITI_IDENTITY_DIR}"
 identity_basename="${ZITI_IDENTITY_BASENAME}"
 identity_file="${identity_dir}/${identity_basename}.json"
 jwt_file="${identity_dir}/${identity_basename}.jwt"
-resolv_file="${ZITI_RESOLV_CONF:-/etc/resolv.conf}"
 hosts_file="${ZITI_HOSTS_FILE:-/etc/hosts}"
 ziti_controller_host="${ZITI_CONTROLLER_HOST}"
 ziti_controller_ip="${ZITI_CONTROLLER_IP:-}"
@@ -288,9 +277,7 @@ fi
 if [[ ! -s "${identity_file}" ]]; then
   echo "expected identity file ${identity_file}" >&2
   exit 1
-fi
-
-printf 'nameserver %s\nsearch svc.cluster.local cluster.local\noptions ndots:5\n' "${workload_dns_nameserver}" > "${resolv_file}"`
+fi`
 }
 
 func postmanEchoCurlScript(queryMarker string) string {
