@@ -282,7 +282,7 @@ fi`
 
 func postmanEchoCurlScript(queryMarker string) string {
 	url := fmt.Sprintf("https://%s/get?egress_e2e=%s", egressPostmanEchoHost, queryMarker)
-	return fmt.Sprintf("curl --fail --silent --show-error --location --connect-timeout 20 --max-time 60 %q > /tmp/postman-echo.json; sleep 300", url)
+	return fmt.Sprintf("curl --fail --silent --show-error --location --connect-timeout 20 --max-time 60 %q > /tmp/postman-echo.json.tmp && mv /tmp/postman-echo.json.tmp /tmp/postman-echo.json; sleep 300", url)
 }
 
 func waitForPostmanEchoOutput(t *testing.T, ctx context.Context, client runnerv1.RunnerServiceClient, workloadID string) execResult {
@@ -297,6 +297,12 @@ func waitForPostmanEchoOutput(t *testing.T, ctx context.Context, client runnerv1
 		})
 		if result.exit == nil || result.exit.GetExitCode() != 0 {
 			return fmt.Errorf("postman echo output unavailable: exit=%v stdout=%q stderr=%q", result.exit, result.stdout, result.stderr)
+		}
+		if strings.TrimSpace(result.stdout) == "" {
+			return fmt.Errorf("postman echo output is empty")
+		}
+		if !json.Valid([]byte(result.stdout)) {
+			return fmt.Errorf("postman echo output is not JSON: stdout=%q", result.stdout)
 		}
 		return nil
 	}); err != nil {
