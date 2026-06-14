@@ -25,7 +25,7 @@ jobs:
       TF_VAR_threads_image_tag: 0.4.12
       TF_VAR_egress_image_tag: pr-14-471fd0cff8d7aa2e49c1a6ecbe296cc7afe3ecdd
       TF_VAR_egress_gateway_image_tag: pr-10-0b4a11ac2d3ecc123d05b331acfd0336d3bcdb5b
-      TF_VAR_ziti_management_image_tag: pr-61-122649920c0a9af8fe5310a6fb37e4b10d3bd1a8
+      TF_VAR_ziti_management_image_tag: pr-61-76fe3000c8a15598ca93f693d0078c195ed75944
     steps:
       - name: Checkout
         uses: actions/checkout@v4
