@@ -131,8 +131,7 @@ func ensureEgressAgentAuthorization(t *testing.T, ctx context.Context, client au
 	t.Helper()
 	ensureClusterAdmin(t, ctx, client)
 	tuples := []*authorizationv1.TupleKey{
-		{User: authorizationIdentityPrefix + identityID, Relation: "can_edit_config", Object: "agent:" + agentID},
-		{User: authorizationIdentityPrefix + identityID, Relation: "can_read_config", Object: "agent:" + agentID},
+		{User: authorizationIdentityPrefix + identityID, Relation: authorizationOwnerRelation, Object: "agent:" + agentID},
 		{User: authorizationOrganizationPrefix + organizationID, Relation: "org", Object: "agent:" + agentID},
 	}
 	adminCtx := adminContext(ctx)
@@ -150,11 +149,16 @@ func ensureEgressAgentAuthorization(t *testing.T, ctx context.Context, client au
 
 func createEgressSecret(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, organizationID string) *secretsv1.Secret {
 	t.Helper()
+	return createEgressSecretWithValue(t, ctx, client, organizationID, egressExpectedSecretValue)
+}
+
+func createEgressSecretWithValue(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, organizationID, value string) *secretsv1.Secret {
+	t.Helper()
 	resp, err := client.CreateSecret(ctx, &secretsv1.CreateSecretRequest{
 		Title:          "e2e-egress-secret-" + uuid.NewString(),
 		Description:    "E2E Egress Gateway secret",
 		OrganizationId: organizationID,
-		Value:          egressExpectedSecretValue,
+		Value:          value,
 	})
 	if err != nil {
 		t.Fatalf("create egress secret: %v", err)

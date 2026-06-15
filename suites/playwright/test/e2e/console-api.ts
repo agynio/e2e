@@ -57,6 +57,7 @@ type UserWire = {
 
 type MembershipWire = {
   id?: string;
+  organizationId?: string;
   identityId?: string;
   role?: string | number;
   status?: string | number;
@@ -549,10 +550,12 @@ export async function createOrganization(page: Page, name: string): Promise<stri
     'CreateOrganization',
     { name },
   );
-  if (!response.organization?.id) {
+  const organizationId = response.organization?.id;
+  if (!organizationId) {
     throw new Error('CreateOrganization response missing organization id.');
   }
-  return response.organization.id;
+  await waitForOrganizationMembership(page, organizationId);
+  return organizationId;
 }
 
 export async function listAccessibleOrganizations(page: Page): Promise<OrganizationWire[]> {
@@ -568,6 +571,22 @@ export async function listAccessibleOrganizations(page: Page): Promise<Organizat
     { identityId },
   );
   return response.organizations ?? [];
+}
+
+async function waitForOrganizationMembership(page: Page, organizationId: string): Promise<void> {
+  const timeoutMs = 10000;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const memberships = await listMembers(page, {
+      organizationId,
+      status: 'MEMBERSHIP_STATUS_ACTIVE',
+    });
+    if (memberships.some((membership) => membership.organizationId === organizationId)) {
+      return;
+    }
+    await page.waitForTimeout(500);
+  }
+  throw new Error(`Organization ${organizationId} membership did not appear in time.`);
 }
 
 async function waitForOrganization(page: Page, organizationId: string): Promise<void> {

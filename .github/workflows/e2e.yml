@@ -23,14 +23,62 @@ jobs:
       AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
+      TF_VAR_egress_image_tag: pr-14-471fd0cff8d7aa2e49c1a6ecbe296cc7afe3ecdd
+      TF_VAR_egress_gateway_image_tag: pr-10-0b4a11ac2d3ecc123d05b331acfd0336d3bcdb5b
+      TF_VAR_ziti_management_image_tag: pr-61-4f5cd681b9887dc397d24dd7cd796ab062cbe6c2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Wait for egress PR image
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/agynio/egress:${TF_VAR_egress_image_tag}"
+          for attempt in {1..60}; do
+            if docker buildx imagetools inspect "${image_ref}" >/dev/null 2>&1; then
+              echo "Found ${image_ref}"
+              exit 0
+            fi
+            echo "Waiting for ${image_ref} (${attempt}/60)"
+            sleep 10
+          done
+          echo "Timed out waiting for ${image_ref}" >&2
+          exit 1
+
+      - name: Wait for egress-gateway PR image
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/agynio/egress-gateway:${TF_VAR_egress_gateway_image_tag}"
+          for attempt in {1..60}; do
+            if docker buildx imagetools inspect "${image_ref}" >/dev/null 2>&1; then
+              echo "Found ${image_ref}"
+              exit 0
+            fi
+            echo "Waiting for ${image_ref} (${attempt}/60)"
+            sleep 10
+          done
+          echo "Timed out waiting for ${image_ref}" >&2
+          exit 1
+
+      - name: Wait for ziti-management PR image
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/agynio/ziti-management:${TF_VAR_ziti_management_image_tag}"
+          for attempt in {1..60}; do
+            if docker buildx imagetools inspect "${image_ref}" >/dev/null 2>&1; then
+              echo "Found ${image_ref}"
+              exit 0
+            fi
+            echo "Waiting for ${image_ref} (${attempt}/60)"
+            sleep 10
+          done
+          echo "Timed out waiting for ${image_ref}" >&2
+          exit 1
+
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@main
+        uses: agynio/bootstrap/.github/actions/provision@noa/issue-153-bootstrap-enrollment
         with:
-          ref: main
+          ref: noa/issue-153-bootstrap-enrollment
 
       - name: Run platform usage E2E test
         uses: ./.github/actions/run-tests
@@ -40,3 +88,13 @@ jobs:
         with:
           tag: svc_metering
           include_smoke: false
+
+      - name: Run egress data-plane E2E test
+        uses: ./.github/actions/run-tests
+        env:
+          E2E_GO_TEST_RUN: TestEgressGatewayDataPlaneSecretInjection
+        with:
+          tag: svc_egress,svc_egress_gateway
+          include_smoke: false
+          e2e-ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          artifact-name: e2e-artifacts-egress-dataplane

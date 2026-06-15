@@ -27,12 +27,16 @@ run: |
   npx buf generate
 
   grep_tags=""
+  grep_invert_tags="@future_console_egress"
   if [ -n "${TAGS:-}" ]; then
     for tag in ${TAGS}; do
       if [ -n "$grep_tags" ]; then
         grep_tags="${grep_tags}|"
       fi
       grep_tags="${grep_tags}@${tag}"
+      if [ "$tag" = "future_console_egress" ]; then
+        grep_invert_tags=""
+      fi
     done
   fi
 
@@ -42,8 +46,16 @@ run: |
     read -r -a test_args <<< "${E2E_PLAYWRIGHT_TEST_ARGS}"
   fi
 
+  playwright_args=("${test_args[@]}")
   if [ -n "$grep_tags" ]; then
-    CI=true npx playwright test "${test_args[@]}" --grep "$grep_tags"
+    playwright_args+=(--grep "$grep_tags")
+  fi
+  if [ -n "$grep_invert_tags" ]; then
+    playwright_args+=(--grep-invert "$grep_invert_tags")
+  fi
+
+  if [ "${#playwright_args[@]}" -gt 0 ]; then
+    CI=true npx playwright test "${playwright_args[@]}"
   else
     CI=true npx playwright test "${test_args[@]}"
   fi
