@@ -4,13 +4,27 @@ package tests
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
+const agynTerraformEgressResourcesEnv = "AGYN_TF_EGRESS_RESOURCES"
+
+func skipUnlessTerraformEgressResourcesEnabled(t *testing.T) {
+	t.Helper()
+
+	if os.Getenv(agynTerraformEgressResourcesEnv) != "1" {
+		// Remove this gate once agynio/terraform-provider-agyn#82 ships in a provider release.
+		t.Skip("agyn_egress_rule and agyn_egress_rule_attachment are pending provider support; see agynio/terraform-provider-agyn#82")
+	}
+}
+
 func TestAccAgynEgressRule_basic(t *testing.T) {
+	skipUnlessTerraformEgressResourcesEnabled(t)
+
 	organizationName := acctest.RandomWithPrefix("tf-acc-org")
 	ruleName := acctest.RandomWithPrefix("tf-acc-egress-rule")
 	resource.Test(t, resource.TestCase{
@@ -43,6 +57,8 @@ func TestAccAgynEgressRule_basic(t *testing.T) {
 }
 
 func TestAccAgynEgressRuleAttachment_basic(t *testing.T) {
+	skipUnlessTerraformEgressResourcesEnabled(t)
+
 	organizationName := acctest.RandomWithPrefix("tf-acc-org")
 	agentName := acctest.RandomWithPrefix("tf-acc-agent")
 	ruleName := acctest.RandomWithPrefix("tf-acc-egress-rule")
