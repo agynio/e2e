@@ -25,7 +25,7 @@ func TestAccAgynEgressRule_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("agyn_egress_rule.test", "ports.#", "1"),
 					resource.TestCheckResourceAttr("agyn_egress_rule.test", "ports.0", "443"),
 					resource.TestCheckResourceAttr("agyn_egress_rule.test", "methods.#", "1"),
-					resource.TestCheckResourceAttr("agyn_egress_rule.test", "methods.0", "GET"),
+					resource.TestCheckResourceAttr("agyn_egress_rule.test", "methods.0", "get"),
 					resource.TestCheckResourceAttr("agyn_egress_rule.test", "action", "allow"),
 					resource.TestCheckResourceAttrSet("agyn_egress_rule.test", "id"),
 				),
