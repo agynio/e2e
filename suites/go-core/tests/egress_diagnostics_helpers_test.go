@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,7 +18,13 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	egressZitiDiagnosticsSecretName       = "ziti-diagnostics"
+	egressZitiManagementDiagnosticsSecret = "ziti-management-diagnostics"
 )
 
 type egressLogReadOptions struct {
@@ -177,15 +184,37 @@ func createEgressZitiManagementSession(t *testing.T, ctx context.Context) (egres
 
 func egressZitiDiagnosticsCredentials(t *testing.T, ctx context.Context) (string, string, error) {
 	t.Helper()
-	secret, err := egressKubeClientset(t).CoreV1().Secrets(platformNamespace()).Get(ctx, "ziti-management-diagnostics", metav1.GetOptions{})
-	if err != nil {
-		return "", "", fmt.Errorf("get %s/%s: %w", platformNamespace(), "ziti-management-diagnostics", err)
+	namespace := platformNamespace()
+	secretNames := []string{egressZitiDiagnosticsSecretName, egressZitiManagementDiagnosticsSecret}
+	var missing []string
+	var lookupErrors []error
+	var secret *corev1.Secret
+	var secretName string
+	for _, candidateName := range secretNames {
+		candidate, err := egressKubeClientset(t).CoreV1().Secrets(namespace).Get(ctx, candidateName, metav1.GetOptions{})
+		if err == nil {
+			secret = candidate
+			secretName = candidateName
+			break
+		}
+		if apierrors.IsNotFound(err) {
+			missing = append(missing, fmt.Sprintf("%s/%s", namespace, candidateName))
+			continue
+		}
+		lookupErrors = append(lookupErrors, fmt.Errorf("get %s/%s: %w", namespace, candidateName, err))
+	}
+	if secret == nil {
+		if len(lookupErrors) > 0 {
+			return "", "", errors.Join(lookupErrors...)
+		}
+		return "", "", fmt.Errorf("ziti diagnostics credentials secret not found: %s", strings.Join(missing, ", "))
 	}
 	username := strings.TrimSpace(string(secret.Data["username"]))
 	password := strings.TrimSpace(string(secret.Data["password"]))
 	if username == "" || password == "" {
-		return "", "", fmt.Errorf("%s/%s missing diagnostics credentials", platformNamespace(), "ziti-management-diagnostics")
+		return "", "", fmt.Errorf("%s/%s missing diagnostics credentials", namespace, secretName)
 	}
+	t.Logf("diagnostics: using ziti diagnostics credentials from %s/%s", namespace, secretName)
 	return username, password, nil
 }
 

@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,6 +41,8 @@ const (
 	egressZitiEnrollmentTokenEnvVar  = "ZITI_ENROLL_TOKEN"
 	egressZitiIdentityBasenameEnvVar = "ZITI_IDENTITY_BASENAME"
 	egressZitiIdentityDirEnvVar      = "ZITI_IDENTITY_DIR"
+	egressDirectEnrollProbeTimeout   = 90 * time.Second
+	egressDirectEnrollProbeLogLines  = int64(200)
 )
 
 func TestEgressGatewayDataPlaneSecretInjection(t *testing.T) {
@@ -65,14 +68,23 @@ func TestEgressGatewayDataPlaneSecretInjection(t *testing.T) {
 	waitForEgressRuleByAgent(t, ctx, fixture.egress, fixture.agentID, allowRuleID)
 
 	runnerClient := newK8sRunnerClient(t)
+	probeZitiIdentityID, probeEnrollmentJWT := createEgressZitiAgentIdentity(t, ctx, fixture.agentID)
+	t.Cleanup(func() { deleteEgressZitiIdentity(t, probeZitiIdentityID) })
+	t.Log("diagnostics: direct enrollment probe identity created")
+	logEgressEnrollmentDiagnostics(t, ctx, probeZitiIdentityID, probeEnrollmentJWT)
+	runEgressDirectEnrollmentProbe(t, ctx, probeEnrollmentJWT)
+	t.Log("diagnostics: direct enrollment probe completed")
+	logEgressEnrollmentDiagnostics(t, ctx, probeZitiIdentityID, probeEnrollmentJWT)
+
 	zitiIdentityID, enrollmentJWT := createEgressZitiAgentIdentity(t, ctx, fixture.agentID)
 	t.Cleanup(func() { deleteEgressZitiIdentity(t, zitiIdentityID) })
+	t.Log("diagnostics: workload enrollment identity created")
 	logEgressEnrollmentDiagnostics(t, ctx, zitiIdentityID, enrollmentJWT)
 
 	request := postmanEchoWorkloadRequest(t, ctx, enrollmentJWT, queryMarker)
 	response := startWorkloadWithCleanup(t, ctx, runnerClient, request)
 	workloadID := response.GetId()
-	waitRunning(t, ctx, runnerClient, workloadID)
+	waitRunningWithEgressEnrollmentDiagnostics(t, ctx, runnerClient, workloadID, zitiIdentityID, enrollmentJWT)
 	targetID := response.GetContainers().GetMain()
 	if targetID == "" {
 		t.Fatal("start postman echo workload: missing main container target id")
@@ -83,6 +95,117 @@ func TestEgressGatewayDataPlaneSecretInjection(t *testing.T) {
 		t.Fatalf("postman echo request failed: exit=%v stdout=%q stderr=%q", execResult.exit, execResult.stdout, execResult.stderr)
 	}
 	assertPostmanEchoAuthorization(t, execResult.stdout, queryMarker, tokenValue)
+}
+
+func waitRunningWithEgressEnrollmentDiagnostics(t *testing.T, ctx context.Context, client runnerv1.RunnerServiceClient, workloadID, zitiIdentityID, enrollmentJWT string) *runnerv1.InspectWorkloadResponse {
+	t.Helper()
+	waitCtx, cancel := context.WithTimeout(ctx, waitRunningTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		resp, err := client.InspectWorkload(waitCtx, &runnerv1.InspectWorkloadRequest{WorkloadId: workloadID})
+		if err == nil {
+			if resp.GetStateRunning() {
+				return resp
+			}
+		} else if status.Code(err) != codes.NotFound {
+			logEgressWorkloadPodDiagnostics(t, context.Background(), workloadID)
+			logEgressEnrollmentDiagnostics(t, context.Background(), zitiIdentityID, enrollmentJWT)
+			t.Fatalf("inspect workload %s: %v", workloadID, err)
+		}
+
+		select {
+		case <-waitCtx.Done():
+			logEgressWorkloadPodDiagnostics(t, context.Background(), workloadID)
+			logEgressEnrollmentDiagnostics(t, context.Background(), zitiIdentityID, enrollmentJWT)
+			t.Fatalf("workload %s not running: %v", workloadID, waitCtx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+func runEgressDirectEnrollmentProbe(t *testing.T, ctx context.Context, enrollmentJWT string) {
+	t.Helper()
+	namespace := egressWorkloadNamespace(t)
+	podName := "ziti-enroll-probe-" + strings.ToLower(strings.ReplaceAll(uuid.NewString(), "-", ""))[:12]
+	clientset := egressKubeClientset(t)
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: podName,
+			Labels: map[string]string{
+				"agyn.dev/e2e":        "egress-ziti-enroll-probe",
+				"agyn.dev/managed-by": egressManagedByValue,
+			},
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			Containers: []corev1.Container{{
+				Name:    egressZitiEnrollContainerName,
+				Image:   envOrDefault(egressZitiSidecarImageEnvKey, egressDefaultZitiSidecarImage),
+				Command: []string{"/usr/bin/bash", "-ec", egressZitiEnrollScript()},
+				Env: []corev1.EnvVar{
+					{Name: egressZitiEnrollmentTokenEnvVar, Value: enrollmentJWT},
+					{Name: egressZitiIdentityBasenameEnvVar, Value: egressZitiIdentityBasename},
+					{Name: egressZitiIdentityDirEnvVar, Value: egressZitiIdentityMountPath},
+					{Name: egressZitiControllerHostEnvKey, Value: envOrDefault(egressZitiControllerHostEnvKey, egressDefaultZitiControllerHost)},
+				},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      egressZitiIdentityVolumeName,
+					MountPath: egressZitiIdentityMountPath,
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name: egressZitiIdentityVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			}},
+		},
+	}
+	if _, err := clientset.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("create direct ziti enrollment probe pod: %v", err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
+		defer cancel()
+		if err := clientset.CoreV1().Pods(namespace).Delete(cleanupCtx, podName, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			t.Logf("cleanup: delete direct ziti enrollment probe pod %s/%s: %v", namespace, podName, err)
+		}
+	})
+
+	waitCtx, cancel := context.WithTimeout(ctx, egressDirectEnrollProbeTimeout)
+	defer cancel()
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		currentPod, err := clientset.CoreV1().Pods(namespace).Get(waitCtx, podName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("get direct ziti enrollment probe pod: %v", err)
+		}
+		switch currentPod.Status.Phase {
+		case corev1.PodSucceeded:
+			readEgressWorkloadLogs(t, context.Background(), namespace, podName, egressZitiEnrollContainerName, egressLogReadOptions{TailLines: egressDirectEnrollProbeLogLines, MaxLines: 20})
+			return
+		case corev1.PodFailed:
+			logEgressWorkloadPodStatus(t, *currentPod)
+			readEgressWorkloadLogs(t, context.Background(), namespace, podName, egressZitiEnrollContainerName, egressLogReadOptions{TailLines: egressDirectEnrollProbeLogLines, MaxLines: 40})
+			t.Fatalf("direct ziti enrollment probe pod %s/%s failed", namespace, podName)
+		}
+
+		select {
+		case <-waitCtx.Done():
+			currentPod, err := clientset.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+			if err == nil {
+				logEgressWorkloadPodStatus(t, *currentPod)
+				readEgressWorkloadLogs(t, context.Background(), namespace, podName, egressZitiEnrollContainerName, egressLogReadOptions{TailLines: egressDirectEnrollProbeLogLines, MaxLines: 40})
+			}
+			t.Fatalf("direct ziti enrollment probe pod %s/%s did not complete: %v", namespace, podName, waitCtx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 func createPostmanEchoEgressRule(t *testing.T, ctx context.Context, fixture egressFixture, secretID string) *egressv1.EgressRule {
