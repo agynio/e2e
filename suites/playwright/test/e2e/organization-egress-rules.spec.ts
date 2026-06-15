@@ -13,7 +13,7 @@ function suffix(): string {
   return `${Date.now()}`;
 }
 
-test.describe('organization-egress-rules', { tag: ['@svc_console'] }, () => {
+test.describe('organization-egress-rules', { tag: ['@future_console_egress'] }, () => {
   test('manages egress rules and agent attachments', async ({ page }) => {
     const now = suffix();
     const organizationId = await createOrganization(page, `e2e-org-egress-${now}`);
