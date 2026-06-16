@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,17 +21,20 @@ import (
 )
 
 const (
-	egressGatewayWiringTestTimeout = 3 * time.Minute
-	egressManagedByValue           = "agents-orchestrator"
-	egressGatewayHealthAddr        = "egress-gateway:50051"
-	egressGatewayHealthTimeout     = 30 * time.Second
-	egressNetworkPolicyName        = "agent-workload-egress"
-	egressCASecretName             = "egress-ca"
-	egressGatewayIdentitySecret    = "egress-gateway-ziti-identity"
-	egressZitiEnrollmentSecret     = "egress-gateway-enrollment"
-	egressCACertPath               = "/etc/agyn/egress-ca/ca.crt"
-	egressOpenZitiCIDR             = "100.64.0.0/10"
-	egressPublicInternetCIDR       = "0.0.0.0/0"
+	egressGatewayWiringTestTimeout   = 3 * time.Minute
+	egressManagedByValue             = "agents-orchestrator"
+	egressGatewayHealthAddr          = "egress-gateway:50051"
+	egressGatewayHealthTimeout       = 30 * time.Second
+	egressNetworkPolicyName          = "agent-workload-egress"
+	egressCASecretName               = "egress-ca"
+	egressGatewayIdentitySecret      = "egress-gateway-ziti-identity"
+	egressZitiEnrollmentSecret       = "egress-gateway-enrollment"
+	egressCACertPath                 = "/etc/agyn/egress-ca/ca.crt"
+	egressOpenZitiCIDR               = "100.64.0.0/10"
+	egressPublicInternetCIDR         = "0.0.0.0/0"
+	egressExpectedClusterPodCIDR     = "EGRESS_EXPECTED_CLUSTER_POD_CIDR"
+	egressExpectedClusterServiceCIDR = "EGRESS_EXPECTED_CLUSTER_SERVICE_CIDR"
+	egressExpectedAdditionalCIDRs    = "EGRESS_EXPECTED_ADDITIONAL_INTERNAL_CIDRS"
 )
 
 var egressDefaultBlockedCIDRs = []string{
@@ -120,9 +125,8 @@ func assertEgressWorkloadNetworkPolicy(t *testing.T, ctx context.Context) {
 	if !networkPolicyAllowsDNS(policy) {
 		t.Fatalf("network policy %s must allow DNS", egressNetworkPolicyName)
 	}
-	if !networkPolicyAllowsPublicInternetExceptBlockedCIDRs(policy, egressDefaultBlockedCIDRs) {
-		t.Fatalf("network policy %s must allow public internet %s with blocked CIDR exceptions %v", egressNetworkPolicyName, egressPublicInternetCIDR, egressDefaultBlockedCIDRs)
-	}
+	expectedCIDRs := expectedEgressNetworkPolicyExcludedCIDRs()
+	assertNetworkPolicyAllowsPublicInternetExceptCIDRs(t, policy, expectedCIDRs)
 }
 
 func assertEgressCAInlineWorkloadPath(t *testing.T, ctx context.Context) {
@@ -158,6 +162,19 @@ func assertEgressCAInlineWorkloadPath(t *testing.T, ctx context.Context) {
 	}
 }
 
+func expectedEgressNetworkPolicyExcludedCIDRs() []string {
+	cidrs := append([]string{}, egressDefaultBlockedCIDRs...)
+	for _, key := range []string{egressExpectedClusterPodCIDR, egressExpectedClusterServiceCIDR, egressExpectedAdditionalCIDRs} {
+		for _, cidr := range strings.Split(os.Getenv(key), ",") {
+			trimmed := strings.TrimSpace(cidr)
+			if trimmed != "" {
+				cidrs = append(cidrs, trimmed)
+			}
+		}
+	}
+	return cidrs
+}
+
 func networkPolicyHasType(types []networkingv1.PolicyType, expected networkingv1.PolicyType) bool {
 	for _, candidate := range types {
 		if candidate == expected {
@@ -178,31 +195,35 @@ func networkPolicyAllowsCIDR(policy *networkingv1.NetworkPolicy, cidr string) bo
 	return false
 }
 
-func networkPolicyAllowsPublicInternetExceptBlockedCIDRs(policy *networkingv1.NetworkPolicy, blockedCIDRs []string) bool {
+func assertNetworkPolicyAllowsPublicInternetExceptCIDRs(t *testing.T, policy *networkingv1.NetworkPolicy, blockedCIDRs []string) {
+	t.Helper()
 	for _, rule := range policy.Spec.Egress {
 		for _, peer := range rule.To {
 			if peer.IPBlock == nil || peer.IPBlock.CIDR != egressPublicInternetCIDR {
 				continue
 			}
-			if cidrSetContainsAll(peer.IPBlock.Except, blockedCIDRs) {
-				return true
+			missing := missingCIDRs(peer.IPBlock.Except, blockedCIDRs)
+			if len(missing) == 0 {
+				return
 			}
+			t.Fatalf("network policy %s public internet %s missing configured CIDR exceptions %v; actual exceptions %v", egressNetworkPolicyName, egressPublicInternetCIDR, missing, peer.IPBlock.Except)
 		}
 	}
-	return false
+	t.Fatalf("network policy %s must allow public internet %s with configured CIDR exceptions %v", egressNetworkPolicyName, egressPublicInternetCIDR, blockedCIDRs)
 }
 
-func cidrSetContainsAll(actual []string, expected []string) bool {
+func missingCIDRs(actual []string, expected []string) []string {
 	actualSet := make(map[string]struct{}, len(actual))
 	for _, cidr := range actual {
 		actualSet[cidr] = struct{}{}
 	}
+	missing := make([]string, 0)
 	for _, cidr := range expected {
 		if _, ok := actualSet[cidr]; !ok {
-			return false
+			missing = append(missing, cidr)
 		}
 	}
-	return true
+	return missing
 }
 
 func networkPolicyAllowsDNS(policy *networkingv1.NetworkPolicy) bool {

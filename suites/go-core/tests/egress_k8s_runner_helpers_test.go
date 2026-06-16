@@ -1,4 +1,4 @@
-//go:build e2e && svc_egress_gateway && !(svc_k8s_runner || smoke)
+//go:build e2e && svc_egress_gateway
 
 package tests
 

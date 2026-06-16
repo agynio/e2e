@@ -26,41 +26,56 @@ func TestEgressGatewayDataPlaneHTTPBehavior(t *testing.T) {
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	assertEgressHTTPStatus(t, ctx, client, baseURL+"/allowed", http.StatusOK)
-	assertEgressInjectedHeader(t, ctx, client, baseURL+"/allowed")
+	assertEgressInjectedHeader(t, ctx, client, baseURL+"/allowed", "X-E2E-Egress-Injected")
+	assertEgressInjectedHeader(t, ctx, client, baseURL+"/literal-header", "X-E2E-Egress-Literal")
+	assertEgressInjectedHeader(t, ctx, client, baseURL+"/secret-header", "X-E2E-Egress-Secret")
 	assertEgressHTTPStatus(t, ctx, client, baseURL+"/denied", http.StatusForbidden)
 	assertUnmatchedBypassesGateway(t, ctx, client, baseURL)
 	assertWebsocketUpgradeRequired(t, ctx, client, baseURL+"/ws")
 }
 
-func assertEgressHTTPStatus(t *testing.T, ctx context.Context, client *http.Client, url string, expected int) {
-	t.Helper()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		t.Fatalf("build request: %v", err)
+func TestEgressGatewayDataPlaneMatcherMatrix(t *testing.T) {
+	baseURL := strings.TrimRight(os.Getenv("EGRESS_DATAPLANE_BASE_URL"), "/")
+	if baseURL == "" {
+		t.Skip("EGRESS_DATAPLANE_BASE_URL is required for live egress data-plane checks")
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("perform egress request %s: %v", url, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != expected {
-		t.Fatalf("expected %s to return %d, got %d", url, expected, resp.StatusCode)
-	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), egressDataPlaneTimeout)
+	t.Cleanup(cancel)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	assertEgressRequest(t, ctx, client, http.MethodGet, baseURL+"/repos/agynio/e2e", http.StatusOK, "X-E2E-Egress-Path-Matched")
+	assertEgressRequest(t, ctx, client, http.MethodPost, baseURL+"/repos/agynio/e2e", http.StatusOK, "X-E2E-Egress-Method-Matched")
+	assertEgressRequest(t, ctx, client, http.MethodGet, baseURL+"/ports/8443", http.StatusOK, "X-E2E-Egress-Port-Matched")
+	assertEgressRequest(t, ctx, client, http.MethodGet, baseURL+"/repos", http.StatusNotFound, "")
 }
 
-func assertEgressInjectedHeader(t *testing.T, ctx context.Context, client *http.Client, url string) {
+func assertEgressHTTPStatus(t *testing.T, ctx context.Context, client *http.Client, url string, expected int) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	assertEgressRequest(t, ctx, client, http.MethodGet, url, expected, "")
+}
+
+func assertEgressInjectedHeader(t *testing.T, ctx context.Context, client *http.Client, url string, markerHeader string) {
+	t.Helper()
+	assertEgressRequest(t, ctx, client, http.MethodGet, url, http.StatusOK, markerHeader)
+}
+
+func assertEgressRequest(t *testing.T, ctx context.Context, client *http.Client, method string, url string, expectedStatus int, expectedHeader string) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
-		t.Fatalf("build injected-header request: %v", err)
+		t.Fatalf("build egress request: %v", err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("perform injected-header request: %v", err)
+		t.Fatalf("perform egress request %s %s: %v", method, url, err)
 	}
 	defer resp.Body.Close()
-	if resp.Header.Get("X-E2E-Egress-Injected") == "" {
-		t.Fatalf("expected response to expose X-E2E-Egress-Injected marker")
+	if resp.StatusCode != expectedStatus {
+		t.Fatalf("expected %s %s to return %d, got %d", method, url, expectedStatus, resp.StatusCode)
+	}
+	if expectedHeader != "" && resp.Header.Get(expectedHeader) == "" {
+		t.Fatalf("expected %s %s response to expose %s marker", method, url, expectedHeader)
 	}
 }
 
