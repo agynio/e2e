@@ -7,13 +7,13 @@
 
 ## Intent
 
-Validates Console App user journeys and browser-visible API behaviors for sign-in, organizations, agents, runners, devices, settings, usage, threads, users, and layout.
+Validates Console App user journeys and browser-visible API behaviors for sign-in, organizations, agents, runners, devices, egress rules, settings, usage, threads, users, and layout.
 
 ## Scope
 
 - Source directory: `suites/playwright`
 - Test inventory pattern: `test/e2e/*.spec.ts`
-- Included case count: 44
+- Included case count: 45
 
 ## Actors
 
@@ -84,6 +84,7 @@ Validates Console App user journeys and browser-visible API behaviors for sign-i
 | [E2E-PLAYWRIGHT-042](#e2e-playwright-042) | `workloads header lays out across columns` | @svc_console, @svc_gateway, @smoke |
 | [E2E-PLAYWRIGHT-043](#e2e-playwright-043) | `opens every platform sidebar section without browser crashes` | @svc_console, @svc_gateway, @smoke |
 | [E2E-PLAYWRIGHT-044](#e2e-playwright-044) | `opens every organization sidebar section without browser crashes` | @svc_console, @svc_gateway, @smoke |
+| [E2E-PLAYWRIGHT-045](#e2e-playwright-045) | `manages egress rules and agent attachments` | @svc_console |
 
 ## Scenarios
 
@@ -602,3 +603,20 @@ Validates Console App user journeys and browser-visible API behaviors for sign-i
 - **Given** The user is signed in and an organization is selected.
 - **When** The user opens each organization sidebar section, including Runners.
 - **Then** The Console shell remains mounted and no TooltipProvider page crash is reported.
+
+### E2E-PLAYWRIGHT-045
+
+- **Source:** `suites/playwright/test/e2e/organization-egress-rules.spec.ts`
+- **Test:** `manages egress rules and agent attachments`
+- **Tags:** @svc_console
+
+**Scenario:** manages egress rules and agent attachments
+
+- **Given** An organization has an egress rule, an agent attachment, and an organization Secret available for header injection.
+- **When** The user opens the organization egress rules page.
+- **Then** The existing egress rule appears and the egress-rules navigation item is visible.
+- **When** The user creates a rule with domain, port, method, `/repos/**` path matching, Bearer header scheme, and a searched Secret-backed header value.
+- **Then** The new UI-created egress rule appears in the list.
+- **When** The user submits an invalid rule with no domain and then an incomplete injected header.
+- **Then** The dialog shows validation errors for the missing domain and incomplete header source.
+- **And** The agent detail page shows the attached egress rule for the agent.
