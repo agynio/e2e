@@ -7,13 +7,13 @@
 
 ## Intent
 
-Validates core platform services through Go E2E tests: gateway authentication, agents, organizations, runners, workloads, files, egress control-plane and gateway wiring, media proxying, LLM proxying, metering, tracing, MCP tools, Ziti exposure, and retry behavior.
+Validates core platform services through Go E2E tests: gateway authentication, agents, organizations, runners, workloads, files, egress control-plane, gateway wiring, and data-plane matching, media proxying, LLM proxying, metering, tracing, MCP tools, Ziti exposure, and retry behavior.
 
 ## Scope
 
 - Source directory: `suites/go-core`
 - Test inventory pattern: `tests/*_test.go`
-- Included case count: 92
+- Included case count: 94
 
 ## Actors
 
@@ -146,6 +146,8 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 | [E2E-GO-CORE-098](#e2e-go-core-098) | `TestEgressGatewayFeaturePath` | @svc_egress |
 | [E2E-GO-CORE-099](#e2e-go-core-099) | `TestEgressGatewayDenyAndNoRulePaths` | @svc_egress |
 | [E2E-GO-CORE-100](#e2e-go-core-100) | `TestEgressGatewayDeploymentWiring` | @svc_egress_gateway |
+| [E2E-GO-CORE-101](#e2e-go-core-101) | `TestEgressGatewayDataPlaneHTTPBehavior` | @svc_egress_gateway |
+| [E2E-GO-CORE-102](#e2e-go-core-102) | `TestEgressGatewayDataPlaneMatcherMatrix` | @svc_egress_gateway |
 
 ## Scenarios
 
@@ -1259,8 +1261,31 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - **When** The suite inspects the gateway deployment, health endpoint, CA/Ziti identity secrets, workload NetworkPolicy, and inline CA workload path.
 - **Then** The gateway exposes the expected health/admin wiring and required data-plane environment/mount configuration.
 - **And** The egress CA and Ziti identity/enrollment secrets exist with required data.
-- **And** The managed workload NetworkPolicy selects Agyn-managed pods, includes Egress policy type, allows OpenZiti CIDR, and allows DNS over TCP/UDP 53.
-- **And** The public internet egress rule allows `0.0.0.0/0` with blocked CIDR exceptions for `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, and `127.0.0.0/8`.
+- **And** The managed workload NetworkPolicy selects Agyn-managed pods, includes Egress policy type, allows configured pod, service, and additional internal CIDR exclusions, allows OpenZiti CIDR, and allows DNS over TCP/UDP 53.
+- **And** The public internet egress rule allows `0.0.0.0/0` with blocked CIDR exceptions for private, link-local, loopback, configured cluster pod, configured cluster service, and configured additional internal CIDRs.
 - **And** A k8s-runner workload can receive and use the egress CA via inline file/env contract.
 
-**Current framework limitation:** full outbound HTTP forwarding through Egress Gateway is not covered here because the current `egress-gateway` service process exposes only its admin health listener; the pure request-processing runtime exists in source but is not wired to an OpenZiti data-plane listener yet. These cases cover the highest-value feasible path: Egress control-plane rule lookup, Secrets referential integrity, deny/no-rule state, Egress Gateway CA/Ziti wiring, and workload NetworkPolicy defaults.
+### E2E-GO-CORE-101
+
+- **Source:** `suites/go-core/tests/egress_dataplane_test.go`
+- **Test:** `TestEgressGatewayDataPlaneHTTPBehavior`
+- **Tags:** @svc_egress_gateway
+
+**Scenario:** TestEgressGatewayDataPlaneHTTPBehavior
+
+- **Given** A live egress data-plane endpoint and distinct direct bypass endpoint are configured.
+- **When** Requests are sent through allow, deny, literal-header, secret-header, no-match direct bypass, and websocket upgrade paths.
+- **Then** Allowed requests succeed, denied requests are forbidden, unmatched traffic bypasses gateway injection, websocket requests require upgrade, and literal plus Secret-backed injected header markers are present.
+
+### E2E-GO-CORE-102
+
+- **Source:** `suites/go-core/tests/egress_dataplane_test.go`
+- **Test:** `TestEgressGatewayDataPlaneMatcherMatrix`
+- **Tags:** @svc_egress_gateway
+
+**Scenario:** TestEgressGatewayDataPlaneMatcherMatrix
+
+- **Given** A live egress data-plane endpoint is configured for matcher validation.
+- **When** Requests are sent through the gateway with path pattern `/repos/**`, method, and port-specific fixtures.
+- **Then** Matching requests return success and expose the expected path, method, or port marker header.
+- **And** A `/repos` request that does not satisfy the `/repos/**` boundary returns a no-match response.
