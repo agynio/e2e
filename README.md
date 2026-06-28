@@ -36,6 +36,16 @@ E2E_SUITES=go-core \
 E2E_GO_TEST_RUN='TestFullPipelineAgnMessageResponse' \
 devspace run test-e2e --tag svc_agents_orchestrator
 
+# Targeted orchestrator workload start/wait/cleanup tests.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestWorkloadStartsOnUnackedMessage|TestWorkloadStopsAfterIdleTimeout|TestWorkloadStartRetryPolicyFastRetry' \
+devspace run test-e2e --tag svc_agents_orchestrator
+
+# Targeted k8s-runner workload lifecycle/exec/logging tests.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestWorkloadLifecycle|TestExec|TestStreaming|TestStreamEvents|TestPutArchive|TestVolumeQueries' \
+devspace run test-e2e --tag svc_k8s_runner --tag svc_runners
+
 # Full default suite selection.
 devspace run test-e2e
 ```
@@ -43,6 +53,11 @@ devspace run test-e2e
 The default command intentionally runs full coverage for default-selected
 suites. It must include real-agent workload creation and Ziti sidecar
 assertions, not smoke-only coverage.
+
+The repository `E2E` workflow runs the targeted go-core workload groups on PRs
+and can also be run manually with `workflow_dispatch` using `workload_group` to
+select `real-agent-ziti`, `orchestrator-workloads`, `k8s-runner-workloads`, or
+`all`.
 
 ## DEV/E2E-only Ziti diagnostics credentials
 

@@ -2,6 +2,19 @@ name: E2E
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      workload_group:
+        description: Workload E2E group to run.
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - real-agent-ziti
+          - orchestrator-workloads
+          - k8s-runner-workloads
+          - platform-usage
   push:
     branches: [main]
 
@@ -10,7 +23,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e:
+  platform-usage:
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' ||
+      inputs.workload_group == 'all' ||
+      inputs.workload_group == 'platform-usage' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -38,5 +55,74 @@ jobs:
           E2E_SUITES: playwright
           E2E_PLAYWRIGHT_TEST_ARGS: test/e2e/organization-platform-usage.spec.ts
         with:
+          e2e-ref: >-
+            ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.ref }}
           tag: svc_metering
+          include_smoke: false
+
+  go-core-workloads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
+      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13.29
+      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
+      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1.29
+      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
+      TF_VAR_threads_chart_version: 0.4.12
+      TF_VAR_threads_image_tag: 0.4.12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: real-agent-ziti
+            tags: svc_agents_orchestrator
+            run: >-
+              TestAgentAgynCLIWaitToAnotherAgent|TestFullPipelineAgnMessageResponse
+            enabled: >-
+              ${{ github.event_name != 'workflow_dispatch' ||
+              inputs.workload_group == 'all' ||
+              inputs.workload_group == 'real-agent-ziti' }}
+          - name: orchestrator-workloads
+            tags: svc_agents_orchestrator
+            run: >-
+              TestWorkloadStartsOnUnackedMessage|TestWorkloadStopsAfterIdleTimeout|TestWorkloadStartRetryPolicyFastRetry
+            enabled: >-
+              ${{ github.event_name != 'workflow_dispatch' ||
+              inputs.workload_group == 'all' ||
+              inputs.workload_group == 'orchestrator-workloads' }}
+          - name: k8s-runner-workloads
+            tags: svc_k8s_runner,svc_runners
+            run: >-
+              TestWorkloadLifecycle|TestExec|TestStreaming|TestStreamEvents|TestPutArchive|TestVolumeQueries
+            enabled: >-
+              ${{ github.event_name != 'workflow_dispatch' ||
+              inputs.workload_group == 'all' ||
+              inputs.workload_group == 'k8s-runner-workloads' }}
+    steps:
+      - name: Checkout
+        if: ${{ matrix.enabled }}
+        uses: actions/checkout@v4
+
+      - name: Provision cluster
+        if: ${{ matrix.enabled }}
+        uses: agynio/bootstrap/.github/actions/provision@main
+        with:
+          ref: main
+
+      - name: Run go-core workload E2E tests
+        if: ${{ matrix.enabled }}
+        uses: ./.github/actions/run-tests
+        env:
+          E2E_SUITES: go-core
+          E2E_GO_TEST_RUN: ${{ matrix.run }}
+          E2E_GO_TEST_TIMEOUT: 35m
+        with:
+          e2e-ref: >-
+            ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.ref }}
+          tag: ${{ matrix.tags }}
           include_smoke: false
