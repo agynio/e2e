@@ -44,7 +44,7 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 	})
 	createAgentEnv(t, identityCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
-	thread := createThread(t, identityCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, identityCtx, threadsClient, orgID, []string{agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")

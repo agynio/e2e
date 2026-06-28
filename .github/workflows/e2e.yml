@@ -95,7 +95,7 @@ jobs:
               inputs.workload_group == 'all' ||
               inputs.workload_group == 'orchestrator-workloads' }}
           - name: k8s-runner-workloads
-            tags: svc_k8s_runner,svc_runners
+            tags: svc_k8s_runner,svc_runners,svc_llm
             run: >-
               TestWorkloadLifecycle|TestExec|TestStreaming|TestStreamEvents|TestPutArchive|TestVolumeQueries
             enabled: >-

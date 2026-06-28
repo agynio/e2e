@@ -60,7 +60,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 		deleteAgent(t, threadsCtx, agentsClient, agentAID)
 	})
 
-	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
+	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{agentAID})
 	threadAID := threadA.GetId()
 	if threadAID == "" {
 		t.Fatal("create agent A thread: missing id")
