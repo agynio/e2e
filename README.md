@@ -10,6 +10,40 @@ suite in a Kubernetes pod.
 For BDD coverage, tag conventions, and traceability references, see the
 [E2E BDD documentation](docs/e2e/README.md).
 
+## E2E verification commands
+
+Use targeted suite selection when validating the AGN agent-loop CLI, platform
+`agyn` CLI egress coverage, or real-agent workload/Ziti sidecar paths:
+
+```bash
+# AGN agent-loop CLI suite only.
+E2E_SUITES=go-agn-cli \
+AGN_BINARY=/path/to/agn \
+devspace run test-e2e --tag svc_agn_cli
+
+# Platform agyn CLI egress lifecycle suite only.
+E2E_SUITES=go-agyn-cli \
+AGYN_BINARY=/path/to/agyn \
+devspace run test-e2e --tag svc_agyn_cli
+
+# Targeted real-agent/Ziti sidecar test.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestAgentAgynCLIWaitToAnotherAgent' \
+devspace run test-e2e --tag svc_agents_orchestrator
+
+# Targeted single-agent full pipeline with AGN init image and Ziti assertions.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestFullPipelineAgnMessageResponse' \
+devspace run test-e2e --tag svc_agents_orchestrator
+
+# Full default suite selection.
+devspace run test-e2e
+```
+
+The default command intentionally runs full coverage for default-selected
+suites. It must include real-agent workload creation and Ziti sidecar
+assertions, not smoke-only coverage.
+
 ## DEV/E2E-only Ziti diagnostics credentials
 
 Some expose diagnostics tests read a Kubernetes secret named

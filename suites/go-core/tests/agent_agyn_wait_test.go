@@ -103,6 +103,9 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	if strings.Contains(agentABody, "notification stream closed") {
 		t.Fatalf("agent A response contains notification stream failure: %q", agentABody)
 	}
+	sidecarCtx, sidecarCancel := context.WithTimeout(threadsCtx, time.Minute)
+	defer sidecarCancel()
+	assertWorkloadZitiSidecarReady(t, sidecarCtx, runnerClient, labels)
 
 	threadB, messagesB, err := findThreadWithParticipantsAndMessage(threadsCtx, threadsClient, orgID, agentAID, agentBID, sentinel)
 	if err != nil {

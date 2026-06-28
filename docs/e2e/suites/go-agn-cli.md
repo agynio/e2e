@@ -7,13 +7,13 @@
 
 ## Intent
 
-Exercises the released or supplied `agn` CLI against the platform, focusing on command execution, session persistence, resume behavior, tool-pair summarization, system-prompt behavior, and egress rule lifecycle commands.
+Exercises the released or supplied `agn` CLI against the platform, focusing on command execution, session persistence, resume behavior, summarization, tool-pair summarization, and system-prompt behavior.
 
 ## Scope
 
 - Source directory: `suites/go-agn-cli`
 - Test inventory pattern: `tests/*_test.go`
-- Included case count: 7
+- Included case count: 6
 
 ## Actors
 
@@ -42,7 +42,6 @@ Exercises the released or supplied `agn` CLI against the platform, focusing on c
 | [E2E-GO-AGN-CLI-004](#e2e-go-agn-cli-004) | `TestAgentSystemPrompt` | @svc_agn_cli |
 | [E2E-GO-AGN-CLI-005](#e2e-go-agn-cli-005) | `TestSummarization` | @svc_agn_cli |
 | [E2E-GO-AGN-CLI-006](#e2e-go-agn-cli-006) | `TestSummarizationToolPair` | @svc_agn_cli |
-| [E2E-GO-AGN-CLI-007](#e2e-go-agn-cli-007) | `TestAgynEgressRuleLifecycle` | @svc_agn_cli |
 
 ## Scenarios
 
@@ -117,17 +116,3 @@ Exercises the released or supplied `agn` CLI against the platform, focusing on c
 - **Given** An AGN CLI session includes tool-call and tool-result pairs.
 - **When** The session is summarized after tool use.
 - **Then** The summary keeps tool-call/tool-result relationships coherent for continued conversation.
-
-### E2E-GO-AGN-CLI-007
-
-- **Source:** `suites/go-agn-cli/tests/egress_test.go`
-- **Test:** `TestAgynEgressRuleLifecycle`
-- **Tags:** @svc_agn_cli
-
-**Scenario:** TestAgynEgressRuleLifecycle
-
-- **Given** The released or supplied `agyn` CLI is configured with a live Gateway URL, API token, and organization id.
-- **When** A user creates an egress rule with domain, port, method, `/repos/**` path matching, allow action, and a literal injected header.
-- **Then** The CLI returns the created rule with the expected matcher and header source details.
-- **When** The user lists, gets, updates, attaches, detaches, and deletes the egress rule through `agyn egress rule` commands.
-- **Then** Each command succeeds against the live gateway, update changes are reflected, and the attachment targets the requested agent id before cleanup.

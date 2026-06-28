@@ -328,7 +328,7 @@ func logWorkloadContainerLogs(t *testing.T, ctx context.Context, namespace strin
 func logWorkloadInitContainerLogs(t *testing.T, ctx context.Context, namespace string, pod corev1.Pod) {
 	t.Helper()
 	for _, container := range pod.Spec.InitContainers {
-		if container.Name != "ziti-sidecar" {
+		if !isZitiWorkloadInitContainer(container.Name) {
 			continue
 		}
 		t.Logf("diagnostics: workload pod=%s init-container=%s", pod.Name, container.Name)
@@ -345,11 +345,20 @@ func logWorkloadInitContainerLogs(t *testing.T, ctx context.Context, namespace s
 	}
 }
 
+func isZitiWorkloadInitContainer(name string) bool {
+	switch name {
+	case "ziti-enroll", "ziti-gateway-wait", "ziti-sidecar":
+		return true
+	default:
+		return false
+	}
+}
+
 func workloadContainerNames(pod corev1.Pod) []string {
 	containers := make([]string, 0, len(pod.Spec.Containers))
 	for _, container := range pod.Spec.Containers {
 		name := container.Name
-		if strings.HasPrefix(name, "agent-") || strings.HasPrefix(name, "mcp-") {
+		if strings.HasPrefix(name, "agent-") || strings.HasPrefix(name, "mcp-") || name == "ziti-sidecar" {
 			containers = append(containers, name)
 		}
 	}

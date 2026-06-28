@@ -14,6 +14,9 @@ inputs:
   agn-binary:
     description: Optional path to an agn CLI binary in the caller workspace.
     required: false
+  agyn-binary:
+    description: Optional path to an agyn platform CLI binary in the caller workspace.
+    required: false
   provider-binary:
     description: Optional path to a Terraform provider binary in the caller workspace.
     required: false
@@ -56,6 +59,21 @@ runs:
         mkdir -p "$dest_dir"
         cp "$source_path" "$dest_dir/agn"
         chmod +x "$dest_dir/agn"
+
+    - name: Stage agyn binary
+      if: ${{ inputs.agyn-binary != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        source_path="$GITHUB_WORKSPACE/${{ inputs.agyn-binary }}"
+        if [ ! -f "$source_path" ]; then
+          echo "Agyn binary not found at $source_path" >&2
+          exit 1
+        fi
+        dest_dir="$GITHUB_WORKSPACE/e2e/suites/go-agyn-cli/bin"
+        mkdir -p "$dest_dir"
+        cp "$source_path" "$dest_dir/agyn"
+        chmod +x "$dest_dir/agyn"
 
     - name: Install PyYAML
       shell: bash
@@ -390,6 +408,9 @@ runs:
         if [ -n "${{ inputs.provider-binary }}" ]; then
           export PROVIDER_BINARY="$GITHUB_WORKSPACE/e2e/suites/go-terraform/.provider/terraform-provider-agyn"
         fi
+        if [ -n "${{ inputs.agyn-binary }}" ]; then
+          export AGYN_BINARY="$GITHUB_WORKSPACE/e2e/suites/go-agyn-cli/bin/agyn"
+        fi
 
         set +e
         if [ "${#unique_tags[@]}" -eq 0 ]; then
@@ -427,6 +448,27 @@ runs:
         kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o wide > "$diagnostics_dir/pods.txt" || true
         kubectl describe pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e > "$diagnostics_dir/describe-pods.txt" || true
         kubectl get events -n "$namespace" --sort-by=.metadata.creationTimestamp > "$diagnostics_dir/events.txt" || true
+        kubectl get pods -n agyn-workloads -o wide > "$diagnostics_dir/workload-pods.txt" 2>&1 || true
+        kubectl describe pods -n agyn-workloads > "$diagnostics_dir/workload-describe-pods.txt" 2>&1 || true
+        kubectl get events -n agyn-workloads --sort-by=.metadata.creationTimestamp > "$diagnostics_dir/workload-events.txt" 2>&1 || true
+        workload_pods=$(kubectl get pods -n agyn-workloads -o name 2>/dev/null | grep -E '^pod/workload-' || true)
+        for pod in $workload_pods; do
+          pod_name=$(echo "$pod" | sed 's|pod/||')
+          kubectl logs -n agyn-workloads --all-containers --prefix --tail=500 "$pod" > "$diagnostics_dir/logs/workload-${pod_name}.log" 2>&1 || true
+          kubectl logs -n agyn-workloads --all-containers --prefix --tail=500 --previous "$pod" > "$diagnostics_dir/logs/workload-${pod_name}-previous.log" 2>&1 || true
+        done
+        for component in agents-orchestrator k8s-runner gateway ziti-management; do
+          component_pods=$(kubectl get pods -n "$namespace" -o name 2>/dev/null | grep -E "^pod/${component}-" || true)
+          for pod in $component_pods; do
+            pod_name=$(echo "$pod" | sed 's|pod/||')
+            kubectl logs -n "$namespace" --all-containers --prefix --tail=500 "$pod" > "$diagnostics_dir/logs/platform-${pod_name}.log" 2>&1 || true
+          done
+        done
+        ziti_pods=$(kubectl get pods -n ziti -o name 2>/dev/null | grep -E '^pod/ziti-(controller|router)-' || true)
+        for pod in $ziti_pods; do
+          pod_name=$(echo "$pod" | sed 's|pod/||')
+          kubectl logs -n ziti --all-containers --prefix --tail=500 "$pod" > "$diagnostics_dir/logs/ziti-${pod_name}.log" 2>&1 || true
+        done
         pods=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/managed-by=e2e -o name 2>/dev/null || true)
         for pod in $pods; do
           pod_name=$(echo "$pod" | sed 's|pod/||')

@@ -7,6 +7,7 @@ This directory documents what the E2E suites validate in behavior-driven (BDD) l
 | Suite ID | Suite doc | Source suite |
 | --- | --- | --- |
 | E2E-SUITE-GO-AGN-CLI | [Go AGN CLI](suites/go-agn-cli.md) | `suites/go-agn-cli/suite.yaml` |
+| E2E-SUITE-GO-AGYN-CLI | [Go Agyn CLI](suites/go-agyn-cli.md) | `suites/go-agyn-cli/suite.yaml` |
 | E2E-SUITE-GO-CORE | [Go Core](suites/go-core.md) | `suites/go-core/suite.yaml` |
 | E2E-SUITE-GO-TERRAFORM | [Go Terraform Provider](suites/go-terraform.md) | `suites/go-terraform/suite.yaml` |
 | E2E-SUITE-PLAYWRIGHT | [Playwright Console App](suites/playwright.md) | `suites/playwright/suite.yaml` |

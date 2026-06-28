@@ -6,6 +6,7 @@ select: |
   suite_tags=("svc_chat_app" "svc_gateway" "svc_agents_orchestrator" "svc_organizations" "svc_files" "svc_media_proxy" "svc_tracing_app")
 
   if [ -z "${TAGS:-}" ]; then
+    echo "full"
     exit 0
   fi
 

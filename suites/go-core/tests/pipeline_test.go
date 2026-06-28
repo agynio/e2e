@@ -99,6 +99,9 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 	if agentBody != expectedResponse {
 		t.Fatalf("expected agent response %q, got %q", expectedResponse, agentBody)
 	}
+	sidecarCtx, sidecarCancel := context.WithTimeout(threadsCtx, time.Minute)
+	defer sidecarCancel()
+	assertWorkloadZitiSidecarReady(t, sidecarCtx, runnerClient, labels)
 
 	return pipelineRun{
 		threadID:       threadID,
