@@ -15,6 +15,14 @@ on:
           - orchestrator-workloads
           - k8s-runner-workloads
           - platform-usage
+      agents_orchestrator_ref:
+        description: agents-orchestrator ref for workload source deploys.
+        required: false
+        default: main
+      k8s_runner_ref:
+        description: k8s-runner ref for workload source deploys.
+        required: false
+        default: main
   push:
     branches: [main]
 
@@ -109,6 +117,60 @@ jobs:
         with:
           ref: main
 
+      - name: Setup DevSpace for source deploy
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        uses: ./.github/actions/setup-devspace
+
+      - name: Checkout k8s-runner source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        uses: actions/checkout@v4
+        with:
+          repository: agynio/k8s-runner
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch' &&
+            inputs.k8s_runner_ref || 'main' }}
+          path: .e2e-deps/k8s-runner
+
+      - name: Checkout agents-orchestrator source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        uses: actions/checkout@v4
+        with:
+          repository: agynio/agents-orchestrator
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch' &&
+            inputs.agents_orchestrator_ref || 'main' }}
+          path: .e2e-deps/agents-orchestrator
+
+      - name: Deploy k8s-runner from source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        working-directory: .e2e-deps/k8s-runner
+        run: devspace run deploy
+
+      - name: Deploy agents-orchestrator from source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        working-directory: .e2e-deps/agents-orchestrator
+        run: devspace run deploy
+
       - name: Run go-core workload E2E tests
         if: >-
           ${{ github.event_name != 'workflow_dispatch' ||
@@ -125,3 +187,27 @@ jobs:
             github.event.pull_request.head.sha || github.ref }}
           tag: ${{ matrix.tags }}
           include_smoke: false
+
+      - name: Restore k8s-runner ArgoCD sync
+        if: >-
+          ${{ always() && (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        run: |
+          if [ -d .e2e-deps/k8s-runner ]; then
+            cd .e2e-deps/k8s-runner
+            devspace run restore-argocd
+          fi
+
+      - name: Restore agents-orchestrator ArgoCD sync
+        if: >-
+          ${{ always() && (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          contains(matrix.tags, 'svc_agents_orchestrator') }}
+        run: |
+          if [ -d .e2e-deps/agents-orchestrator ]; then
+            cd .e2e-deps/agents-orchestrator
+            devspace run restore-argocd
+          fi

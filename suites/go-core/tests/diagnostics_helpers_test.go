@@ -170,6 +170,7 @@ func logWorkloadPodDiagnostics(t *testing.T, ctx context.Context, workloadID str
 func logWorkloadPodDiagnosticsFromPod(t *testing.T, ctx context.Context, pod corev1.Pod) {
 	t.Helper()
 	logWorkloadPodStatus(t, pod)
+	logWorkloadPodSpec(t, pod)
 	namespace := pod.Namespace
 	if namespace == "" {
 		namespace = workloadNamespace(t)
@@ -212,6 +213,68 @@ func logWorkloadPodStatus(t *testing.T, pod corev1.Pod) {
 	for _, status := range pod.Status.ContainerStatuses {
 		logContainerStatus(t, pod.Name, "container", status)
 	}
+}
+
+func logWorkloadPodSpec(t *testing.T, pod corev1.Pod) {
+	t.Helper()
+	for _, container := range pod.Spec.InitContainers {
+		if isDiagnosticWorkloadContainerSpec(container.Name) {
+			logContainerSpec(t, pod.Name, "init", container)
+		}
+	}
+	for _, container := range pod.Spec.Containers {
+		if isDiagnosticWorkloadContainerSpec(container.Name) {
+			logContainerSpec(t, pod.Name, "container", container)
+		}
+	}
+}
+
+func logContainerSpec(t *testing.T, podName, kind string, container corev1.Container) {
+	t.Helper()
+	t.Logf(
+		"diagnostics: pod=%s %s_spec=%s image=%s command=%s args=%s env=%s",
+		podName,
+		kind,
+		container.Name,
+		container.Image,
+		formatStringSlice(container.Command),
+		formatStringSlice(container.Args),
+		formatEnvVars(container.Env),
+	)
+}
+
+func formatStringSlice(values []string) string {
+	if len(values) == 0 {
+		return "-"
+	}
+	return truncateLogLine(fmt.Sprintf("%q", values))
+}
+
+func formatEnvVars(envs []corev1.EnvVar) string {
+	if len(envs) == 0 {
+		return "-"
+	}
+	parts := make([]string, 0, len(envs))
+	for _, env := range envs {
+		value := env.Value
+		if env.ValueFrom != nil {
+			value = "<valueFrom>"
+		} else if isSensitiveEnvName(env.Name) {
+			value = "<redacted>"
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", env.Name, value))
+	}
+	sort.Strings(parts)
+	return truncateLogLine(strings.Join(parts, ","))
+}
+
+func isSensitiveEnvName(name string) bool {
+	lowerName := strings.ToLower(name)
+	return strings.Contains(lowerName, "jwt") ||
+		strings.Contains(lowerName, "key") ||
+		strings.Contains(lowerName, "password") ||
+		strings.Contains(lowerName, "secret") ||
+		strings.Contains(lowerName, "token")
 }
 
 func logContainerStatus(t *testing.T, podName, kind string, status corev1.ContainerStatus) {
@@ -354,11 +417,17 @@ func isZitiWorkloadInitContainer(name string) bool {
 	}
 }
 
+func isDiagnosticWorkloadContainerSpec(name string) bool {
+	return isZitiWorkloadInitContainer(name) ||
+		strings.HasPrefix(name, "agent-") ||
+		strings.HasPrefix(name, "mcp-")
+}
+
 func workloadContainerNames(pod corev1.Pod) []string {
 	containers := make([]string, 0, len(pod.Spec.Containers))
 	for _, container := range pod.Spec.Containers {
 		name := container.Name
-		if strings.HasPrefix(name, "agent-") || strings.HasPrefix(name, "mcp-") || name == "ziti-sidecar" {
+		if isDiagnosticWorkloadContainerSpec(name) {
 			containers = append(containers, name)
 		}
 	}
