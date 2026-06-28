@@ -19,7 +19,9 @@ on:
     branches: [main]
 
 concurrency:
-  group: e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  group: >-
+    e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number ||
+    github.event_name == 'workflow_dispatch' && github.run_id || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -82,39 +84,36 @@ jobs:
             tags: svc_agents_orchestrator
             run: >-
               TestAgentAgynCLIWaitToAnotherAgent|TestFullPipelineAgnMessageResponse
-            enabled: >-
-              ${{ github.event_name != 'workflow_dispatch' ||
-              inputs.workload_group == 'all' ||
-              inputs.workload_group == 'real-agent-ziti' }}
           - name: orchestrator-workloads
             tags: svc_agents_orchestrator
             run: >-
               TestWorkloadStartsOnUnackedMessage|TestWorkloadStopsAfterIdleTimeout|TestWorkloadStartRetryPolicyFastRetry
-            enabled: >-
-              ${{ github.event_name != 'workflow_dispatch' ||
-              inputs.workload_group == 'all' ||
-              inputs.workload_group == 'orchestrator-workloads' }}
           - name: k8s-runner-workloads
             tags: svc_k8s_runner,svc_runners,svc_llm
             run: >-
               TestWorkloadLifecycle|TestExec|TestStreaming|TestStreamEvents|TestPutArchive|TestVolumeQueries
-            enabled: >-
-              ${{ github.event_name != 'workflow_dispatch' ||
-              inputs.workload_group == 'all' ||
-              inputs.workload_group == 'k8s-runner-workloads' }}
     steps:
       - name: Checkout
-        if: ${{ matrix.enabled }}
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name }}
         uses: actions/checkout@v4
 
       - name: Provision cluster
-        if: ${{ matrix.enabled }}
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name }}
         uses: agynio/bootstrap/.github/actions/provision@main
         with:
           ref: main
 
       - name: Run go-core workload E2E tests
-        if: ${{ matrix.enabled }}
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name }}
         uses: ./.github/actions/run-tests
         env:
           E2E_SUITES: go-core
