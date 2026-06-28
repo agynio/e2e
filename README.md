@@ -57,11 +57,10 @@ assertions, not smoke-only coverage.
 The repository `E2E` workflow runs the targeted go-core workload groups on PRs
 and can also be run manually with `workflow_dispatch` using `workload_group` to
 select `real-agent-ziti`, `orchestrator-workloads`, `k8s-runner-workloads`, or
-`all`. Workload groups that exercise agents-orchestrator deploy
-`agynio/k8s-runner` and `agynio/agents-orchestrator` from source after
-bootstrap provisioning so the live suite validates unreleased workload/Ziti
-changes. Manual runs can override those source refs with
-`k8s_runner_ref` and `agents_orchestrator_ref`.
+`all`. The `real-agent-ziti` group deploys `agynio/k8s-runner` and
+`agynio/agents-orchestrator` from source after bootstrap provisioning so the
+live suite validates unreleased workload/Ziti changes. Manual runs can override
+those source refs with `k8s_runner_ref` and `agents_orchestrator_ref`.
 
 ## DEV/E2E-only Ziti diagnostics credentials
 
