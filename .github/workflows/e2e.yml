@@ -122,7 +122,8 @@ jobs:
           ${{ (github.event_name != 'workflow_dispatch' ||
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name) &&
-          matrix.name == 'real-agent-ziti' }}
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
         uses: ./.github/actions/setup-devspace
 
       - name: Checkout k8s-runner source
@@ -144,7 +145,8 @@ jobs:
           ${{ (github.event_name != 'workflow_dispatch' ||
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name) &&
-          matrix.name == 'real-agent-ziti' }}
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
         uses: actions/checkout@v4
         with:
           repository: agynio/agents-orchestrator
@@ -167,9 +169,24 @@ jobs:
           ${{ (github.event_name != 'workflow_dispatch' ||
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name) &&
-          matrix.name == 'real-agent-ziti' }}
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
         working-directory: .e2e-deps/agents-orchestrator
         run: devspace run deploy
+
+      - name: Allow workload DNS egress to Ziti
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        run: |
+          set -euo pipefail
+          kubectl patch networkpolicy agent-workload-egress \
+            -n agyn-workloads \
+            --type=json \
+            -p '[{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]'
 
       - name: Run go-core workload E2E tests
         if: >-
@@ -205,7 +222,8 @@ jobs:
           ${{ always() && (github.event_name != 'workflow_dispatch' ||
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name) &&
-          matrix.name == 'real-agent-ziti' }}
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
         run: |
           if [ -d .e2e-deps/agents-orchestrator ]; then
             cd .e2e-deps/agents-orchestrator

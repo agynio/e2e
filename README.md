@@ -58,9 +58,12 @@ The repository `E2E` workflow runs the targeted go-core workload groups on PRs
 and can also be run manually with `workflow_dispatch` using `workload_group` to
 select `real-agent-ziti`, `orchestrator-workloads`, `k8s-runner-workloads`, or
 `all`. The `real-agent-ziti` group deploys `agynio/k8s-runner` and
-`agynio/agents-orchestrator` from source after bootstrap provisioning so the
-live suite validates unreleased workload/Ziti changes. Manual runs can override
-those source refs with `k8s_runner_ref` and `agents_orchestrator_ref`.
+`agynio/agents-orchestrator` from source after bootstrap provisioning. The
+`orchestrator-workloads` group deploys `agynio/agents-orchestrator` from
+source. Both source-backed groups apply the workload DNS egress allowance needed
+for agent pods to reach `ziti-workload-dns` while bootstrap carries the current
+k8s-runner chart policy. Manual runs can override those source refs with
+`k8s_runner_ref` and `agents_orchestrator_ref`.
 
 ## DEV/E2E-only Ziti diagnostics credentials
 
