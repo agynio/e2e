@@ -172,7 +172,15 @@ jobs:
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         working-directory: .e2e-deps/agents-orchestrator
-        run: devspace run deploy
+        run: |
+          devspace run deploy
+          if [ "${{ matrix.name }}" = "real-agent-ziti" ]; then
+            kubectl set env deployment/agents-orchestrator \
+              -n platform \
+              ZITI_RUNTIME_CONTROLLER_RESOLVE_HOST=istio-ingressgateway.istio-gateway.svc.cluster.local \
+              ZITI_RUNTIME_CONTROLLER_PORT=443
+            kubectl rollout status deployment/agents-orchestrator -n platform --timeout=120s
+          fi
 
       - name: Allow workload DNS egress to Ziti
         if: >-
@@ -183,27 +191,34 @@ jobs:
           matrix.name == 'orchestrator-workloads') }}
         run: |
           set -euo pipefail
+          patch='[{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}'
           ziti_controller_ip="$(kubectl get service ziti-controller-client -n ziti -o jsonpath='{.spec.clusterIP}')"
           if [ -z "$ziti_controller_ip" ]; then
             echo "ziti-controller-client ClusterIP is empty" >&2
             exit 1
           fi
-          kubectl patch configmap ziti-workload-dns \
-            -n ziti \
-            --type=merge \
-            -p "$(cat <<EOF_DNS
-          {"data":{"ziti.db":"\$ORIGIN ziti.agyn.dev.\n\$TTL 30\n@ IN SOA ns.ziti.agyn.dev. hostmaster.agyn.dev. 1 7200 3600 1209600 30\n@ IN NS ns.ziti.agyn.dev.\n@ IN A ${ziti_controller_ip}\nns IN A ${ziti_controller_ip}\n"}}
+          if [ "${{ matrix.name }}" = "real-agent-ziti" ]; then
+            istio_gateway_ip="$(kubectl get service istio-ingressgateway -n istio-gateway -o jsonpath='{.spec.clusterIP}')"
+            if [ -z "$istio_gateway_ip" ]; then
+              echo "istio-ingressgateway ClusterIP is empty" >&2
+              exit 1
+            fi
+            kubectl patch configmap ziti-workload-dns \
+              -n ziti \
+              --type=merge \
+              -p "$(cat <<EOF_DNS
+          {"data":{"ziti.db":"\$ORIGIN ziti.agyn.dev.\n\$TTL 30\n@ IN SOA ns.ziti.agyn.dev. hostmaster.agyn.dev. 1 7200 3600 1209600 30\n@ IN NS ns.ziti.agyn.dev.\n@ IN A ${istio_gateway_ip}\nns IN A ${istio_gateway_ip}\n"}}
           EOF_DNS
           )"
-          kubectl rollout restart deployment/ziti-workload-dns -n ziti
-          kubectl rollout status deployment/ziti-workload-dns -n ziti --timeout=120s
+            kubectl rollout restart deployment/ziti-workload-dns -n ziti
+            kubectl rollout status deployment/ziti-workload-dns -n ziti --timeout=120s
+            patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${istio_gateway_ip}/32\"}}],\"ports\":[{\"protocol\":\"TCP\",\"port\":443}]}}"
+          fi
+          patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${ziti_controller_ip}/32\"}}],\"ports\":[{\"protocol\":\"TCP\",\"port\":2496}]}}]"
           kubectl patch networkpolicy agent-workload-egress \
             -n agyn-workloads \
             --type=json \
-            -p "$(cat <<EOF_POLICY
-          [{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}},{"op":"add","path":"/spec/egress/-","value":{"to":[{"ipBlock":{"cidr":"${ziti_controller_ip}/32"}}],"ports":[{"protocol":"TCP","port":2496}]}}]
-          EOF_POLICY
-          )"
+            -p "$patch"
 
       - name: Run go-core workload E2E tests
         if: >-
