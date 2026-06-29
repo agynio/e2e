@@ -84,8 +84,6 @@ jobs:
       AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
       TF_VAR_threads_chart_version: 0.4.12
       TF_VAR_threads_image_tag: 0.4.12
-      TF_VAR_k8s_runner_chart_version: 0.10.13
-      TF_VAR_k8s_runner_image_tag: 0.10.13
     strategy:
       fail-fast: false
       matrix:
