@@ -86,6 +86,7 @@ jobs:
       TF_VAR_threads_image_tag: 0.4.12
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         include:
           - name: real-agent-ziti
