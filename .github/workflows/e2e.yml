@@ -192,7 +192,7 @@ jobs:
             -n ziti \
             --type=merge \
             -p "$(cat <<EOF_DNS
-          {"data":{"ziti.db":"$ORIGIN ziti.agyn.dev.\n$TTL 30\n@ IN SOA ns.ziti.agyn.dev. hostmaster.agyn.dev. 1 7200 3600 1209600 30\n@ IN NS ns.ziti.agyn.dev.\n@ IN A ${ziti_controller_ip}\nns IN A ${ziti_controller_ip}\n"}}
+          {"data":{"ziti.db":"\$ORIGIN ziti.agyn.dev.\n\$TTL 30\n@ IN SOA ns.ziti.agyn.dev. hostmaster.agyn.dev. 1 7200 3600 1209600 30\n@ IN NS ns.ziti.agyn.dev.\n@ IN A ${ziti_controller_ip}\nns IN A ${ziti_controller_ip}\n"}}
           EOF_DNS
           )"
           kubectl rollout restart deployment/ziti-workload-dns -n ziti
