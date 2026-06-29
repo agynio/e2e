@@ -183,10 +183,27 @@ jobs:
           matrix.name == 'orchestrator-workloads') }}
         run: |
           set -euo pipefail
+          ziti_controller_ip="$(kubectl get service ziti-controller-client -n ziti -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$ziti_controller_ip" ]; then
+            echo "ziti-controller-client ClusterIP is empty" >&2
+            exit 1
+          fi
+          kubectl patch configmap ziti-workload-dns \
+            -n ziti \
+            --type=merge \
+            -p "$(cat <<EOF_DNS
+          {"data":{"ziti.db":"$ORIGIN ziti.agyn.dev.\n$TTL 30\n@ IN SOA ns.ziti.agyn.dev. hostmaster.agyn.dev. 1 7200 3600 1209600 30\n@ IN NS ns.ziti.agyn.dev.\n@ IN A ${ziti_controller_ip}\nns IN A ${ziti_controller_ip}\n"}}
+          EOF_DNS
+          )"
+          kubectl rollout restart deployment/ziti-workload-dns -n ziti
+          kubectl rollout status deployment/ziti-workload-dns -n ziti --timeout=120s
           kubectl patch networkpolicy agent-workload-egress \
             -n agyn-workloads \
             --type=json \
-            -p '[{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]'
+            -p "$(cat <<EOF_POLICY
+          [{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}},{"op":"add","path":"/spec/egress/-","value":{"to":[{"ipBlock":{"cidr":"${ziti_controller_ip}/32"}}],"ports":[{"protocol":"TCP","port":2496}]}}]
+          EOF_POLICY
+          )"
 
       - name: Run go-core workload E2E tests
         if: >-
