@@ -173,14 +173,11 @@ jobs:
           matrix.name == 'orchestrator-workloads') }}
         working-directory: .e2e-deps/agents-orchestrator
         run: |
-          devspace run deploy
           if [ "${{ matrix.name }}" = "real-agent-ziti" ]; then
-            kubectl set env deployment/agents-orchestrator \
-              -n platform \
-              ZITI_RUNTIME_CONTROLLER_RESOLVE_HOST=istio-ingressgateway.istio-gateway.svc.cluster.local \
-              ZITI_RUNTIME_CONTROLLER_PORT=443
-            kubectl rollout status deployment/agents-orchestrator -n platform --timeout=120s
+            export ZITI_RUNTIME_CONTROLLER_RESOLVE_HOST=istio-ingressgateway.istio-gateway.svc.cluster.local
+            export ZITI_RUNTIME_CONTROLLER_PORT=443
           fi
+          devspace run deploy
 
       - name: Allow workload DNS egress to Ziti
         if: >-
