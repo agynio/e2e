@@ -201,7 +201,7 @@ jobs:
             echo "ziti-workload-dns ClusterIP is empty" >&2
             exit 1
           fi
-          ziti_dns_endpoint_ips="$(kubectl get endpoints ziti-workload-dns -n ziti -o jsonpath='{range .subsets[*].addresses[*]}{.ip}{"\\n"}{end}')"
+          ziti_dns_endpoint_ips="$(kubectl get endpoints ziti-workload-dns -n ziti -o jsonpath='{range .subsets[*].addresses[*]}{.ip}{" "}{end}')"
           if [ -z "$ziti_dns_endpoint_ips" ]; then
             echo "ziti-workload-dns endpoints are empty" >&2
             exit 1
