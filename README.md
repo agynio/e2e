@@ -64,7 +64,9 @@ source. Both source-backed groups provision the pinned bootstrap runtime DNS fix
 the pinned k8s-runner source egress policy, and fail fast if `ziti.agyn.dev`
 through `ziti-workload-dns` does not resolve to the Istio ingressgateway
 ClusterIP. Manual runs can override those source refs with `bootstrap_ref`,
-`k8s_runner_ref`, and `agents_orchestrator_ref`.
+`k8s_runner_ref`, and `agents_orchestrator_ref`. The default `k8s_runner_ref`
+tracks `noa/issue-73` so validation includes the latest selector-aware egress
+policy from k8s-runner PR #74.
 
 ## DEV/E2E-only Ziti diagnostics credentials
 

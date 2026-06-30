@@ -26,14 +26,14 @@ on:
       k8s_runner_ref:
         description: k8s-runner ref for workload source deploys.
         required: false
-        default: 974d1792c4caa2855c08e01b71fe0ec537c2a0e4
+        default: noa/issue-73
   push:
     branches: [main]
 
 env:
   WORKLOAD_BOOTSTRAP_REF: e9e44b4c083bf989a664e73000ac8d9e7fda2afe
   WORKLOAD_AGENTS_ORCHESTRATOR_REF: noa/issue-219
-  WORKLOAD_K8S_RUNNER_REF: 974d1792c4caa2855c08e01b71fe0ec537c2a0e4
+  WORKLOAD_K8S_RUNNER_REF: noa/issue-73
 
 concurrency:
   group: >-
