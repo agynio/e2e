@@ -196,10 +196,19 @@ jobs:
           matrix.name == 'orchestrator-workloads') }}
         run: |
           set -euo pipefail
+          ziti_dns_ip="$(kubectl get service ziti-workload-dns -n ziti -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$ziti_dns_ip" ]; then
+            echo "ziti-workload-dns ClusterIP is empty" >&2
+            exit 1
+          fi
+
           kubectl patch networkpolicy agent-workload-egress \
             -n agyn-workloads \
             --type=json \
-            -p '[{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]'
+            -p "$(cat <<EOF
+          [{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}},{"op":"add","path":"/spec/egress/-","value":{"to":[{"ipBlock":{"cidr":"${ziti_dns_ip}/32"}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]
+          EOF
+          )"
 
       - name: Verify runtime Ziti DNS
         if: >-
