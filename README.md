@@ -60,10 +60,11 @@ select `real-agent-ziti`, `orchestrator-workloads`, `k8s-runner-workloads`, or
 `all`. The `real-agent-ziti` group deploys `agynio/k8s-runner` and
 `agynio/agents-orchestrator` from source after bootstrap provisioning. The
 `orchestrator-workloads` group deploys `agynio/agents-orchestrator` from
-source. Both source-backed groups apply the workload DNS egress allowance needed
-for agent pods to reach `ziti-workload-dns` while bootstrap carries the current
-k8s-runner chart policy. Manual runs can override those source refs with
-`k8s_runner_ref` and `agents_orchestrator_ref`.
+source. Both source-backed groups provision the pinned bootstrap runtime DNS fix, deploy
+the pinned k8s-runner source egress policy, and fail fast if `ziti.agyn.dev`
+through `ziti-workload-dns` does not resolve to the Istio ingressgateway
+ClusterIP. Manual runs can override those source refs with `bootstrap_ref`,
+`k8s_runner_ref`, and `agents_orchestrator_ref`.
 
 ## DEV/E2E-only Ziti diagnostics credentials
 
