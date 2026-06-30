@@ -201,14 +201,22 @@ jobs:
             echo "ziti-workload-dns ClusterIP is empty" >&2
             exit 1
           fi
+          ziti_dns_endpoint_ips="$(kubectl get endpoints ziti-workload-dns -n ziti -o jsonpath='{range .subsets[*].addresses[*]}{.ip}{"\\n"}{end}')"
+          if [ -z "$ziti_dns_endpoint_ips" ]; then
+            echo "ziti-workload-dns endpoints are empty" >&2
+            exit 1
+          fi
+
+          patch='[{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}},{"op":"add","path":"/spec/egress/-","value":{"to":[{"ipBlock":{"cidr":"'"${ziti_dns_ip}"'/32"}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}'
+          for ziti_dns_endpoint_ip in $ziti_dns_endpoint_ips; do
+            patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${ziti_dns_endpoint_ip}/32\"}}],\"ports\":[{\"protocol\":\"UDP\",\"port\":53},{\"protocol\":\"TCP\",\"port\":53}]}}"
+          done
+          patch="${patch}]"
 
           kubectl patch networkpolicy agent-workload-egress \
             -n agyn-workloads \
             --type=json \
-            -p "$(cat <<EOF
-          [{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}},{"op":"add","path":"/spec/egress/-","value":{"to":[{"ipBlock":{"cidr":"${ziti_dns_ip}/32"}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]
-          EOF
-          )"
+            -p "$patch"
 
       - name: Verify runtime Ziti DNS
         if: >-
