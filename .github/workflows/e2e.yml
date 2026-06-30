@@ -282,7 +282,7 @@ jobs:
             --rm \
             -i \
             --quiet \
-            --command -- nslookup ziti.agyn.dev "$ziti_dns_ip" | awk '/^Address:[[:space:]]*[0-9]/ {answer=$2} END {print answer}' | sed 's/:.*$//')"
+            --command -- nslookup ziti.agyn.dev "$ziti_dns_ip" 2>&1 | awk '/^Address:[[:space:]]*[0-9]/ {answer=$2} END {print answer}' | sed 's/:.*$//')"
 
           if [ -z "$dns_answer" ]; then
             echo "ziti-workload-dns returned no address for ziti.agyn.dev" >&2
