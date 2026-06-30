@@ -274,15 +274,20 @@ jobs:
             exit 1
           fi
 
-          dns_output="$(kubectl run ziti-runtime-dns-preflight \
+          kubectl delete pod ziti-runtime-dns-preflight -n agyn-workloads --ignore-not-found
+          kubectl run ziti-runtime-dns-preflight \
             -n agyn-workloads \
             --image=busybox:1.37.0 \
             --labels=agyn.dev/managed-by=agents-orchestrator \
             --restart=Never \
-            --rm \
-            -i \
-            --quiet \
-            --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip}" 2>&1)"
+            --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip}"
+          kubectl wait \
+            -n agyn-workloads \
+            --for=jsonpath='{.status.phase}'=Succeeded \
+            pod/ziti-runtime-dns-preflight \
+            --timeout=30s
+          dns_output="$(kubectl logs ziti-runtime-dns-preflight -n agyn-workloads)"
+          kubectl delete pod ziti-runtime-dns-preflight -n agyn-workloads --ignore-not-found
           echo "$dns_output"
           dns_answer="$(printf '%s\n' "$dns_output" | awk '/^Address:[[:space:]]*[0-9]/ {answer=$2} END {print answer}' | sed 's/:.*$//')"
 
