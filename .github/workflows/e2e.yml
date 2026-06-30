@@ -221,7 +221,7 @@ jobs:
           kubectl patch networkpolicy ziti-workload-dns \
             -n ziti \
             --type=json \
-            -p '[{"op":"add","path":"/spec/ingress/-","value":{"from":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"agyn-workloads"}},"podSelector":{"matchLabels":{"agyn.dev/managed-by":"agents-orchestrator"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]'
+            -p '[{"op":"add","path":"/spec/ingress/-","value":{"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]'
 
       - name: Verify runtime Ziti DNS
         if: >-
