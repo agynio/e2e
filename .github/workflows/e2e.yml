@@ -274,7 +274,7 @@ jobs:
             exit 1
           fi
 
-          dns_answer="$(kubectl run ziti-runtime-dns-preflight \
+          dns_output="$(kubectl run ziti-runtime-dns-preflight \
             -n agyn-workloads \
             --image=busybox:1.37.0 \
             --labels=agyn.dev/managed-by=agents-orchestrator \
@@ -282,7 +282,9 @@ jobs:
             --rm \
             -i \
             --quiet \
-            --command -- nslookup ziti.agyn.dev "$ziti_dns_ip" 2>&1 | awk '/^Address:[[:space:]]*[0-9]/ {answer=$2} END {print answer}' | sed 's/:.*$//')"
+            --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip}" 2>&1)"
+          echo "$dns_output"
+          dns_answer="$(printf '%s\n' "$dns_output" | awk '/^Address:[[:space:]]*[0-9]/ {answer=$2} END {print answer}' | sed 's/:.*$//')"
 
           if [ -z "$dns_answer" ]; then
             echo "ziti-workload-dns returned no address for ziti.agyn.dev" >&2
