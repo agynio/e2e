@@ -194,7 +194,7 @@ jobs:
             echo "ziti-controller-client ClusterIP is empty" >&2
             exit 1
           fi
-          if [ "${{ matrix.name }}" = "real-agent-ziti" ]; then
+          if [ "${{ matrix.name }}" = "real-agent-ziti" ] || [ "${{ matrix.name }}" = "orchestrator-workloads" ]; then
             istio_gateway_ip="$(kubectl get service istio-ingressgateway -n istio-gateway -o jsonpath='{.spec.clusterIP}')"
             if [ -z "$istio_gateway_ip" ]; then
               echo "istio-ingressgateway ClusterIP is empty" >&2
