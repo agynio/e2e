@@ -194,6 +194,11 @@ jobs:
             echo "ziti-controller-client ClusterIP is empty" >&2
             exit 1
           fi
+          ziti_router_ip="$(kubectl get service ziti-router-edge -n ziti -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$ziti_router_ip" ]; then
+            echo "ziti-router-edge ClusterIP is empty" >&2
+            exit 1
+          fi
           if [ "${{ matrix.name }}" = "real-agent-ziti" ] || [ "${{ matrix.name }}" = "orchestrator-workloads" ]; then
             istio_gateway_ip="$(kubectl get service istio-ingressgateway -n istio-gateway -o jsonpath='{.spec.clusterIP}')"
             if [ -z "$istio_gateway_ip" ]; then
@@ -211,6 +216,7 @@ jobs:
             kubectl rollout status deployment/ziti-workload-dns -n ziti --timeout=120s
             patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${istio_gateway_ip}/32\"}}],\"ports\":[{\"protocol\":\"TCP\",\"port\":443}]}}"
           fi
+          patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${ziti_router_ip}/32\"}}],\"ports\":[{\"protocol\":\"TCP\",\"port\":2496}]}}"
           patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${ziti_controller_ip}/32\"}}],\"ports\":[{\"protocol\":\"TCP\",\"port\":2496}]}}]"
           kubectl patch networkpolicy agent-workload-egress \
             -n agyn-workloads \
