@@ -60,7 +60,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 		deleteAgent(t, threadsCtx, agentsClient, agentAID)
 	})
 
-	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
+	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{agentAID})
 	threadAID := threadA.GetId()
 	if threadAID == "" {
 		t.Fatal("create agent A thread: missing id")
@@ -103,6 +103,9 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	if strings.Contains(agentABody, "notification stream closed") {
 		t.Fatalf("agent A response contains notification stream failure: %q", agentABody)
 	}
+	sidecarCtx, sidecarCancel := context.WithTimeout(threadsCtx, time.Minute)
+	defer sidecarCancel()
+	assertWorkloadZitiSidecarReady(t, sidecarCtx, runnerClient, labels)
 
 	threadB, messagesB, err := findThreadWithParticipantsAndMessage(threadsCtx, threadsClient, orgID, agentAID, agentBID, sentinel)
 	if err != nil {

@@ -256,9 +256,19 @@ PY
         > "$suite_diagnostics_dir/events.txt" 2>&1 || true
 
       kubectl get pods -n agyn-workloads -o wide > "$suite_diagnostics_dir/workload-pods.txt" 2>&1 || true
+      kubectl describe pods -n agyn-workloads > "$suite_diagnostics_dir/workload-describe-pods.txt" 2>&1 || true
       kubectl get events -n agyn-workloads --sort-by=.metadata.creationTimestamp \
         > "$suite_diagnostics_dir/workload-events.txt" 2>&1 || true
-      collect_pod_logs_by_name agyn-workloads workload workload-
+      while IFS= read -r workload_pod || [ -n "$workload_pod" ]; do
+        if [ -z "$workload_pod" ]; then
+          continue
+        fi
+        workload_pod_name=${workload_pod#pod/}
+        kubectl logs -n agyn-workloads --all-containers --prefix --tail=500 "$workload_pod" \
+          > "$suite_diagnostics_dir/logs/workload-${workload_pod_name}.log" 2>&1 || true
+        kubectl logs -n agyn-workloads --all-containers --prefix --tail=500 --previous "$workload_pod" \
+          > "$suite_diagnostics_dir/logs/workload-${workload_pod_name}-previous.log" 2>&1 || true
+      done < <(kubectl get pods -n agyn-workloads -o name 2>/dev/null | grep -E '^pod/workload-' || true)
 
       collect_pod_logs_by_name "$namespace" platform \
         agents- \

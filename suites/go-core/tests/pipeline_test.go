@@ -63,7 +63,7 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")
@@ -99,6 +99,9 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 	if agentBody != expectedResponse {
 		t.Fatalf("expected agent response %q, got %q", expectedResponse, agentBody)
 	}
+	sidecarCtx, sidecarCancel := context.WithTimeout(threadsCtx, time.Minute)
+	defer sidecarCancel()
+	assertWorkloadZitiSidecarReady(t, sidecarCtx, runnerClient, labels)
 
 	return pipelineRun{
 		threadID:       threadID,

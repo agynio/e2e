@@ -162,6 +162,7 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - **Given** Two agents can communicate through threads.
 - **When** One agent waits for another agent to respond in a shared thread.
 - **Then** The expected message is found in the active thread between the participants.
+- **And** A real workload pod exists and its Ziti enrollment, gateway wait, and restartable sidecar containers are healthy.
 
 ### E2E-GO-CORE-002
 
@@ -1098,6 +1099,7 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 - **Given** A full AGN-backed agent pipeline is configured.
 - **When** A user sends a message to the agent.
 - **Then** The pipeline produces the expected response in the thread.
+- **And** A real workload pod exists and its Ziti enrollment, gateway wait, and restartable sidecar containers are healthy.
 
 ### E2E-GO-CORE-088
 

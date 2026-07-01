@@ -8,7 +8,7 @@ select: |
   suite_tags=("svc_tracing_app" "svc_agents_orchestrator" "smoke")
 
   if [ -z "${TAGS:-}" ]; then
-    echo "smoke"
+    echo "full"
     exit 0
   fi
 
@@ -37,8 +37,6 @@ run: |
       fi
       grep_tags="${grep_tags}@${tag}"
     done
-  else
-    grep_tags="@smoke"
   fi
 
   set +e

@@ -10,6 +10,64 @@ suite in a Kubernetes pod.
 For BDD coverage, tag conventions, and traceability references, see the
 [E2E BDD documentation](docs/e2e/README.md).
 
+## E2E verification commands
+
+Use targeted suite selection when validating the AGN agent-loop CLI, platform
+`agyn` CLI egress coverage, or real-agent workload/Ziti sidecar paths:
+
+```bash
+# AGN agent-loop CLI suite only.
+E2E_SUITES=go-agn-cli \
+AGN_BINARY=/path/to/agn \
+devspace run test-e2e --tag svc_agn_cli
+
+# Platform agyn CLI egress lifecycle suite only.
+E2E_SUITES=go-agyn-cli \
+AGYN_BINARY=/path/to/agyn \
+devspace run test-e2e --tag svc_agyn_cli
+
+# Targeted real-agent/Ziti sidecar test.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestAgentAgynCLIWaitToAnotherAgent' \
+devspace run test-e2e --tag svc_agents_orchestrator
+
+# Targeted single-agent full pipeline with AGN init image and Ziti assertions.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestFullPipelineAgnMessageResponse' \
+devspace run test-e2e --tag svc_agents_orchestrator
+
+# Targeted orchestrator workload start/wait/cleanup tests.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestWorkloadStartsOnUnackedMessage|TestWorkloadStopsAfterIdleTimeout|TestWorkloadStartRetryPolicyFastRetry' \
+devspace run test-e2e --tag svc_agents_orchestrator
+
+# Targeted k8s-runner workload lifecycle/exec/logging tests.
+E2E_SUITES=go-core \
+E2E_GO_TEST_RUN='TestWorkloadLifecycle|TestExec|TestStreaming|TestStreamEvents|TestPutArchive|TestVolumeQueries' \
+devspace run test-e2e --tag svc_k8s_runner --tag svc_runners
+
+# Full default suite selection.
+devspace run test-e2e
+```
+
+The default command intentionally runs full coverage for default-selected
+suites. It must include real-agent workload creation and Ziti sidecar
+assertions, not smoke-only coverage.
+
+The repository `E2E` workflow runs the targeted go-core workload groups on PRs
+and can also be run manually with `workflow_dispatch` using `workload_group` to
+select `real-agent-ziti`, `orchestrator-workloads`, `k8s-runner-workloads`, or
+`all`. The `real-agent-ziti` group deploys `agynio/k8s-runner` and
+`agynio/agents-orchestrator` from source after bootstrap provisioning. The
+`orchestrator-workloads` group deploys `agynio/agents-orchestrator` from
+source. Both source-backed groups provision the pinned bootstrap runtime DNS fix, deploy
+the pinned k8s-runner source egress policy, and fail fast if `ziti.agyn.dev`
+through `ziti-workload-dns` does not resolve to the Istio ingressgateway
+ClusterIP. Manual runs can override those source refs with `bootstrap_ref`,
+`k8s_runner_ref`, and `agents_orchestrator_ref`. The default `k8s_runner_ref`
+tracks `noa/issue-73` so validation includes the latest selector-aware egress
+policy from k8s-runner PR #74.
+
 ## DEV/E2E-only Ziti diagnostics credentials
 
 Some expose diagnostics tests read a Kubernetes secret named

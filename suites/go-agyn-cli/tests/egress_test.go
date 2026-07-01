@@ -1,4 +1,4 @@
-//go:build e2e && svc_agn_cli
+//go:build e2e && svc_agyn_cli
 
 package tests
 
@@ -50,7 +50,7 @@ type agynEgressAttachmentOutput struct {
 }
 
 func TestAgynEgressRuleLifecycle(t *testing.T) {
-	binary := agnBinaryPath(t)
+	binary := agynBinaryPath(t)
 	env := newAgynCLIGatewayEnv(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -61,7 +61,7 @@ func TestAgynEgressRuleLifecycle(t *testing.T) {
 	domainPattern := fmt.Sprintf("api-%s.example.com", uniqueID())
 	agentID := uniqueID()
 
-	createStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "create",
+	createStdout, _ := runAgynWithContext(t, ctx, binary, env, "egress", "rule", "create",
 		"--organization-id", organizationID,
 		"--name", ruleName,
 		"--description", "E2E CLI egress rule",
@@ -92,20 +92,20 @@ func TestAgynEgressRuleLifecycle(t *testing.T) {
 		if !deleted {
 			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cleanupCancel()
-			_, _ = runAgnWithContextNoFail(cleanupCtx, binary, env, "egress", "rule", "delete", ruleID)
+			_, _ = runAgynWithContextNoFail(cleanupCtx, binary, env, "egress", "rule", "delete", ruleID)
 		}
 	}()
 
-	listStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "list", "--organization-id", organizationID, "--output", "json")
+	listStdout, _ := runAgynWithContext(t, ctx, binary, env, "egress", "rule", "list", "--organization-id", organizationID, "--output", "json")
 	listedRules := decodeAgynEgressRuleList(t, listStdout)
 	requireAgynRuleID(t, listedRules, ruleID)
 
-	getStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "get", ruleID, "--output", "json")
+	getStdout, _ := runAgynWithContext(t, ctx, binary, env, "egress", "rule", "get", ruleID, "--output", "json")
 	gotRule := decodeAgynEgressRule(t, getStdout)
 	require.Equal(t, ruleID, gotRule.ID)
 	require.Equal(t, ruleName, gotRule.Name)
 
-	updateStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "update", ruleID,
+	updateStdout, _ := runAgynWithContext(t, ctx, binary, env, "egress", "rule", "update", ruleID,
 		"--name", updatedRuleName,
 		"--description", "E2E CLI egress rule updated",
 		"--domain", domainPattern,
@@ -124,14 +124,14 @@ func TestAgynEgressRuleLifecycle(t *testing.T) {
 	require.Equal(t, "/repos/**/issues", updatedRule.Matcher.PathPattern)
 	require.Equal(t, "deny", updatedRule.Effect.Action)
 
-	attachStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "attach", ruleID, agentID, "--output", "json")
+	attachStdout, _ := runAgynWithContext(t, ctx, binary, env, "egress", "rule", "attach", ruleID, agentID, "--output", "json")
 	attachment := decodeAgynEgressAttachment(t, attachStdout)
 	require.NotEmpty(t, attachment.ID)
 	require.Equal(t, ruleID, attachment.RuleID)
 	require.Equal(t, agentID, attachment.AgentID)
 
-	_, _ = runAgnWithContext(t, ctx, binary, env, "egress", "rule", "detach", attachment.ID)
-	_, _ = runAgnWithContext(t, ctx, binary, env, "egress", "rule", "delete", ruleID)
+	_, _ = runAgynWithContext(t, ctx, binary, env, "egress", "rule", "detach", attachment.ID)
+	_, _ = runAgynWithContext(t, ctx, binary, env, "egress", "rule", "delete", ruleID)
 	deleted = true
 }
 
@@ -185,7 +185,7 @@ func requireAgynRuleID(t *testing.T, rules []agynEgressRuleOutput, ruleID string
 	t.Fatalf("egress rule %s not found in list response: %+v", ruleID, rules)
 }
 
-func runAgnWithContextNoFail(ctx context.Context, binary string, env []string, args ...string) (string, string) {
+func runAgynWithContextNoFail(ctx context.Context, binary string, env []string, args ...string) (string, string) {
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Env = env
 	var stdout strings.Builder
@@ -198,4 +198,42 @@ func runAgnWithContextNoFail(ctx context.Context, binary string, env []string, a
 
 func uniqueID() string {
 	return fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+}
+
+func agynBinaryPath(t *testing.T) string {
+	t.Helper()
+	path := strings.TrimSpace(os.Getenv("AGYN_BINARY"))
+	if path == "" {
+		path = filepath.Join("bin", "agyn")
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(suiteRoot(t), path)
+	}
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	if info.Mode()&0o111 == 0 {
+		t.Fatalf("agyn binary is not executable: %s", path)
+	}
+	return path
+}
+
+func suiteRoot(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	return filepath.Clean(filepath.Join(wd, ".."))
+}
+
+func runAgynWithContext(t *testing.T, ctx context.Context, binary string, env []string, args ...string) (string, string) {
+	t.Helper()
+	cmd := exec.CommandContext(ctx, binary, args...)
+	cmd.Env = env
+	var stdout strings.Builder
+	var stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("run agyn %v: %v\nstdout: %s\nstderr: %s", args, err, stdout.String(), stderr.String())
+	}
+	return stdout.String(), stderr.String()
 }

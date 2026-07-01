@@ -2,15 +2,52 @@ name: E2E
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      workload_group:
+        description: Workload E2E group to run.
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - real-agent-ziti
+          - orchestrator-workloads
+          - k8s-runner-workloads
+          - platform-usage
+          - workload-validation
+      bootstrap_ref:
+        description: bootstrap ref for workload infrastructure provisioning.
+        required: false
+        default: e9e44b4c083bf989a664e73000ac8d9e7fda2afe
+      agents_orchestrator_ref:
+        description: agents-orchestrator ref for workload source deploys.
+        required: false
+        default: noa/issue-219
+      k8s_runner_ref:
+        description: k8s-runner ref for workload source deploys.
+        required: false
+        default: noa/issue-73
   push:
     branches: [main]
 
+env:
+  WORKLOAD_BOOTSTRAP_REF: e9e44b4c083bf989a664e73000ac8d9e7fda2afe
+  WORKLOAD_AGENTS_ORCHESTRATOR_REF: noa/issue-219
+  WORKLOAD_K8S_RUNNER_REF: noa/issue-73
+
 concurrency:
-  group: e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  group: >-
+    e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number ||
+    github.event_name == 'workflow_dispatch' && github.run_id || github.sha }}
   cancel-in-progress: true
 
 jobs:
-  e2e:
+  platform-usage:
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' ||
+      inputs.workload_group == 'all' ||
+      inputs.workload_group == 'platform-usage' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -38,5 +75,390 @@ jobs:
           E2E_SUITES: playwright
           E2E_PLAYWRIGHT_TEST_ARGS: test/e2e/organization-platform-usage.spec.ts
         with:
+          e2e-ref: >-
+            ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.ref }}
           tag: svc_metering
           include_smoke: false
+
+  go-core-workloads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      AGYN_AGENT_INIT_IMAGE: ghcr.io/agynio/agent-init:v1.0.0
+      CODEX_INIT_IMAGE: ghcr.io/agynio/agent-init-codex:0.13.29
+      AGN_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
+      CLAUDE_INIT_IMAGE: ghcr.io/agynio/agent-init-claude:0.1.29
+      AGN_EXPOSE_INIT_IMAGE: ghcr.io/agynio/agent-init-agn:0.5.5
+      TF_VAR_threads_chart_version: 0.4.12
+      TF_VAR_threads_image_tag: 0.4.12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: real-agent-ziti
+            tags: svc_agents_orchestrator
+            run: >-
+              TestAgentAgynCLIWaitToAnotherAgent|TestFullPipelineAgnMessageResponse
+          - name: orchestrator-workloads
+            tags: svc_agents_orchestrator
+            run: >-
+              TestWorkloadStartsOnUnackedMessage|TestWorkloadStopsAfterIdleTimeout|TestWorkloadStartRetryPolicyFastRetry
+          - name: k8s-runner-workloads
+            tags: svc_k8s_runner,svc_runners,svc_llm
+            run: >-
+              TestWorkloadLifecycle|TestExec|TestStreaming|TestStreamEvents|TestPutArchive|TestVolumeQueries
+    steps:
+      - name: Checkout
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) }}
+        uses: actions/checkout@v4
+
+      - name: Provision cluster
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) }}
+        uses: agynio/bootstrap/.github/actions/provision@e9e44b4c083bf989a664e73000ac8d9e7fda2afe
+        with:
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch' &&
+            inputs.bootstrap_ref || env.WORKLOAD_BOOTSTRAP_REF }}
+
+      - name: Setup DevSpace for source deploy
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        uses: ./.github/actions/setup-devspace
+
+      - name: Checkout k8s-runner source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        uses: actions/checkout@v4
+        with:
+          repository: agynio/k8s-runner
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch' &&
+            inputs.k8s_runner_ref || env.WORKLOAD_K8S_RUNNER_REF }}
+          path: .e2e-deps/k8s-runner
+
+      - name: Checkout agents-orchestrator source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        uses: actions/checkout@v4
+        with:
+          repository: agynio/agents-orchestrator
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch' &&
+            inputs.agents_orchestrator_ref || env.WORKLOAD_AGENTS_ORCHESTRATOR_REF }}
+          path: .e2e-deps/agents-orchestrator
+
+      - name: Deploy k8s-runner from source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        working-directory: .e2e-deps/k8s-runner
+        run: devspace run deploy
+
+      - name: Deploy agents-orchestrator from source
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        working-directory: .e2e-deps/agents-orchestrator
+        run: devspace run deploy
+
+      - name: Allow validation DNS preflight egress
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        run: |
+          set -euo pipefail
+          ziti_dns_ip="$(kubectl get service ziti-workload-dns -n ziti -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$ziti_dns_ip" ]; then
+            echo "ziti-workload-dns ClusterIP is empty" >&2
+            exit 1
+          fi
+          service_endpoint_ips() {
+            kubectl get endpoints "$1" -n "$2" -o jsonpath='{range .subsets[*].addresses[*]}{.ip}{" "}{end}'
+          }
+
+          ziti_dns_endpoint_ips="$(service_endpoint_ips ziti-workload-dns ziti)"
+          if [ -z "$ziti_dns_endpoint_ips" ]; then
+            echo "ziti-workload-dns endpoints are empty" >&2
+            exit 1
+          fi
+          istio_gateway_ip="$(kubectl get service istio-ingressgateway -n istio-gateway -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$istio_gateway_ip" ]; then
+            echo "istio-ingressgateway ClusterIP is empty" >&2
+            exit 1
+          fi
+          istio_gateway_endpoint_ips="$(service_endpoint_ips istio-ingressgateway istio-gateway)"
+          if [ -z "$istio_gateway_endpoint_ips" ]; then
+            echo "istio-ingressgateway endpoints are empty" >&2
+            exit 1
+          fi
+          ziti_controller_ip="$(kubectl get service ziti-controller-client -n ziti -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$ziti_controller_ip" ]; then
+            echo "ziti-controller-client ClusterIP is empty" >&2
+            exit 1
+          fi
+          ziti_controller_endpoint_ips="$(service_endpoint_ips ziti-controller-client ziti)"
+          if [ -z "$ziti_controller_endpoint_ips" ]; then
+            echo "ziti-controller-client endpoints are empty" >&2
+            exit 1
+          fi
+          ziti_router_ip="$(kubectl get service ziti-router-edge -n ziti -o jsonpath='{.spec.clusterIP}')"
+          if [ -z "$ziti_router_ip" ]; then
+            echo "ziti-router-edge ClusterIP is empty" >&2
+            exit 1
+          fi
+          ziti_router_endpoint_ips="$(service_endpoint_ips ziti-router-edge ziti)"
+          if [ -z "$ziti_router_endpoint_ips" ]; then
+            echo "ziti-router-edge endpoints are empty" >&2
+            exit 1
+          fi
+
+          add_tcp_egress_ip() {
+            patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"$1/32\"}}],\"ports\":[{\"protocol\":\"TCP\",\"port\":$2}]}}"
+          }
+
+          patch='[{"op":"add","path":"/spec/egress/-","value":{"to":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ziti"}},"podSelector":{"matchLabels":{"app.kubernetes.io/name":"ziti-workload-dns"}}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}},{"op":"add","path":"/spec/egress/-","value":{"to":[{"ipBlock":{"cidr":"'"${ziti_dns_ip}"'/32"}}],"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}'
+          for ziti_dns_endpoint_ip in $ziti_dns_endpoint_ips; do
+            patch="${patch},{\"op\":\"add\",\"path\":\"/spec/egress/-\",\"value\":{\"to\":[{\"ipBlock\":{\"cidr\":\"${ziti_dns_endpoint_ip}/32\"}}],\"ports\":[{\"protocol\":\"UDP\",\"port\":53},{\"protocol\":\"TCP\",\"port\":53}]}}"
+          done
+          add_tcp_egress_ip "$istio_gateway_ip" 443
+          for istio_gateway_endpoint_ip in $istio_gateway_endpoint_ips; do
+            add_tcp_egress_ip "$istio_gateway_endpoint_ip" 443
+          done
+          add_tcp_egress_ip "$ziti_controller_ip" 2496
+          for ziti_controller_endpoint_ip in $ziti_controller_endpoint_ips; do
+            add_tcp_egress_ip "$ziti_controller_endpoint_ip" 2496
+            add_tcp_egress_ip "$ziti_controller_endpoint_ip" 1280
+          done
+          add_tcp_egress_ip "$ziti_router_ip" 2496
+          for ziti_router_endpoint_ip in $ziti_router_endpoint_ips; do
+            add_tcp_egress_ip "$ziti_router_endpoint_ip" 2496
+            add_tcp_egress_ip "$ziti_router_endpoint_ip" 3022
+          done
+          patch="${patch}]"
+
+          kubectl patch networkpolicy agent-workload-egress \
+            -n agyn-workloads \
+            --type=json \
+            -p "$patch"
+          kubectl get networkpolicy agent-workload-egress -n agyn-workloads -o yaml
+
+          kubectl patch networkpolicy ziti-workload-dns \
+            -n ziti \
+            --type=json \
+            -p '[{"op":"add","path":"/spec/ingress/-","value":{"ports":[{"protocol":"UDP","port":53},{"protocol":"TCP","port":53}]}}]'
+
+      - name: Verify runtime Ziti DNS
+        if: >-
+          ${{ (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        run: |
+          set -euo pipefail
+
+          dump_runtime_dns_diagnostics() {
+            kubectl get configmap ziti-workload-dns -n ziti -o yaml || true
+            kubectl get service,endpoints -n ziti ziti-workload-dns ziti-controller-client ziti-router-edge -o wide || true
+            kubectl get service,endpoints,pods -n ziti -l app.kubernetes.io/name=ziti-workload-dns -o wide || true
+            kubectl get service,endpoints -n istio-gateway istio-ingressgateway -o wide || true
+            if [ -n "${ziti_dns_ip:-}" ]; then
+              kubectl run ziti-runtime-dns-debug \
+                -n agyn-workloads \
+                --image=busybox:1.37.0 \
+                --labels=agyn.dev/managed-by=agents-orchestrator \
+                --restart=Never \
+                --rm \
+                -i \
+                --quiet \
+                --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip}; nslookup ziti.agyn.dev" || true
+            fi
+            kubectl logs -n agyn-workloads -l app.kubernetes.io/name=ziti-sidecar --all-containers --tail=200 || true
+            kubectl logs -n agyn-workloads -l agyn.dev/component=ziti-sidecar --all-containers --tail=200 || true
+            kubectl get networkpolicy agent-workload-egress -n agyn-workloads -o yaml || true
+            kubectl get pods -n agyn-workloads -o wide || true
+          }
+
+          istio_gateway_ip="$(kubectl get service istio-ingressgateway -n istio-gateway -o jsonpath='{.spec.clusterIP}')"
+          ziti_controller_ip="$(kubectl get service ziti-controller-client -n ziti -o jsonpath='{.spec.clusterIP}')"
+          ziti_dns_ip="$(kubectl get service ziti-workload-dns -n ziti -o jsonpath='{.spec.clusterIP}')"
+
+          if [ -z "$istio_gateway_ip" ]; then
+            echo "istio-ingressgateway ClusterIP is empty" >&2
+            dump_runtime_dns_diagnostics
+            exit 1
+          fi
+          if [ -z "$ziti_controller_ip" ]; then
+            echo "ziti-controller-client ClusterIP is empty" >&2
+            dump_runtime_dns_diagnostics
+            exit 1
+          fi
+          if [ -z "$ziti_dns_ip" ]; then
+            echo "ziti-workload-dns ClusterIP is empty" >&2
+            dump_runtime_dns_diagnostics
+            exit 1
+          fi
+
+          kubectl delete pod ziti-runtime-dns-preflight -n agyn-workloads --ignore-not-found
+          kubectl run ziti-runtime-dns-preflight \
+            -n agyn-workloads \
+            --image=busybox:1.37.0 \
+            --labels=agyn.dev/managed-by=agents-orchestrator \
+            --restart=Never \
+            --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip} && timeout 10 nc -vz -w 5 ${ziti_dns_ip} 53"
+          kubectl wait \
+            -n agyn-workloads \
+            --for=jsonpath='{.status.phase}'=Succeeded \
+            pod/ziti-runtime-dns-preflight \
+            --timeout=30s
+          dns_output="$(kubectl logs ziti-runtime-dns-preflight -n agyn-workloads)"
+          kubectl delete pod ziti-runtime-dns-preflight -n agyn-workloads --ignore-not-found
+          echo "$dns_output"
+          dns_answer="$(printf '%s\n' "$dns_output" | awk '/^Address:[[:space:]]*[0-9]/ {answer=$2} END {print answer}' | sed 's/:.*$//')"
+
+          if [ -z "$dns_answer" ]; then
+            echo "ziti-workload-dns returned no address for ziti.agyn.dev" >&2
+            dump_runtime_dns_diagnostics
+            exit 1
+          fi
+          if [ "$dns_answer" = "$ziti_controller_ip" ]; then
+            echo "ziti.agyn.dev resolved to ziti-controller-client ${ziti_controller_ip}; expected istio-ingressgateway ${istio_gateway_ip}" >&2
+            dump_runtime_dns_diagnostics
+            exit 1
+          fi
+          if [ "$dns_answer" != "$istio_gateway_ip" ]; then
+            echo "ziti.agyn.dev resolved to ${dns_answer}; expected istio-ingressgateway ${istio_gateway_ip}" >&2
+            dump_runtime_dns_diagnostics
+            exit 1
+          fi
+
+          echo "ziti.agyn.dev resolves through ziti-workload-dns to ${dns_answer}."
+
+      - name: Run go-core workload E2E tests
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) }}
+        uses: ./.github/actions/run-tests
+        env:
+          E2E_SUITES: go-core
+          E2E_GO_TEST_RUN: ${{ matrix.run }}
+          E2E_GO_TEST_TIMEOUT: 35m
+        with:
+          e2e-ref: >-
+            ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.ref }}
+          tag: ${{ matrix.tags }}
+          include_smoke: false
+
+      - name: Collect runtime Ziti diagnostics
+        if: >-
+          ${{ failure() && (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        run: |
+          set -euo pipefail
+          kubectl get configmap ziti-workload-dns -n ziti -o yaml || true
+          kubectl get service,endpoints -n ziti ziti-workload-dns ziti-controller-client ziti-router-edge -o wide || true
+          kubectl get service,endpoints -n istio-gateway istio-ingressgateway -o wide || true
+          ziti_dns_ip="$(kubectl get service ziti-workload-dns -n ziti -o jsonpath='{.spec.clusterIP}' 2>/dev/null || true)"
+          if [ -n "$ziti_dns_ip" ]; then
+            kubectl run ziti-runtime-dns-failure-debug \
+              -n agyn-workloads \
+              --image=busybox:1.37.0 \
+              --labels=agyn.dev/managed-by=agents-orchestrator \
+              --restart=Never \
+              --rm \
+              -i \
+              --quiet \
+              --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip}; nslookup ziti.agyn.dev" || true
+          fi
+          kubectl logs -n agyn-workloads -l app.kubernetes.io/name=ziti-sidecar --all-containers --tail=500 || true
+          kubectl logs -n agyn-workloads -l agyn.dev/component=ziti-sidecar --all-containers --tail=500 || true
+          kubectl get networkpolicy agent-workload-egress -n agyn-workloads -o yaml || true
+          kubectl logs -n agyn-workloads -l agyn.dev/managed-by=agents-orchestrator --all-containers --tail=500 || true
+          kubectl get pods -n agyn-workloads -o wide || true
+
+      - name: Restore k8s-runner ArgoCD sync
+        if: >-
+          ${{ always() && (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        run: |
+          if [ -d .e2e-deps/k8s-runner ]; then
+            cd .e2e-deps/k8s-runner
+            devspace run restore-argocd
+          fi
+
+      - name: Restore agents-orchestrator ArgoCD sync
+        if: >-
+          ${{ always() && (github.event_name != 'workflow_dispatch' ||
+          inputs.workload_group == 'all' ||
+          inputs.workload_group == matrix.name ||
+          (inputs.workload_group == 'workload-validation' &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
+          (matrix.name == 'real-agent-ziti' ||
+          matrix.name == 'orchestrator-workloads') }}
+        run: |
+          if [ -d .e2e-deps/agents-orchestrator ]; then
+            cd .e2e-deps/agents-orchestrator
+            devspace run restore-argocd
+          fi

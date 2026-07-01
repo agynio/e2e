@@ -52,7 +52,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	}
 	t.Cleanup(func() { deleteAgentEnv(t, threadsCtx, agentsClient, agentEnvID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{agentID})
 	threadID = thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")

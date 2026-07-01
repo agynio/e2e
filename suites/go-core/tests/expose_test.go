@@ -279,7 +279,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "HOME", "/tmp")
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "AGYN_GATEWAY_URL", "http://gateway:8080")
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")
