@@ -308,6 +308,7 @@ jobs:
           dump_runtime_dns_diagnostics() {
             kubectl get configmap ziti-workload-dns -n ziti -o yaml || true
             kubectl get service,endpoints -n ziti ziti-workload-dns ziti-controller-client ziti-router-edge -o wide || true
+            kubectl get service,endpoints,pods -n ziti -l app.kubernetes.io/name=ziti-workload-dns -o wide || true
             kubectl get service,endpoints -n istio-gateway istio-ingressgateway -o wide || true
             if [ -n "${ziti_dns_ip:-}" ]; then
               kubectl run ziti-runtime-dns-debug \
@@ -352,7 +353,7 @@ jobs:
             --image=busybox:1.37.0 \
             --labels=agyn.dev/managed-by=agents-orchestrator \
             --restart=Never \
-            --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip}"
+            --command -- sh -c "nslookup ziti.agyn.dev ${ziti_dns_ip} && timeout 10 nc -vz -w 5 ${ziti_dns_ip} 53"
           kubectl wait \
             -n agyn-workloads \
             --for=jsonpath='{.status.phase}'=Succeeded \
