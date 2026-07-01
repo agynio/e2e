@@ -139,7 +139,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         uses: ./.github/actions/setup-devspace
@@ -150,7 +150,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         uses: actions/checkout@v4
@@ -167,7 +167,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         uses: actions/checkout@v4
@@ -184,7 +184,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         working-directory: .e2e-deps/k8s-runner
@@ -196,7 +196,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         working-directory: .e2e-deps/agents-orchestrator
@@ -208,7 +208,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         run: |
@@ -299,7 +299,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         run: |
@@ -406,7 +406,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         run: |
@@ -438,7 +438,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         run: |
@@ -453,7 +453,7 @@ jobs:
           inputs.workload_group == 'all' ||
           inputs.workload_group == matrix.name ||
           (inputs.workload_group == 'workload-validation' &&
-          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads')) &&
+          (matrix.name == 'real-agent-ziti' || matrix.name == 'orchestrator-workloads'))) &&
           (matrix.name == 'real-agent-ziti' ||
           matrix.name == 'orchestrator-workloads') }}
         run: |
