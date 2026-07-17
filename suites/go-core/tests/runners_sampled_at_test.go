@@ -326,6 +326,8 @@ func createRunnerWorkload(t *testing.T, ctx context.Context, runnerClient runner
 		AgentId:        agentID,
 		OrganizationId: organizationID,
 		Status:         runnersv1.WorkloadStatus_WORKLOAD_STATUS_RUNNING,
+		OwnerKind:      runnersv1.RuntimeOwnerKind_RUNTIME_OWNER_KIND_AGENT_INSTANCE,
+		OwnerId:        agentID,
 		Containers:     runnerDefaultContainers(),
 		ZitiIdentityId: "ziti-test",
 	})
@@ -352,6 +354,8 @@ func createRunnerVolume(t *testing.T, ctx context.Context, runnerClient runnersv
 		OrganizationId: organizationID,
 		SizeGb:         "10",
 		Status:         runnersv1.VolumeStatus_VOLUME_STATUS_PROVISIONING,
+		OwnerKind:      runnersv1.RuntimeOwnerKind_RUNTIME_OWNER_KIND_AGENT_INSTANCE,
+		OwnerId:        agentID,
 	})
 	if err != nil {
 		t.Fatalf("CreateVolume failed: %v", err)
