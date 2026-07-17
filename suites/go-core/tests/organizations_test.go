@@ -47,7 +47,7 @@ func TestOrganizationsServiceE2E(t *testing.T) {
 	require.NotNil(t, getResp.GetOrganization())
 	require.Equal(t, organizationID1, getResp.GetOrganization().GetId())
 
-	updatedOrganizationResp, err := client.UpdateOrganization(ctx, &organizationsv1.UpdateOrganizationRequest{
+	updatedOrganizationResp, err := client.UpdateOrganization(identityCtx, &organizationsv1.UpdateOrganizationRequest{
 		Id:   organizationID1,
 		Name: proto.String("Organization Alpha Updated " + testID),
 	})
@@ -70,7 +70,7 @@ func TestOrganizationsServiceE2E(t *testing.T) {
 	require.True(t, hasID(accessibleResp.GetOrganizations(), organizationID1))
 	require.True(t, hasID(accessibleResp.GetOrganizations(), organizationID2))
 
-	_, err = client.UpdateOrganization(ctx, &organizationsv1.UpdateOrganizationRequest{Id: organizationID1})
+	_, err = client.UpdateOrganization(identityCtx, &organizationsv1.UpdateOrganizationRequest{Id: organizationID1})
 	requireStatusCode(t, err, codes.InvalidArgument)
 
 	_, err = client.GetOrganization(ctx, &organizationsv1.GetOrganizationRequest{Id: uuid.NewString()})
