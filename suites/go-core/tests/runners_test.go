@@ -77,6 +77,8 @@ func TestRunnerLifecycle(t *testing.T) {
 		AgentId:        agentID,
 		OrganizationId: organizationID,
 		Status:         runnersv1.WorkloadStatus_WORKLOAD_STATUS_STARTING,
+		OwnerKind:      runnersv1.RuntimeOwnerKind_RUNTIME_OWNER_KIND_AGENT_INSTANCE,
+		OwnerId:        agentID,
 		Containers:     runnerDefaultContainers(),
 		ZitiIdentityId: "ziti-test",
 	})
