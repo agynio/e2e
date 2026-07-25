@@ -843,7 +843,7 @@ Validates core platform services through Go E2E tests: gateway authentication, a
 
 **Scenario:** TestMCPToolsE2E
 
-- **Given** An agent has MCP tools configured.
+- **Given** A Codex-backed agent has MCP tools configured.
 - **When** A user sends a prompt requiring tool use.
 - **Then** The agent invokes the MCP tools and returns the expected answer.
 

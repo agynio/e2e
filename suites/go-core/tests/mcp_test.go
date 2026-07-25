@@ -15,7 +15,7 @@ import (
 )
 
 func TestMCPToolsE2E(t *testing.T) {
-	runMCPToolsE2E(t, testLLMEndpointAgn, agnInitImage)
+	runMCPToolsE2E(t, testLLMEndpointCodex, codexInitImage)
 }
 
 func TestMCPToolsAgnE2E(t *testing.T) {
