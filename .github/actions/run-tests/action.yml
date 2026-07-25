@@ -173,7 +173,7 @@ runs:
         fi
 
         if [ -z "${CODEX_INIT_IMAGE:-}" ]; then
-          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:0.13.29"
+          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:0.13.41"
           echo "CODEX_INIT_IMAGE=$CODEX_INIT_IMAGE" >> "$GITHUB_ENV"
         fi
 

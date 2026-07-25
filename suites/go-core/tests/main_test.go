@@ -58,7 +58,7 @@ var (
 	runnersAddr     = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
 	secretsAddr     = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
 	tracingAddr     = envOrDefault("TRACING_ADDRESS", "tracing:50051")
-	codexInitImage  = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:0.13.29")
+	codexInitImage  = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:0.13.41")
 	agnInitImage    = envOrDefault("AGN_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:0.5.5")
 	claudeInitImage = envOrDefault("CLAUDE_INIT_IMAGE", "ghcr.io/agynio/agent-init-claude:0.1.29")
 )
@@ -237,11 +237,23 @@ func deleteAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsSer
 
 func cleanupAgentEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, agentID string) {
 	t.Helper()
+	cleanupEnvs(t, ctx, client, &agentsv1.ListEnvsRequest{AgentId: agentID})
+}
+
+func cleanupMCPEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, mcpID string) {
+	t.Helper()
+	cleanupEnvs(t, ctx, client, &agentsv1.ListEnvsRequest{McpId: mcpID})
+}
+
+func cleanupEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.ListEnvsRequest) {
+	t.Helper()
 	pageToken := ""
 	for {
-		resp, err := client.ListEnvs(ctx, &agentsv1.ListEnvsRequest{AgentId: agentID, PageSize: 100, PageToken: pageToken})
+		request.PageSize = 100
+		request.PageToken = pageToken
+		resp, err := client.ListEnvs(ctx, request)
 		if err != nil {
-			t.Logf("cleanup: list agent envs for %s: %v", agentID, err)
+			t.Logf("cleanup: list envs: %v", err)
 			return
 		}
 		for _, env := range resp.GetEnvs() {
@@ -342,6 +354,7 @@ func createMCP(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceC
 
 func deleteMCP(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, mcpID string) {
 	t.Helper()
+	cleanupMCPEnvs(t, ctx, client, mcpID)
 	_, err := client.DeleteMcp(ctx, &agentsv1.DeleteMcpRequest{Id: mcpID})
 	if err != nil {
 		t.Logf("cleanup: delete mcp %s: %v", mcpID, err)

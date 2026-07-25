@@ -65,7 +65,6 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 	if memoryMcpID == "" {
 		t.Fatal("create memory mcp: missing id")
 	}
-	t.Cleanup(func() { deleteMCP(t, ctx, agentsClient, memoryMcpID) })
 	createMCPEnv(t, ctx, agentsClient, memoryMcpID, "MEMORY_FILE_PATH", "/tmp/memory.json")
 
 	filesystemMCP := createMCP(
@@ -81,7 +80,10 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 	if filesystemMcpID == "" {
 		t.Fatal("create filesystem mcp: missing id")
 	}
-	t.Cleanup(func() { deleteMCP(t, ctx, agentsClient, filesystemMcpID) })
+	t.Cleanup(func() {
+		deleteMCP(t, ctx, agentsClient, filesystemMcpID)
+		deleteMCP(t, ctx, agentsClient, memoryMcpID)
+	})
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()

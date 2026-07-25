@@ -16,10 +16,10 @@ if (!BASE_URL) {
 export default defineConfig({
   testDir: './test/e2e',
   timeout: 60000,
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 1,
-  workers: 2,
+  workers: 1,
   reporter: [
     process.env.CI ? ['dot'] : ['list'],
     ['junit', { outputFile: 'junit.xml' }],
