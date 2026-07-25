@@ -10,6 +10,7 @@ import { setSelectedOrganization } from './organization-helpers';
 
 const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
+const testLlmRemoteName = process.env.E2E_TEST_LLM_REMOTE_NAME ?? 'simple-hello';
 
 test.describe('file-upload', {
   tag: [
@@ -26,6 +27,7 @@ test.describe('file-upload', {
     const { organizationId, agentId, participantId } = await setupTestAgent(page, {
       endpoint: llmEndpoint,
       initImage: process.env.E2E_AGENT_INIT_IMAGE,
+      remoteName: testLlmRemoteName,
     });
     await createAgentEnv(page, agentId, 'TEST_SCENARIO', 'attachments');
     const chatId = await createChat(page, organizationId, participantId);

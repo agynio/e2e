@@ -13,6 +13,7 @@ import { completeOidcLogin } from './sign-in-helper';
 
 const CODEX_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT ?? 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
+const CODEX_TEST_LLM_REMOTE_NAME = process.env.E2E_TEST_LLM_REMOTE_NAME ?? 'simple-hello';
 const CLAUDE_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT_CLAUDE ?? 'https://testllm.dev/v1/org/agynio/suite/claude/messages';
 const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:0.1.29';
@@ -28,6 +29,7 @@ function isTimeoutError(error: unknown): error is Error {
 type TraceScenario = {
   name: string;
   endpoint: string;
+  remoteName?: string;
   protocol?: string;
   initImage?: string;
 };
@@ -38,6 +40,7 @@ const TRACE_SCENARIOS: TraceScenario[] = [
   {
     name: 'codex',
     endpoint: CODEX_TEST_LLM_ENDPOINT,
+    remoteName: CODEX_TEST_LLM_REMOTE_NAME,
     initImage: process.env.E2E_AGENT_INIT_IMAGE,
   },
   {
@@ -266,6 +269,7 @@ test.describe('chat trace link', {
 
       const { organizationId, participantId } = await setupTestAgent(page, {
         endpoint: scenario.endpoint,
+        remoteName: scenario.remoteName,
         protocol: scenario.protocol,
         initImage: scenario.initImage,
       });
