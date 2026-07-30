@@ -91,6 +91,37 @@ runs:
       run: |
         set -euo pipefail
 
+        # Newest published release of a ghcr.io/agynio image, by semver.
+        # tags/list is paginated and unordered, so every page is walked and the
+        # tags are compared numerically — taking the last page's last entry
+        # yields a stale version that looks plausible.
+        latest_image() {
+          local repo="$1" token url tags page next
+          token="$(curl -fsS "https://ghcr.io/token?scope=repository:agynio/${repo}:pull" |
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
+          url="https://ghcr.io/v2/agynio/${repo}/tags/list?n=1000"
+          tags=""
+          while [ -n "$url" ]; do
+            page="$(curl -fsS -D /tmp/hdr.$$ -H "Authorization: Bearer ${token}" "$url")"
+            tags="${tags}$(printf '%s' "$page" |
+              python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin).get("tags") or []))')
+        "
+            next="$(sed -n 's/^[Ll]ink:.*<\([^>]*\)>.*/\1/p' /tmp/hdr.$$)"
+            rm -f /tmp/hdr.$$
+            [ -n "$next" ] && url="https://ghcr.io${next}" || url=""
+          done
+          # grep exits non-zero on no match, which pipefail would turn into an
+          # abort before the empty check below reports something useful.
+          local latest
+          latest="$(printf '%s\n' "$tags" | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true; } |
+            sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
+          if [ -z "$latest" ]; then
+            echo "No semver tags found for ghcr.io/agynio/${repo}." >&2
+            return 1
+          fi
+          printf 'ghcr.io/agynio/%s:%s' "$repo" "$latest"
+        }
+
         bootstrap_dir="$GITHUB_WORKSPACE/bootstrap"
         k8s_stack="$bootstrap_dir/stacks/k8s"
         platform_stack="$bootstrap_dir/stacks/platform"
@@ -172,31 +203,26 @@ runs:
           echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
         fi
 
-        if [ -z "${CODEX_INIT_IMAGE:-}" ]; then
-          CODEX_INIT_IMAGE="ghcr.io/agynio/agent-init-codex:0.13.41"
-          echo "CODEX_INIT_IMAGE=$CODEX_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
+        # Init images are always resolved to the newest published release, never
+        # pinned. A pin here is invisible to the caller and silently opts every
+        # run out of fixes shipped in later init images — which is how a known
+        # agent-reply flake kept reproducing in a service whose workflow pinned
+        # a version predating its fix. Resolution failure is fatal: falling back
+        # to some hardcoded tag is the behaviour this replaces.
+        codex_init_image="$(latest_image agent-init-codex)"
+        agn_init_image="$(latest_image agent-init-agn)"
+        claude_init_image="$(latest_image agent-init-claude)"
 
-        if [ -z "${AGYN_AGENT_INIT_IMAGE:-}" ]; then
-          # No agynio/agent-init image exists; default to the codex init image.
-          AGYN_AGENT_INIT_IMAGE="$CODEX_INIT_IMAGE"
-          echo "AGYN_AGENT_INIT_IMAGE=$AGYN_AGENT_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
+        # No agynio/agent-init image is published; the codex init image stands in.
+        {
+          echo "CODEX_INIT_IMAGE=$codex_init_image"
+          echo "AGYN_AGENT_INIT_IMAGE=$codex_init_image"
+          echo "AGN_INIT_IMAGE=$agn_init_image"
+          echo "AGN_EXPOSE_INIT_IMAGE=$agn_init_image"
+          echo "CLAUDE_INIT_IMAGE=$claude_init_image"
+        } >> "$GITHUB_ENV"
 
-        if [ -z "${AGN_INIT_IMAGE:-}" ]; then
-          AGN_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.5"
-          echo "AGN_INIT_IMAGE=$AGN_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${CLAUDE_INIT_IMAGE:-}" ]; then
-          CLAUDE_INIT_IMAGE="ghcr.io/agynio/agent-init-claude:0.1.29"
-          echo "CLAUDE_INIT_IMAGE=$CLAUDE_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${AGN_EXPOSE_INIT_IMAGE:-}" ]; then
-          AGN_EXPOSE_INIT_IMAGE="ghcr.io/agynio/agent-init-agn:0.5.5"
-          echo "AGN_EXPOSE_INIT_IMAGE=$AGN_EXPOSE_INIT_IMAGE" >> "$GITHUB_ENV"
-        fi
+        echo "init images: codex=$codex_init_image agn=$agn_init_image claude=$claude_init_image"
 
         if [ -z "${AGYN_MODEL_ID:-}" ]; then
           list_models_payload=$(cat <<EOF

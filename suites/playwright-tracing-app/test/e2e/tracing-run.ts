@@ -35,11 +35,6 @@ const TEST_LLM_TOKEN = 'test-token';
 const TEST_LLM_MODEL = 'mcp-tools-test';
 const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
-const DEFAULT_INIT_IMAGES: Record<TraceSdk, string> = {
-  agn: 'ghcr.io/agynio/agent-init-agn:0.5.5',
-  codex: 'ghcr.io/agynio/agent-init-codex:0.13.41',
-  claude: 'ghcr.io/agynio/agent-init-claude:0.1.29',
-};
 const INIT_IMAGE_ENV_VARS: Record<TraceSdk, string> = {
   agn: 'AGN_INIT_IMAGE',
   codex: 'CODEX_INIT_IMAGE',
@@ -89,13 +84,16 @@ type FullChainRunOptions = {
   sdk?: TraceSdk;
 };
 
+// Init images come from the environment, which the caller resolves to the
+// newest published release. There is deliberately no default: a hardcoded one
+// pins the suite to a stale image the moment the env goes missing.
 function resolveInitImage(sdk: TraceSdk): string {
   const envVar = INIT_IMAGE_ENV_VARS[sdk];
   const value = process.env[envVar]?.trim();
-  if (value) {
-    return value;
+  if (!value) {
+    throw new Error(`${envVar} is required`);
   }
-  return DEFAULT_INIT_IMAGES[sdk];
+  return value;
 }
 
 function resolveLlmEndpoint(sdk: TraceSdk): string {
