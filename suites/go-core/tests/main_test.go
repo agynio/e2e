@@ -58,9 +58,13 @@ var (
 	runnersAddr     = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
 	secretsAddr     = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
 	tracingAddr     = envOrDefault("TRACING_ADDRESS", "tracing:50051")
-	codexInitImage  = envOrDefault("CODEX_INIT_IMAGE", "ghcr.io/agynio/agent-init-codex:0.13.41")
-	agnInitImage    = envOrDefault("AGN_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:0.5.5")
-	claudeInitImage = envOrDefault("CLAUDE_INIT_IMAGE", "ghcr.io/agynio/agent-init-claude:0.1.29")
+	// Init images are resolved to the newest published release by the caller
+	// and are required, not defaulted: a hardcoded fallback here would run a
+	// stale image whenever the env went missing, which is indistinguishable
+	// from a real failure at the point it bites.
+	codexInitImage  = requireEnv("CODEX_INIT_IMAGE")
+	agnInitImage    = requireEnv("AGN_INIT_IMAGE")
+	claudeInitImage = requireEnv("CLAUDE_INIT_IMAGE")
 )
 
 type pipelineRun struct {

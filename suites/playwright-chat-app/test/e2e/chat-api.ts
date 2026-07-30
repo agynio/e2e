@@ -9,10 +9,18 @@ const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
 
-export const DEFAULT_TEST_INIT_IMAGE =
-  process.env.E2E_AGENT_INIT_IMAGE?.trim() ||
-  process.env.CODEX_INIT_IMAGE?.trim() ||
-    'ghcr.io/agynio/agent-init-codex:0.13.41';
+// Reads the first of `names` that is set. There is deliberately no default:
+// the caller resolves init images to the newest published release, and a
+// hardcoded fallback would silently pin the suite to a stale one.
+export function requireEnv(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  throw new Error(`${names.join(' or ')} is required`);
+}
+
+export const DEFAULT_TEST_INIT_IMAGE = requireEnv('E2E_AGENT_INIT_IMAGE', 'CODEX_INIT_IMAGE');
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
 const CONNECT_JSON_HEADERS = {

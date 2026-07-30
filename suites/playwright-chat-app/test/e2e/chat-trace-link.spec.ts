@@ -3,6 +3,7 @@ import { test } from './fixtures';
 import {
   createChat,
   getMessages,
+  requireEnv,
   resolveIdentityId,
   sendChatMessage,
   setupTestAgent,
@@ -16,7 +17,8 @@ const CODEX_TEST_LLM_ENDPOINT =
 const CODEX_TEST_LLM_REMOTE_NAME = process.env.E2E_TEST_LLM_REMOTE_NAME ?? 'simple-hello';
 const CLAUDE_TEST_LLM_ENDPOINT =
   process.env.E2E_TEST_LLM_ENDPOINT_CLAUDE ?? 'https://testllm.dev/v1/org/agynio/suite/claude/messages';
-const CLAUDE_INIT_IMAGE = process.env.CLAUDE_INIT_IMAGE ?? 'ghcr.io/agynio/agent-init-claude:0.1.29';
+// Resolved by the caller to the newest published release; no default here.
+const CLAUDE_INIT_IMAGE = requireEnv('CLAUDE_INIT_IMAGE');
 const CLAUDE_PROTOCOL = 'PROTOCOL_ANTHROPIC_MESSAGES';
 const MESSAGE_DEEP_LINK_RESOLUTION_TIMEOUT_MS = 180000;
 const MESSAGE_DEEP_LINK_POLL_INTERVAL_MS = 5000;

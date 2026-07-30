@@ -6,6 +6,104 @@ vars:
     default: platform
 
 commands:
+  # Run suites against the local bundle VM (`agyn local start`) with zero
+  # required environment: defaults the well-known local admin token, scopes to
+  # the go-core suite, defaults --tag smoke, reads the ingress port from the
+  # agyn CLI when available, and pins the agent init images CI normally sets.
+  # Every default can still be overridden via the usual variables.
+  test-e2e-local: |-
+    set -euo pipefail
+    tags=()
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --tag) shift; tags+=("$1") ;;
+        --tag=*) tags+=("${1#--tag=}") ;;
+        *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
+      esac
+      shift
+    done
+    if [ "${#tags[@]}" -eq 0 ]; then
+      tags=(smoke)
+    fi
+    export TAGS="${tags[*]}"
+    # Pin to the bundle VM's context. Both this command's kubectl reads and the
+    # pods devspace/run-pipeline spawn follow the current context, and a running
+    # bootstrap k3d cluster (k3d-agyn-local) can steal it — sending the run to
+    # the wrong cluster. Override with AGYN_LOCAL_CONTEXT.
+    local_ctx="${AGYN_LOCAL_CONTEXT:-agyn-local}"
+    if kubectl config get-contexts -o name 2>/dev/null | grep -qx "${local_ctx}"; then
+      kubectl config use-context "${local_ctx}" >/dev/null
+      echo "e2e: using kube context ${local_ctx}"
+    else
+      echo "WARNING: kube context ${local_ctx} not found; run 'agyn local kubeconfig'" >&2
+    fi
+    # The Gateway bootstrap token is generated per install by `agyn local
+    # start`, so there is no longer a fixed value to fall back on. Read it from
+    # the credentials file the CLI wrote: `agyn profile show` deliberately
+    # reports only that a token is stored, never the value.
+    creds="${AGYN_CREDENTIALS_FILE:-${HOME}/.agyn/credentials}"
+    if [ -z "${AGYN_API_TOKEN:-}" ] && [ -f "${creds}" ]; then
+      AGYN_API_TOKEN="$(awk '
+        /^[^[:space:]#]/ { profile = $1; sub(":$", "", profile) }
+        profile == "local" && $1 == "token:" { print $2; exit }
+      ' "${creds}")"
+    fi
+    if [ -z "${AGYN_API_TOKEN:-}" ]; then
+      echo "ERROR: no Gateway token; run 'agyn local credentials' or set AGYN_API_TOKEN" >&2
+      exit 1
+    fi
+    export AGYN_API_TOKEN
+    export E2E_SUITES="${E2E_SUITES:-go-core}"
+    # Org and model ids are provisioned into the VM by the apps-provision Job.
+    if [ -z "${AGYN_ORGANIZATION_ID:-}" ]; then
+      AGYN_ORGANIZATION_ID="$(kubectl -n platform get configmap agyn-local-provision \
+        -o jsonpath='{.data.organizationId}' 2>/dev/null || true)"
+    fi
+    [ -n "${AGYN_ORGANIZATION_ID:-}" ] && export AGYN_ORGANIZATION_ID
+    if [ -z "${AGYN_MODEL_ID:-}" ]; then
+      AGYN_MODEL_ID="$(kubectl -n platform get configmap agyn-local-provision \
+        -o jsonpath='{.data.modelId}' 2>/dev/null || true)"
+    fi
+    [ -n "${AGYN_MODEL_ID:-}" ] && export AGYN_MODEL_ID
+    if [ -z "${E2E_INGRESS_PORT:-}" ] && command -v agyn >/dev/null 2>&1; then
+      E2E_INGRESS_PORT="$(agyn local config get port 2>/dev/null || true)"
+    fi
+    export E2E_INGRESS_PORT="${E2E_INGRESS_PORT:-2496}"
+    export AGYN_AGENT_IMAGE="${AGYN_AGENT_IMAGE:-ghcr.io/agynio/agent-runtime:v1.0.0}"
+    export AGYN_AGENT_INIT_IMAGE="${AGYN_AGENT_INIT_IMAGE:-ghcr.io/agynio/agent-init:v1.0.0}"
+    # Newest published release, resolved per run. Pinning here is what let a
+    # stale codex init image keep reproducing a fixed agent-reply flake.
+    latest_image() {
+      repo="$1"
+      token="$(curl -fsS "https://ghcr.io/token?scope=repository:agynio/${repo}:pull" |
+        python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
+      url="https://ghcr.io/v2/agynio/${repo}/tags/list?n=1000"
+      tags=""
+      while [ -n "$url" ]; do
+        page="$(curl -fsS -D /tmp/ghcr-hdr.$$ -H "Authorization: Bearer ${token}" "$url")"
+        tags="${tags}$(printf '%s' "$page" |
+          python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin).get("tags") or []))')
+    "
+        next="$(sed -n 's/^[Ll]ink:.*<\([^>]*\)>.*/\1/p' /tmp/ghcr-hdr.$$)"
+        rm -f /tmp/ghcr-hdr.$$
+        [ -n "$next" ] && url="https://ghcr.io${next}" || url=""
+      done
+      latest="$(printf '%s\n' "$tags" | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true; } |
+        sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
+      [ -n "$latest" ] || { echo "No semver tags for ghcr.io/agynio/${repo}." >&2; return 1; }
+      printf 'ghcr.io/agynio/%s:%s' "$repo" "$latest"
+    }
+    AGN_INIT_IMAGE="$(latest_image agent-init-agn)"
+    export AGN_INIT_IMAGE
+    export AGN_EXPOSE_INIT_IMAGE="$AGN_INIT_IMAGE"
+    CODEX_INIT_IMAGE="$(latest_image agent-init-codex)"
+    export CODEX_INIT_IMAGE
+    CLAUDE_INIT_IMAGE="$(latest_image agent-init-claude)"
+    export CLAUDE_INIT_IMAGE
+    export DEVSPACE_NAMESPACE="${DEVSPACE_NAMESPACE:-${E2E_NAMESPACE}}"
+    export E2E_NAMESPACE="${E2E_NAMESPACE}"
+    devspace run-pipeline test-e2e
+
   test-e2e: |-
     set -euo pipefail
     tags=()
