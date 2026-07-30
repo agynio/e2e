@@ -45,9 +45,11 @@ type logReadOptions struct {
 
 func readWorkloadLogs(t *testing.T, ctx context.Context, namespace, podName, containerName string) {
 	t.Helper()
-	options := logReadOptions{TailLines: 50, MaxLines: 5}
+	// The agent container is the one that explains a failed workload, so give
+	// it room; five lines is not enough to show a startup sequence and its
+	// error.
+	options := logReadOptions{TailLines: 200, MaxLines: 25}
 	if strings.HasPrefix(containerName, "mcp-") {
-		options.TailLines = 200
 		options.MaxLines = 20
 	}
 	readWorkloadLogsWithOptions(t, ctx, namespace, podName, containerName, options)
@@ -68,22 +70,27 @@ func readWorkloadLogsWithOptions(t *testing.T, ctx context.Context, namespace, p
 	}
 	defer stream.Close()
 
+	// Keep the LAST MaxLines of the window, not the first. A container that
+	// died explains itself on its final line, and printing the head of the
+	// tail window hides exactly that — a crash reads as a silent exit.
 	scanner := bufio.NewScanner(stream)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	lines := 0
+	recent := make([]string, 0, options.MaxLines)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
-		t.Logf("diagnostics: pod=%s container=%s log=%s", podName, containerName, truncateLogLine(line))
-		lines++
-		if lines >= options.MaxLines {
-			break
+		if len(recent) == options.MaxLines {
+			recent = recent[1:]
 		}
+		recent = append(recent, line)
 	}
 	if err := scanner.Err(); err != nil {
 		t.Logf("diagnostics: pod=%s container=%s log scan error: %v", podName, containerName, err)
+	}
+	for _, line := range recent {
+		t.Logf("diagnostics: pod=%s container=%s log=%s", podName, containerName, truncateLogLine(line))
 	}
 }
 
