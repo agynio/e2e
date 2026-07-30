@@ -174,9 +174,42 @@ func logWorkloadPodDiagnostics(t *testing.T, ctx context.Context, workloadID str
 	logWorkloadPodDiagnosticsFromPod(t, ctx, *pod)
 }
 
+// logLLMProxyDiagnostics dumps the proxy's own account of a turn. An agent that
+// reports "stream disconnected before completion" only sees its end of the
+// connection; the proxy logs the upstream status and any stream failure, and
+// without it a transport fault is indistinguishable from the agent misbehaving.
+func logLLMProxyDiagnostics(t *testing.T, ctx context.Context) {
+	t.Helper()
+	namespace := currentNamespace(t)
+	pods, err := kubeClientset(t).CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		t.Logf("diagnostics: list llm-proxy pods: %v", err)
+		return
+	}
+	found := 0
+	for _, pod := range pods.Items {
+		if !strings.Contains(strings.ToLower(pod.Name), "llm-proxy") {
+			continue
+		}
+		t.Logf("diagnostics: llm-proxy pod=%s", pod.Name)
+		for _, container := range pod.Spec.Containers {
+			readWorkloadLogsWithOptions(t, ctx, namespace, pod.Name, container.Name,
+				logReadOptions{TailLines: 200, MaxLines: 25})
+		}
+		found++
+		if found >= 2 {
+			break
+		}
+	}
+	if found == 0 {
+		t.Log("diagnostics: no llm-proxy pods found")
+	}
+}
+
 func logWorkloadPodDiagnosticsFromPod(t *testing.T, ctx context.Context, pod corev1.Pod) {
 	t.Helper()
 	logWorkloadPodStatus(t, pod)
+	logLLMProxyDiagnostics(t, ctx)
 	namespace := pod.Namespace
 	if namespace == "" {
 		namespace = workloadNamespace(t)
