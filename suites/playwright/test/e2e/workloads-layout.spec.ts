@@ -6,7 +6,7 @@ test.describe('workloads-layout', { tag: ['@svc_console', '@svc_gateway', '@smok
     const organizationId = await createOrganization(page, `e2e-workloads-layout-${Date.now()}`);
     await setSelectedOrganization(page, organizationId);
 
-    await page.goto(`/organizations/${organizationId}/activity/workloads`);
+    await page.goto(`/organizations/${organizationId}/workloads`);
     const header = page.getByTestId('organization-workloads-header');
     await expect(header).toBeVisible({ timeout: 15000 });
     await header.scrollIntoViewIfNeeded();

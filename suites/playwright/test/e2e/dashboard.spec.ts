@@ -19,7 +19,7 @@ test.describe('dashboard', { tag: ['@svc_console', '@smoke'] }, () => {
     await page.goto('/');
     await Promise.all([usersLoaded, orgsLoaded, runnersLoaded]);
 
-    await expect(page.getByTestId('page-title')).toHaveText('Dashboard', { timeout: 15000 });
+    await expect(page.getByTestId('page-title')).toHaveText('Overview', { timeout: 15000 });
     await expect(page.getByTestId('dashboard-stat-card')).toHaveCount(3);
     await argosScreenshot(page, 'dashboard-overview');
   });
