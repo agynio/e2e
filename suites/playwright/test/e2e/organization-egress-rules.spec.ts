@@ -48,7 +48,7 @@ test.describe('organization-egress-rules', { tag: ['@svc_console'] }, () => {
     await createEgressRuleAttachment(page, { ruleId, agentId });
 
     await page.goto(`/organizations/${organizationId}/egress-rules`);
-    await expect(page.getByTestId('egress-rules-heading')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('list-search')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('egress-rule-row').filter({ hasText: ruleName })).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('nav-organization-egress-rules')).toBeVisible();
 

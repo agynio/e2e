@@ -21,6 +21,12 @@ test.describe('organizations', { tag: ['@svc_console'] }, () => {
     await page.goto(`/organizations/${orgId}`);
     await expect(page.getByTestId('page-title')).toHaveText('Overview', { timeout: 15000 });
     await expect(page.getByTestId('organization-overview-card')).toHaveCount(7);
+
+    // The organization_id the Terraform provider needs, without reading the URL.
+    await expect(page.getByTestId('organization-overview-identity')).toContainText(orgName);
+    await expect(page.getByTestId('organization-overview-id')).toHaveText(orgId);
+    await expect(page.getByTestId('organization-overview-id-copy')).toBeVisible();
+
     await argosScreenshot(page, 'organization-detail-overview');
   });
 });
