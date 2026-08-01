@@ -132,7 +132,7 @@ runs:
 
     # A boot that dies before the guest is reachable leaves its reason only in
     # lima's own logs, on a runner that is about to be destroyed. The CLI prints
-    # these itself from v0.2.14; this stays for the case where it is the CLI
+    # these itself from v0.2.15; this stays for the case where it is the CLI
     # that died, and for pinned older versions.
     - name: Dump VM boot logs
       if: failure()
