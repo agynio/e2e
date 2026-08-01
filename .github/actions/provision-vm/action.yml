@@ -139,9 +139,11 @@ runs:
       shell: bash
       run: |
         set -uo pipefail
+        # In ~/.agyn/local, not the instance directory: the CLI deletes the
+        # instance when a boot fails and copies these out first.
         for log in "${HOME}/.agyn/local/lima.log" \
-                   "${HOME}/.agyn/local/lima/agyn/ha.stderr.log" \
-                   "${HOME}/.agyn/local/lima/agyn/serial.log"; do
+                   "${HOME}/.agyn/local/ha.stderr.log" \
+                   "${HOME}/.agyn/local/serial.log"; do
           [ -f "${log}" ] || continue
           echo "::group::${log}"
           tail -100 "${log}"
