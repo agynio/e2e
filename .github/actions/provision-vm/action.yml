@@ -130,6 +130,24 @@ runs:
           --cpus "${{ inputs.cpus }}" \
           --memory "${{ inputs.memory }}"
 
+    # A boot that dies before the guest is reachable leaves its reason only in
+    # lima's own logs, on a runner that is about to be destroyed. The CLI prints
+    # these itself from v0.2.14; this stays for the case where it is the CLI
+    # that died, and for pinned older versions.
+    - name: Dump VM boot logs
+      if: failure()
+      shell: bash
+      run: |
+        set -uo pipefail
+        for log in "${HOME}/.agyn/local/lima.log" \
+                   "${HOME}/.agyn/local/lima/agyn/ha.stderr.log" \
+                   "${HOME}/.agyn/local/lima/agyn/serial.log"; do
+          [ -f "${log}" ] || continue
+          echo "::group::${log}"
+          tail -100 "${log}"
+          echo "::endgroup::"
+        done
+
     # The image contains the charts that were published when it was baked. This
     # is the only lever CI has on platform versions — per-service chart pins do
     # not exist any more — so it is on by default.
