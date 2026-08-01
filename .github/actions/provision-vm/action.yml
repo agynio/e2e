@@ -77,7 +77,11 @@ runs:
       run: |
         set -euo pipefail
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils xz-utils
+        # ovmf carries /usr/share/OVMF/OVMF_CODE.fd. The image boots UEFI, and
+        # without it lima dies before the guest exists with "could not find
+        # firmware for qemu-system-x86_64" -- qemu-system-x86 does not pull it
+        # in under --no-install-recommends.
+        sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils xz-utils ovmf
         # Lima is not in the Ubuntu archive.
         lima_version="1.0.4"
         curl -fsSL --retry 3 --retry-delay 5 \
