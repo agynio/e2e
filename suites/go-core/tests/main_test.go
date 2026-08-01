@@ -48,16 +48,16 @@ const (
 )
 
 var (
-	agentsAddr      = envOrDefault("AGENTS_ADDRESS", "agents:50051")
-	threadsAddr     = envOrDefault("THREADS_ADDRESS", "threads:50051")
-	llmAddr         = envOrDefault("LLM_ADDRESS", "llm:50051")
-	meteringAddr    = envOrDefault("METERING_ADDRESS", "metering:50051")
-	usersAddr       = envOrDefault("USERS_ADDRESS", "users:50051")
-	orgsAddr        = envOrDefault("ORGANIZATIONS_ADDRESS", "organizations:50051")
-	runnerAddr      = envOrDefault("RUNNER_ADDRESS", "k8s-runner:50051")
-	runnersAddr     = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
-	secretsAddr     = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
-	tracingAddr     = envOrDefault("TRACING_ADDRESS", "tracing:50051")
+	agentsAddr   = envOrDefault("AGENTS_ADDRESS", "agents:50051")
+	threadsAddr  = envOrDefault("THREADS_ADDRESS", "threads:50051")
+	llmAddr      = envOrDefault("LLM_ADDRESS", "llm:50051")
+	meteringAddr = envOrDefault("METERING_ADDRESS", "metering:50051")
+	usersAddr    = envOrDefault("USERS_ADDRESS", "users:50051")
+	orgsAddr     = envOrDefault("ORGANIZATIONS_ADDRESS", "organizations:50051")
+	runnerAddr   = envOrDefault("RUNNER_ADDRESS", "k8s-runner:50051")
+	runnersAddr  = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
+	secretsAddr  = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
+	tracingAddr  = envOrDefault("TRACING_ADDRESS", "tracing:50051")
 	// Init images are resolved to the newest published release by the caller
 	// and are required, not defaulted: a hardcoded fallback here would run a
 	// stale image whenever the env went missing, which is indistinguishable
@@ -136,14 +136,41 @@ func createModel(t *testing.T, ctx context.Context, token, name, providerID, rem
 
 // --- Setup Helpers ---
 
+// createAgent gives every agent a nickname. An agent added to a thread is
+// served by an instance, whose handle is @nickname#suffix -- without one,
+// CreateInstance refuses and the thread cannot be created at all.
 func createAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, initImage string) *agentsv1.Agent {
 	t.Helper()
 	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
 		Name:           name,
+		Nickname:       nicknameFor(name),
 		Model:          model,
 		OrganizationID: organizationID,
 		InitImage:      initImage,
 	})
+}
+
+// nicknameFor derives a nickname from a test's agent name. Nicknames allow
+// lowercase letters, digits, underscore and hyphen, and cap at 32 characters --
+// well under the uuid-suffixed names these tests generate -- so the name is
+// truncated and given a short random tail to stay unique within the org.
+func nicknameFor(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_', r == '-':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	const maxNickname = 32
+	suffix := strings.ReplaceAll(uuid.NewString(), "-", "")[:8]
+	stem := b.String()
+	if len(stem) > maxNickname-len(suffix)-1 {
+		stem = stem[:maxNickname-len(suffix)-1]
+	}
+	return strings.Trim(stem, "-") + "-" + suffix
 }
 
 func createAgentWithNickname(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, nickname, model, organizationID, initImage string) *agentsv1.Agent {
