@@ -185,8 +185,13 @@ runs:
         set -euo pipefail
         port="${{ inputs.port }}"
 
+        # Deliberately NOT exported as AGYN_BASE_URL. This URL only works on the
+        # runner: *.agyn.dev resolves to 127.0.0.1, which inside a test pod is
+        # the pod itself, and the host port is a Lima forward that does not
+        # exist in the cluster. The E2E runner already derives the in-cluster
+        # address (gateway.<namespace>.svc.cluster.local:8080) when
+        # AGYN_BASE_URL is unset, and that is the one the suites need.
         base_url="https://gateway.agyn.dev:${port}"
-        echo "AGYN_BASE_URL=${base_url}" >> "$GITHUB_ENV"
         echo "base-url=${base_url}" >> "$GITHUB_OUTPUT"
         echo "E2E_INGRESS_PORT=${port}" >> "$GITHUB_ENV"
 

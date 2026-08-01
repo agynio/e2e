@@ -126,20 +126,23 @@ runs:
         # step exported. Nothing here knows how it was provisioned, which is what
         # let the k3d-and-Terraform stack be swapped for the platform VM without
         # touching a suite.
-        for required in AGYN_BASE_URL AGYN_API_TOKEN AGYN_ORGANIZATION_ID; do
+        for required in AGYN_API_TOKEN AGYN_ORGANIZATION_ID; do
           if [ -z "${!required:-}" ]; then
             echo "${required} is not set; run a provisioning action before this one." >&2
             exit 1
           fi
         done
 
-        if ! gateway_status=$(curl -sS -k -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "${AGYN_BASE_URL}"); then
-          echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
-          exit 1
-        fi
-        if [ "$gateway_status" = "000" ]; then
-          echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
-          exit 1
+        # AGYN_BASE_URL is optional, and usually absent: the suites run in pods,
+        # where the pipeline's in-cluster address is the only one that resolves.
+        # A caller that sets it is naming a URL reachable from inside the
+        # cluster, so it is worth failing early if it is not reachable at all.
+        if [ -n "${AGYN_BASE_URL:-}" ]; then
+          gateway_status=$(curl -sS -k -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "${AGYN_BASE_URL}" || true)
+          if [ -z "$gateway_status" ] || [ "$gateway_status" = "000" ]; then
+            echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable." >&2
+            exit 1
+          fi
         fi
 
         if [ -z "${AGYN_AGENT_IMAGE:-}" ]; then
