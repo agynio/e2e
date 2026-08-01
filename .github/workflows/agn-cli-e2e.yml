@@ -50,9 +50,7 @@ jobs:
           chmod +x agn
 
       - name: Provision cluster
-        uses: agynio/bootstrap/.github/actions/provision@main
-        with:
-          ref: main
+        uses: ./.github/actions/provision-vm
 
       - name: Run go-agn-cli suite
         uses: ./.github/actions/run-tests

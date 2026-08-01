@@ -1,0 +1,210 @@
+name: Provision the platform VM
+description: Boot the prebuilt Agyn platform VM and export the environment the E2E runner needs.
+# Replaces agynio/bootstrap/.github/actions/provision. That action built a
+# cluster on the runner — k3d, eight Terraform stacks, Argo CD — and left its
+# state behind for run-tests to read outputs from. This one boots an image that
+# already contains the platform, and everything downstream reads plain
+# environment variables instead of Terraform state.
+#
+# Everything here goes through the agyn CLI. The VM's boot contract (ports,
+# kubeconfig, bootstrap token, CA) belongs to the CLI and the image, and a
+# second implementation of it in CI would drift from the one users run.
+inputs:
+  version:
+    description: Platform VM image version. "latest" resolves through the CDN's latest.json.
+    required: false
+    default: latest
+  upgrade:
+    description: Move the platform Helm releases to the newest published charts after boot.
+    required: false
+    default: "true"
+  port:
+    description: Host port forwarded onto the VM's ingress NodePort.
+    required: false
+    default: "2496"
+  cpus:
+    description: VM CPUs.
+    required: false
+    default: "4"
+  memory:
+    description: VM memory. Higher than the CLI's 8GiB default because services
+      run from source inside the guest here.
+    required: false
+    default: 12GiB
+  agyn-cli-version:
+    description: agyn CLI release tag to install. Empty means the latest release.
+    required: false
+    default: ""
+outputs:
+  kubeconfig:
+    description: Absolute path to the kubeconfig for the VM's cluster.
+    value: ${{ steps.kubeconfig.outputs.kubeconfig }}
+  base-url:
+    description: Gateway base URL the platform is reachable at.
+    value: ${{ steps.env.outputs.base-url }}
+runs:
+  using: composite
+  steps:
+    # A hosted runner has ~14 GB free on /, and the image alone is ~900 MB
+    # compressed and ~4.6 GB expanded. These toolchains are preinstalled for
+    # other people's jobs and unused here.
+    - name: Reclaim disk space
+      shell: bash
+      run: |
+        set -euo pipefail
+        before=$(df -BG --output=avail / | awk 'NR==2{gsub("G","");print $1}')
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                    /usr/local/share/boost "${AGENT_TOOLSDIRECTORY:-}" || true
+        sudo docker image prune --all --force || true
+        after=$(df -BG --output=avail / | awk 'NR==2{gsub("G","");print $1}')
+        echo "free disk: ${before}G -> ${after}G"
+
+    # Without acceleration QEMU emulates and the job burns its timeout instead
+    # of failing with a reason.
+    - name: Verify KVM
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ ! -e /dev/kvm ]; then
+          echo "::error::/dev/kvm is missing on this runner; the platform VM cannot boot at usable speed"
+          exit 1
+        fi
+        sudo chmod 666 /dev/kvm
+        ls -l /dev/kvm
+
+    - name: Install Lima and QEMU
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils xz-utils
+        # Lima is not in the Ubuntu archive.
+        lima_version="1.0.4"
+        curl -fsSL --retry 3 --retry-delay 5 \
+          "https://github.com/lima-vm/lima/releases/download/v${lima_version}/lima-${lima_version}-Linux-x86_64.tar.gz" \
+          | sudo tar -xz -C /usr/local
+        limactl --version
+
+    - name: Install the agyn CLI
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        CLI_VERSION: ${{ inputs.agyn-cli-version }}
+      run: |
+        set -euo pipefail
+        if [ -n "${CLI_VERSION}" ]; then
+          api_url="https://api.github.com/repos/agynio/agyn-cli/releases/tags/${CLI_VERSION}"
+        else
+          api_url="https://api.github.com/repos/agynio/agyn-cli/releases/latest"
+        fi
+        asset_url="$(curl -fsSL \
+          -H "Authorization: Bearer ${GH_TOKEN}" \
+          -H "Accept: application/vnd.github+json" \
+          "${api_url}" \
+          | python3 -c 'import json,sys; print(next((a["browser_download_url"] for a in json.load(sys.stdin).get("assets", []) if a.get("name") == "agyn-linux-amd64"), ""))')"
+        if [ -z "${asset_url}" ]; then
+          echo "::error::no agyn-linux-amd64 asset on ${api_url}"
+          exit 1
+        fi
+        curl -fsSL --retry 3 --retry-delay 5 -o /tmp/agyn "${asset_url}"
+        sudo install -c -m 0755 /tmp/agyn /usr/local/bin/agyn
+        agyn --version
+
+    # The CLI keeps images, Lima state and the VM disk under ~/.agyn, which sits
+    # on the runner's small root volume. /mnt is the large ephemeral disk.
+    - name: Put VM state on the large volume
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo install -d -o "$(id -u)" -g "$(id -g)" /mnt/agyn
+        ln -sfn /mnt/agyn "${HOME}/.agyn"
+        df -h /mnt /
+
+    - name: Start the platform VM
+      shell: bash
+      run: |
+        set -euo pipefail
+        agyn local start --yes --install-ca \
+          --version "${{ inputs.version }}" \
+          --port "${{ inputs.port }}" \
+          --cpus "${{ inputs.cpus }}" \
+          --memory "${{ inputs.memory }}"
+
+    # The image contains the charts that were published when it was baked. This
+    # is the only lever CI has on platform versions — per-service chart pins do
+    # not exist any more — so it is on by default.
+    - name: Upgrade the platform to the newest charts
+      if: ${{ inputs.upgrade == 'true' }}
+      shell: bash
+      run: agyn local upgrade
+
+    - name: Export the kubeconfig
+      id: kubeconfig
+      shell: bash
+      run: |
+        set -euo pipefail
+        kubeconfig="${HOME}/.kube/agyn-local.yaml"
+        mkdir -p "$(dirname "${kubeconfig}")"
+        agyn local kubeconfig --path "${kubeconfig}"
+        echo "kubeconfig=${kubeconfig}" >> "$GITHUB_OUTPUT"
+        echo "KUBECONFIG=${kubeconfig}" >> "$GITHUB_ENV"
+        KUBECONFIG="${kubeconfig}" kubectl get nodes
+
+    # The contract every downstream step reads. Under bootstrap these came from
+    # Terraform outputs; here they come from the VM itself.
+    - name: Export the Agyn test environment
+      id: env
+      shell: bash
+      env:
+        KUBECONFIG: ${{ steps.kubeconfig.outputs.kubeconfig }}
+      run: |
+        set -euo pipefail
+        port="${{ inputs.port }}"
+
+        base_url="https://gateway.agyn.dev:${port}"
+        echo "AGYN_BASE_URL=${base_url}" >> "$GITHUB_ENV"
+        echo "base-url=${base_url}" >> "$GITHUB_OUTPUT"
+        echo "E2E_INGRESS_PORT=${port}" >> "$GITHUB_ENV"
+
+        # Generated per install by `agyn local start`, so there is no well-known
+        # value to fall back on.
+        token="$(agyn profile token local)"
+        if [ -z "${token}" ]; then
+          echo "::error::no Gateway token stored for the local profile"
+          exit 1
+        fi
+        echo "::add-mask::${token}"
+        echo "AGYN_API_TOKEN=${token}" >> "$GITHUB_ENV"
+
+        # Provisioned into the VM by the apps-provision Job.
+        for i in $(seq 1 60); do
+          organization_id="$(kubectl -n platform get configmap agyn-local-provision \
+            -o jsonpath='{.data.organizationId}' 2>/dev/null || true)"
+          [ -n "${organization_id}" ] && break
+          sleep 5
+        done
+        if [ -z "${organization_id}" ]; then
+          echo "::error::agyn-local-provision configmap never appeared; the apps-provision Job did not complete"
+          kubectl -n platform get jobs,pods || true
+          exit 1
+        fi
+        model_id="$(kubectl -n platform get configmap agyn-local-provision \
+          -o jsonpath='{.data.modelId}' 2>/dev/null || true)"
+        echo "AGYN_ORGANIZATION_ID=${organization_id}" >> "$GITHUB_ENV"
+        [ -n "${model_id}" ] && echo "AGYN_MODEL_ID=${model_id}" >> "$GITHUB_ENV"
+
+        echo "base url: ${base_url}"
+        echo "organization: ${organization_id}"
+        echo "model: ${model_id:-<none>}"
+
+    - name: Verify the platform answers
+      shell: bash
+      run: |
+        set -euo pipefail
+        status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 \
+          "https://gateway.agyn.dev:${{ inputs.port }}" || true)"
+        if [ -z "${status}" ] || [ "${status}" = "000" ]; then
+          echo "::error::the Gateway is not reachable from the runner"
+          exit 1
+        fi
+        echo "gateway responded ${status}"

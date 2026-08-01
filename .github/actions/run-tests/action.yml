@@ -122,40 +122,16 @@ runs:
           printf 'ghcr.io/agynio/%s:%s' "$repo" "$latest"
         }
 
-        bootstrap_dir="$GITHUB_WORKSPACE/bootstrap"
-        k8s_stack="$bootstrap_dir/stacks/k8s"
-        platform_stack="$bootstrap_dir/stacks/platform"
-        apps_stack="$bootstrap_dir/stacks/apps"
-
-        if [ -d "$k8s_stack" ]; then
-          if ! domain=$(terraform -chdir="$k8s_stack" output -raw domain); then
-            echo "Failed to read domain output from ${k8s_stack}." >&2
+        # The cluster is described entirely by the environment the provisioning
+        # step exported. Nothing here knows how it was provisioned, which is what
+        # let the k3d-and-Terraform stack be swapped for the platform VM without
+        # touching a suite.
+        for required in AGYN_BASE_URL AGYN_API_TOKEN AGYN_ORGANIZATION_ID; do
+          if [ -z "${!required:-}" ]; then
+            echo "${required} is not set; run a provisioning action before this one." >&2
             exit 1
           fi
-          if ! ingress_port=$(terraform -chdir="$k8s_stack" output -raw ingress_port); then
-            echo "Failed to read ingress_port output from ${k8s_stack}." >&2
-            exit 1
-          fi
-          if [ -z "$domain" ] || [ -z "$ingress_port" ]; then
-            echo "Bootstrap outputs missing domain or ingress_port." >&2
-            exit 1
-          fi
-          gateway_url="https://gateway.${domain}:${ingress_port}"
-        fi
-
-        export_base_url="true"
-        if [ -z "${AGYN_BASE_URL:-}" ]; then
-          export_base_url="false"
-          if [ -z "${gateway_url:-}" ]; then
-            echo "AGYN_BASE_URL not set and bootstrap outputs unavailable." >&2
-            exit 1
-          fi
-          AGYN_BASE_URL="$gateway_url"
-        fi
-
-        if [ "$export_base_url" = "true" ]; then
-          echo "AGYN_BASE_URL=$AGYN_BASE_URL" >> "$GITHUB_ENV"
-        fi
+        done
 
         if ! gateway_status=$(curl -sS -k -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "${AGYN_BASE_URL}"); then
           echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
@@ -164,38 +140,6 @@ runs:
         if [ "$gateway_status" = "000" ]; then
           echo "AGYN_BASE_URL ${AGYN_BASE_URL} is not reachable from the GitHub runner." >&2
           exit 1
-        fi
-
-        if [ -z "${AGYN_API_TOKEN:-}" ]; then
-          if [ ! -d "$platform_stack" ]; then
-            echo "AGYN_API_TOKEN not set and platform stack missing." >&2
-            exit 1
-          fi
-          if ! AGYN_API_TOKEN=$(terraform -chdir="$platform_stack" output -raw cluster_admin_api_token); then
-            echo "Failed to read cluster_admin_api_token output from ${platform_stack}." >&2
-            exit 1
-          fi
-          if [ -z "$AGYN_API_TOKEN" ]; then
-            echo "AGYN_API_TOKEN output was empty." >&2
-            exit 1
-          fi
-          echo "AGYN_API_TOKEN=$AGYN_API_TOKEN" >> "$GITHUB_ENV"
-        fi
-
-        if [ -z "${AGYN_ORGANIZATION_ID:-}" ]; then
-          if [ ! -d "$apps_stack" ]; then
-            echo "AGYN_ORGANIZATION_ID not set and apps stack missing." >&2
-            exit 1
-          fi
-          if ! AGYN_ORGANIZATION_ID=$(terraform -chdir="$apps_stack" output -raw bootstrap_organization_id); then
-            echo "Failed to read bootstrap_organization_id output from ${apps_stack}." >&2
-            exit 1
-          fi
-          if [ -z "$AGYN_ORGANIZATION_ID" ]; then
-            echo "AGYN_ORGANIZATION_ID output was empty." >&2
-            exit 1
-          fi
-          echo "AGYN_ORGANIZATION_ID=$AGYN_ORGANIZATION_ID" >> "$GITHUB_ENV"
         fi
 
         if [ -z "${AGYN_AGENT_IMAGE:-}" ]; then
