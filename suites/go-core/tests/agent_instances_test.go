@@ -195,3 +195,120 @@ func deleteInstance(t *testing.T, ctx context.Context, client agentsv1.AgentsSer
 		t.Logf("cleanup: delete instance %s: %v", instanceID, err)
 	}
 }
+
+// An instance whose class sets a short idle limit is paused by the sweep, with
+// a reason that tells "nobody used this" apart from "something went wrong".
+// The sweep only reads instances whose class opted in, so a class without a
+// limit is what proves it is the policy doing the work rather than a timer.
+func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	t.Cleanup(cancel)
+
+	agentsConn := dialGRPC(t, agentsAddr)
+	threadsConn := dialGRPC(t, threadsAddr)
+	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
+	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
+
+	gatewayToken := gatewayAPIToken(t)
+	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	threadsCtx := withIdentity(ctx, identityID)
+	orgID := gatewayOrganizationID(t)
+	modelID := gatewayModelID(t)
+
+	// One second, so the instance is past its limit as soon as it exists.
+	agent := createAgentWithOptions(t, threadsCtx, agentsClient, agentCreateOptions{
+		Name:            fmt.Sprintf("e2e-idle-ttl-%s", uuid.NewString()),
+		Nickname:        nicknameFor("e2e-idle-ttl"),
+		Model:           modelID,
+		OrganizationID:  orgID,
+		InitImage:       codexInitImage,
+		InstanceIdleTTL: "1s",
+	})
+	agentID := agent.GetMeta().GetId()
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
+
+	instance := waitForInstance(t, threadsCtx, agentsClient, agentID, orgID)
+	instanceID := instance.GetMeta().GetId()
+	t.Cleanup(func() { deleteInstance(t, threadsCtx, agentsClient, instanceID) })
+
+	// The sweep runs on its own schedule, so this waits for a tick rather than
+	// assuming one has happened.
+	pollCtx, pollCancel := context.WithTimeout(ctx, 180*time.Second)
+	defer pollCancel()
+	if err := pollUntil(pollCtx, pollInterval, func(ctx context.Context) error {
+		resp, err := agentsClient.GetInstance(ctx, &agentsv1.GetInstanceRequest{Id: instanceID})
+		if err != nil {
+			return err
+		}
+		got := resp.GetInstance()
+		if got.GetState() != agentsv1.AgentInstanceState_AGENT_INSTANCE_STATE_PAUSED {
+			return fmt.Errorf("state is %s, want paused", got.GetState())
+		}
+		if reason := got.GetPauseReason(); reason != "idle_ttl_exceeded" {
+			return fmt.Errorf("pause reason %q, want idle_ttl_exceeded", reason)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("wait for the idle sweep: %v", err)
+	}
+
+	// Resuming clears the reason, which is what makes the pause recoverable
+	// rather than a quiet death.
+	if _, err := agentsClient.ResumeInstance(threadsCtx, &agentsv1.ResumeInstanceRequest{Id: instanceID}); err != nil {
+		t.Fatalf("resume instance: %v", err)
+	}
+	resumed, err := agentsClient.GetInstance(threadsCtx, &agentsv1.GetInstanceRequest{Id: instanceID})
+	if err != nil {
+		t.Fatalf("get instance after resume: %v", err)
+	}
+	if got := resumed.GetInstance(); got.GetState() != agentsv1.AgentInstanceState_AGENT_INSTANCE_STATE_ACTIVE {
+		t.Fatalf("state after resume is %s, want active", got.GetState())
+	}
+	if reason := resumed.GetInstance().GetPauseReason(); reason != "" {
+		t.Fatalf("pause reason after resume is %q, want empty", reason)
+	}
+}
+
+// An agent whose class sets no idle limit is left alone. Without this the test
+// above would pass just as well against a sweep that paused everything.
+func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	t.Cleanup(cancel)
+
+	agentsConn := dialGRPC(t, agentsAddr)
+	threadsConn := dialGRPC(t, threadsAddr)
+	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
+	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
+
+	gatewayToken := gatewayAPIToken(t)
+	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	threadsCtx := withIdentity(ctx, identityID)
+	orgID := gatewayOrganizationID(t)
+	modelID := gatewayModelID(t)
+
+	agent := createAgent(t, threadsCtx, agentsClient,
+		fmt.Sprintf("e2e-no-idle-ttl-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agentID := agent.GetMeta().GetId()
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
+
+	instance := waitForInstance(t, threadsCtx, agentsClient, agentID, orgID)
+	instanceID := instance.GetMeta().GetId()
+	t.Cleanup(func() { deleteInstance(t, threadsCtx, agentsClient, instanceID) })
+
+	// Long enough for several sweep ticks to have come and gone.
+	time.Sleep(90 * time.Second)
+
+	resp, err := agentsClient.GetInstance(threadsCtx, &agentsv1.GetInstanceRequest{Id: instanceID})
+	if err != nil {
+		t.Fatalf("get instance: %v", err)
+	}
+	if got := resp.GetInstance().GetState(); got != agentsv1.AgentInstanceState_AGENT_INSTANCE_STATE_ACTIVE {
+		t.Fatalf("state is %s, want active -- the sweep took an instance whose class set no limit", got)
+	}
+}
