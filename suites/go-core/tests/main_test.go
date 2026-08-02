@@ -202,6 +202,11 @@ type agentCreateOptions struct {
 	OrganizationID string
 	InitImage      string
 	IdleTimeout    string
+	// The class policies an instance inherits. Zero values leave them unset,
+	// so the server applies its own defaults.
+	DefaultThread   agentsv1.AgentDefaultThread
+	FinalMessage    agentsv1.AgentFinalMessage
+	InstanceIdleTTL string
 }
 
 func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, opts agentCreateOptions) *agentsv1.Agent {
@@ -221,6 +226,15 @@ func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.A
 	}
 	if opts.IdleTimeout != "" {
 		request.IdleTimeout = &opts.IdleTimeout
+	}
+	if opts.DefaultThread != agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_UNSPECIFIED {
+		request.DefaultThread = opts.DefaultThread
+	}
+	if opts.FinalMessage != agentsv1.AgentFinalMessage_AGENT_FINAL_MESSAGE_UNSPECIFIED {
+		request.FinalMessage = opts.FinalMessage
+	}
+	if opts.InstanceIdleTTL != "" {
+		request.InstanceIdleTtl = &opts.InstanceIdleTTL
 	}
 	resp, err := client.CreateAgent(ctx, request)
 	if err != nil {
