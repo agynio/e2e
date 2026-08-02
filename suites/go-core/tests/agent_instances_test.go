@@ -312,3 +312,54 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 		t.Fatalf("state is %s, want active -- the sweep took an instance whose class set no limit", got)
 	}
 }
+
+// An explicit default_thread_id wins over the class policy. This is what
+// `agyn agents instantiate --default-thread` sets, and the reason the field
+// exists separately from the creation context: naming a thread is a decision,
+// while the context only reports which thread happened to be involved.
+func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	t.Cleanup(cancel)
+
+	agentsConn := dialGRPC(t, agentsAddr)
+	threadsConn := dialGRPC(t, threadsAddr)
+	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
+	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
+
+	gatewayToken := gatewayAPIToken(t)
+	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	threadsCtx := withIdentity(ctx, identityID)
+	orgID := gatewayOrganizationID(t)
+	modelID := gatewayModelID(t)
+
+	// NONE, so the policy would leave the default unset and only the explicit
+	// value can put one there.
+	agent := createAgentWithOptions(t, threadsCtx, agentsClient, agentCreateOptions{
+		Name:           fmt.Sprintf("e2e-explicit-thread-%s", uuid.NewString()),
+		Nickname:       nicknameFor("e2e-explicit-thread"),
+		Model:          modelID,
+		OrganizationID: orgID,
+		InitImage:      codexInitImage,
+		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
+	})
+	agentID := agent.GetMeta().GetId()
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID})
+	threadID := thread.GetId()
+	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
+
+	resp, err := agentsClient.CreateInstance(threadsCtx, &agentsv1.CreateInstanceRequest{
+		AgentId:         agentID,
+		DefaultThreadId: &threadID,
+	})
+	if err != nil {
+		t.Fatalf("create instance: %v", err)
+	}
+	instance := resp.GetInstance()
+	t.Cleanup(func() { deleteInstance(t, threadsCtx, agentsClient, instance.GetMeta().GetId()) })
+
+	if got := instance.GetDefaultThreadId(); got != threadID {
+		t.Fatalf("expected the named thread %s, got %q", threadID, got)
+	}
+}
