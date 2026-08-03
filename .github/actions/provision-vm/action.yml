@@ -13,7 +13,10 @@ inputs:
   version:
     description: Platform VM image version. "latest" resolves through the CDN's latest.json.
     required: false
-    default: latest
+    # Pinned rather than "latest" because latest.json only moves once a version
+    # is published for both architectures, and amd64 -- the only one CI can use
+    # -- is released first. Move this when a release completes.
+    default: "0.2.2"
   upgrade:
     description: Move the platform Helm releases to the newest published charts after boot.
     required: false
