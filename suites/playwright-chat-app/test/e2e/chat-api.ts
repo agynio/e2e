@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { create, fromBinary, toBinary, toJson } from '@bufbuild/protobuf';
 import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
@@ -435,10 +437,23 @@ type CreateAgentOptions = {
   configuration: string;
   image: string;
   initImage: string;
+  nickname?: string;
   availability?: AgentAvailability;
 };
 
-type CreateAgentPayload = Omit<CreateAgentOptions, 'availability'> & {
+// An agent without a nickname cannot be given an instance -- the orchestrator
+// refuses with "agent nickname is required to create an instance" -- and every
+// chat here starts one. Derived from the name so a failure names the test, with
+// a random suffix because nicknames are unique.
+export function nicknameFor(name: string): string {
+  const stem = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  const suffix = randomUUID().replace(/-/g, '').slice(0, 8);
+  const maxNickname = 32;
+  return `${stem.slice(0, maxNickname - suffix.length - 1).replace(/-+$/, '')}-${suffix}`;
+}
+
+type CreateAgentPayload = Omit<CreateAgentOptions, 'availability' | 'nickname'> & {
+  nickname: string;
   availability: AgentAvailability.INTERNAL | AgentAvailability.PRIVATE;
 };
 
@@ -507,11 +522,12 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
 }
 
 export function buildCreateAgentPayload(opts: CreateAgentOptions): CreateAgentPayload {
-  const { availability = AgentAvailability.INTERNAL, ...rest } = opts;
+  const { availability = AgentAvailability.INTERNAL, nickname, ...rest } = opts;
+  const resolvedNickname = nickname?.trim() || nicknameFor(rest.name);
   if (availability !== AgentAvailability.INTERNAL && availability !== AgentAvailability.PRIVATE) {
     throw new Error(`Unsupported agent availability: ${availability}`);
   }
-  return { ...rest, availability };
+  return { ...rest, nickname: resolvedNickname, availability };
 }
 
 export function buildCreateAgentRequestJson(opts: CreateAgentOptions): unknown {
