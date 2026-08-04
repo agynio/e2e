@@ -207,10 +207,6 @@ type LlmProviderWire = {
 type CreateSecretResponseWire = {
   secret?: { meta?: { id?: string } };
 };
-type CreateImagePullSecretResponseWire = {
-  imagePullSecret?: { meta?: { id?: string } };
-};
-
 type EgressRuleWire = {
   meta?: { id?: string };
   name?: string;
@@ -922,28 +918,8 @@ export async function createSecret(
   return secretId;
 }
 
-export async function createImagePullSecret(
-  page: Page,
-  opts: { organizationId: string; registry: string; username: string; value: string; description?: string },
+,
 ): Promise<string> {
-  const response = await postConnect<CreateImagePullSecretResponseWire>(
-    page,
-    SECRETS_GATEWAY_PATH,
-    'CreateImagePullSecret',
-    {
-      description: opts.description ?? `E2E image pull secret for ${opts.registry}`,
-      registry: opts.registry,
-      username: opts.username,
-      value: opts.value,
-      organizationId: opts.organizationId,
-    },
-  );
-  const secretId = response.imagePullSecret?.meta?.id;
-  if (!secretId) {
-    throw new Error('CreateImagePullSecret response missing image pull secret id.');
-  }
-  return secretId;
-}
 
 export async function createEgressRule(
   page: Page,
