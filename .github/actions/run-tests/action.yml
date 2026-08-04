@@ -410,6 +410,23 @@ runs:
           kubectl logs -n "$namespace" --all-containers --prefix "$pod" > "$diagnostics_dir/logs/${pod_name}.log" 2>&1 || true
         done
 
+        # The platform's own pods, not just the test pods. A suite that reports
+        # nothing more than "expected 1 workload, got 0" leaves the reason in
+        # whichever service declined to act -- and with the service under test
+        # running from source, that reason is exactly what a caller needs.
+        for pod in $(kubectl get pods -n "$namespace" \
+          -l '!app.kubernetes.io/managed-by' -o name 2>/dev/null || true); do
+          pod_name=$(echo "$pod" | sed 's|pod/||')
+          kubectl logs -n "$namespace" --all-containers --prefix --tail=500 "$pod" \
+            > "$diagnostics_dir/logs/platform-${pod_name}.log" 2>&1 || true
+        done
+        kubectl get pods -n agyn-workloads -o wide > "$diagnostics_dir/workload-pods.txt" 2>&1 || true
+        for pod in $(kubectl get pods -n agyn-workloads -o name 2>/dev/null || true); do
+          pod_name=$(echo "$pod" | sed 's|pod/||')
+          kubectl logs -n agyn-workloads --all-containers --prefix --tail=500 "$pod" \
+            > "$diagnostics_dir/logs/workload-${pod_name}.log" 2>&1 || true
+        done
+
     - name: Upload test artifacts
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
