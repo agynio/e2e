@@ -184,8 +184,6 @@ type McpWire = {
   agentId?: string;
 };
 
-type HookWire = {
-  meta?: { id?: string };
   event?: string;
   agentId?: string;
 };
@@ -270,10 +268,6 @@ type CreateAgentResponseWire = {
 
 type CreateMcpResponseWire = {
   mcp?: McpWire;
-};
-
-type CreateHookResponseWire = {
-  hook?: HookWire;
 };
 
 type ListRunnersResponseWire = {
@@ -1072,30 +1066,6 @@ export async function createMcp(
     throw new Error('CreateMcp response missing mcp id.');
   }
   return mcpId;
-}
-
-export async function createHook(
-  page: Page,
-  opts: {
-    agentId: string;
-    event: string;
-    functionName: string;
-    image: string;
-    description?: string;
-  },
-): Promise<string> {
-  const response = await postConnect<CreateHookResponseWire>(page, AGENTS_GATEWAY_PATH, 'CreateHook', {
-    agentId: opts.agentId,
-    event: opts.event,
-    function: opts.functionName,
-    image: opts.image,
-    description: opts.description ?? '',
-  });
-  const hookId = response.hook?.meta?.id;
-  if (!hookId) {
-    throw new Error('CreateHook response missing hook id.');
-  }
-  return hookId;
 }
 
 export async function deleteSecret(page: Page, secretId: string): Promise<void> {

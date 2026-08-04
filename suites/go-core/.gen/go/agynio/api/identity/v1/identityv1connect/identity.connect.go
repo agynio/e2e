@@ -67,12 +67,12 @@ type IdentityServiceClient interface {
 	// BatchGetIdentityTypes returns known identity types for the requested IDs.
 	// Unknown identity IDs are omitted from the response.
 	BatchGetIdentityTypes(context.Context, *connect.Request[v1.BatchGetIdentityTypesRequest]) (*connect.Response[v1.BatchGetIdentityTypesResponse], error)
-	// SetNickname sets or updates the nickname for an identity within an org.
-	// Returns ALREADY_EXISTS if the nickname is already taken in the org.
+	// SetNickname sets or updates the nickname handle for an identity within an org.
+	// Returns ALREADY_EXISTS if the full handle is already taken in the org.
 	SetNickname(context.Context, *connect.Request[v1.SetNicknameRequest]) (*connect.Response[v1.SetNicknameResponse], error)
 	// RemoveNickname deletes the nickname entry for an identity within an org.
 	RemoveNickname(context.Context, *connect.Request[v1.RemoveNicknameRequest]) (*connect.Response[v1.RemoveNicknameResponse], error)
-	// ResolveNickname resolves an @nickname within an org to its identity.
+	// ResolveNickname resolves an @nickname or @nickname#instance_suffix within an org to its identity.
 	ResolveNickname(context.Context, *connect.Request[v1.ResolveNicknameRequest]) (*connect.Response[v1.ResolveNicknameResponse], error)
 	// BatchGetNicknames resolves identity IDs to nicknames within an org.
 	// Unknown or unset nicknames are omitted from the response.
@@ -193,12 +193,12 @@ type IdentityServiceHandler interface {
 	// BatchGetIdentityTypes returns known identity types for the requested IDs.
 	// Unknown identity IDs are omitted from the response.
 	BatchGetIdentityTypes(context.Context, *connect.Request[v1.BatchGetIdentityTypesRequest]) (*connect.Response[v1.BatchGetIdentityTypesResponse], error)
-	// SetNickname sets or updates the nickname for an identity within an org.
-	// Returns ALREADY_EXISTS if the nickname is already taken in the org.
+	// SetNickname sets or updates the nickname handle for an identity within an org.
+	// Returns ALREADY_EXISTS if the full handle is already taken in the org.
 	SetNickname(context.Context, *connect.Request[v1.SetNicknameRequest]) (*connect.Response[v1.SetNicknameResponse], error)
 	// RemoveNickname deletes the nickname entry for an identity within an org.
 	RemoveNickname(context.Context, *connect.Request[v1.RemoveNicknameRequest]) (*connect.Response[v1.RemoveNicknameResponse], error)
-	// ResolveNickname resolves an @nickname within an org to its identity.
+	// ResolveNickname resolves an @nickname or @nickname#instance_suffix within an org to its identity.
 	ResolveNickname(context.Context, *connect.Request[v1.ResolveNicknameRequest]) (*connect.Response[v1.ResolveNicknameResponse], error)
 	// BatchGetNicknames resolves identity IDs to nicknames within an org.
 	// Unknown or unset nicknames are omitted from the response.

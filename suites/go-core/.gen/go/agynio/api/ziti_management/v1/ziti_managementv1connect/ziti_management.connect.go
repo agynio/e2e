@@ -36,12 +36,21 @@ const (
 	// ZitiManagementServiceCreateAgentIdentityProcedure is the fully-qualified name of the
 	// ZitiManagementService's CreateAgentIdentity RPC.
 	ZitiManagementServiceCreateAgentIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateAgentIdentity"
+	// ZitiManagementServiceCreateSandboxIdentityProcedure is the fully-qualified name of the
+	// ZitiManagementService's CreateSandboxIdentity RPC.
+	ZitiManagementServiceCreateSandboxIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateSandboxIdentity"
 	// ZitiManagementServiceCreateAppIdentityProcedure is the fully-qualified name of the
 	// ZitiManagementService's CreateAppIdentity RPC.
 	ZitiManagementServiceCreateAppIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateAppIdentity"
 	// ZitiManagementServiceCreateServiceProcedure is the fully-qualified name of the
 	// ZitiManagementService's CreateService RPC.
 	ZitiManagementServiceCreateServiceProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateService"
+	// ZitiManagementServiceGetServiceProcedure is the fully-qualified name of the
+	// ZitiManagementService's GetService RPC.
+	ZitiManagementServiceGetServiceProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/GetService"
+	// ZitiManagementServiceListServicesProcedure is the fully-qualified name of the
+	// ZitiManagementService's ListServices RPC.
+	ZitiManagementServiceListServicesProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/ListServices"
 	// ZitiManagementServiceDeleteIdentityProcedure is the fully-qualified name of the
 	// ZitiManagementService's DeleteIdentity RPC.
 	ZitiManagementServiceDeleteIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteIdentity"
@@ -69,6 +78,12 @@ const (
 	// ZitiManagementServiceCreateServicePolicyProcedure is the fully-qualified name of the
 	// ZitiManagementService's CreateServicePolicy RPC.
 	ZitiManagementServiceCreateServicePolicyProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateServicePolicy"
+	// ZitiManagementServiceGetServicePolicyProcedure is the fully-qualified name of the
+	// ZitiManagementService's GetServicePolicy RPC.
+	ZitiManagementServiceGetServicePolicyProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/GetServicePolicy"
+	// ZitiManagementServiceListServicePoliciesProcedure is the fully-qualified name of the
+	// ZitiManagementService's ListServicePolicies RPC.
+	ZitiManagementServiceListServicePoliciesProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/ListServicePolicies"
 	// ZitiManagementServiceDeleteServicePolicyProcedure is the fully-qualified name of the
 	// ZitiManagementService's DeleteServicePolicy RPC.
 	ZitiManagementServiceDeleteServicePolicyProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteServicePolicy"
@@ -81,6 +96,30 @@ const (
 	// ZitiManagementServiceDeleteDeviceIdentityProcedure is the fully-qualified name of the
 	// ZitiManagementService's DeleteDeviceIdentity RPC.
 	ZitiManagementServiceDeleteDeviceIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteDeviceIdentity"
+	// ZitiManagementServiceCreateTunnelIdentityProcedure is the fully-qualified name of the
+	// ZitiManagementService's CreateTunnelIdentity RPC.
+	ZitiManagementServiceCreateTunnelIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/CreateTunnelIdentity"
+	// ZitiManagementServiceDeleteTunnelIdentityProcedure is the fully-qualified name of the
+	// ZitiManagementService's DeleteTunnelIdentity RPC.
+	ZitiManagementServiceDeleteTunnelIdentityProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/DeleteTunnelIdentity"
+	// ZitiManagementServicePatchIdentityRoleAttributesProcedure is the fully-qualified name of the
+	// ZitiManagementService's PatchIdentityRoleAttributes RPC.
+	ZitiManagementServicePatchIdentityRoleAttributesProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/PatchIdentityRoleAttributes"
+	// ZitiManagementServiceGetIdentityLivenessProcedure is the fully-qualified name of the
+	// ZitiManagementService's GetIdentityLiveness RPC.
+	ZitiManagementServiceGetIdentityLivenessProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/GetIdentityLiveness"
+	// ZitiManagementServiceListServicesByTagProcedure is the fully-qualified name of the
+	// ZitiManagementService's ListServicesByTag RPC.
+	ZitiManagementServiceListServicesByTagProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/ListServicesByTag"
+	// ZitiManagementServiceListIdentitiesByTagProcedure is the fully-qualified name of the
+	// ZitiManagementService's ListIdentitiesByTag RPC.
+	ZitiManagementServiceListIdentitiesByTagProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/ListIdentitiesByTag"
+	// ZitiManagementServiceListServicePoliciesByTagProcedure is the fully-qualified name of the
+	// ZitiManagementService's ListServicePoliciesByTag RPC.
+	ZitiManagementServiceListServicePoliciesByTagProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/ListServicePoliciesByTag"
+	// ZitiManagementServiceUpdateServiceProcedure is the fully-qualified name of the
+	// ZitiManagementService's UpdateService RPC.
+	ZitiManagementServiceUpdateServiceProcedure = "/agynio.api.ziti_management.v1.ZitiManagementService/UpdateService"
 )
 
 // ZitiManagementServiceClient is a client for the
@@ -88,11 +127,17 @@ const (
 type ZitiManagementServiceClient interface {
 	// Orchestrator -> create OpenZiti identity for an agent, return enrollment JWT.
 	CreateAgentIdentity(context.Context, *connect.Request[v1.CreateAgentIdentityRequest]) (*connect.Response[v1.CreateAgentIdentityResponse], error)
+	// Orchestrator -> create OpenZiti identity for a sandbox workload, return enrollment JWT.
+	CreateSandboxIdentity(context.Context, *connect.Request[v1.CreateSandboxIdentityRequest]) (*connect.Response[v1.CreateSandboxIdentityResponse], error)
 	// Apps Service -> create and enroll an OpenZiti identity for an app. If a previous
 	// identity exists, deletes it first. Returns enrolled credentials.
 	CreateAppIdentity(context.Context, *connect.Request[v1.CreateAppIdentityRequest]) (*connect.Response[v1.CreateAppIdentityResponse], error)
 	// Runners Service, Apps Service -> create a per-runner or per-app OpenZiti service.
 	CreateService(context.Context, *connect.Request[v1.CreateServiceRequest]) (*connect.Response[v1.CreateServiceResponse], error)
+	// Services managing OpenZiti resources -> fetch a service by ID or exact name.
+	GetService(context.Context, *connect.Request[v1.GetServiceRequest]) (*connect.Response[v1.GetServiceResponse], error)
+	// Services managing OpenZiti resources -> list services by name, prefix, role attributes, and pagination.
+	ListServices(context.Context, *connect.Request[v1.ListServicesRequest]) (*connect.Response[v1.ListServicesResponse], error)
 	// Orchestrator -> delete OpenZiti identity and its platform mapping.
 	DeleteIdentity(context.Context, *connect.Request[v1.DeleteIdentityRequest]) (*connect.Response[v1.DeleteIdentityResponse], error)
 	// Apps Service -> delete an app's OpenZiti identity and its associated service.
@@ -119,6 +164,10 @@ type ZitiManagementServiceClient interface {
 	// Expose Service -> create a single OpenZiti service policy (Bind or Dial).
 	// Returns the policy ID.
 	CreateServicePolicy(context.Context, *connect.Request[v1.CreateServicePolicyRequest]) (*connect.Response[v1.CreateServicePolicyResponse], error)
+	// Services managing OpenZiti resources -> fetch a service policy by ID or exact name.
+	GetServicePolicy(context.Context, *connect.Request[v1.GetServicePolicyRequest]) (*connect.Response[v1.GetServicePolicyResponse], error)
+	// Services managing OpenZiti resources -> list service policies by name, prefix, type, roles, and pagination.
+	ListServicePolicies(context.Context, *connect.Request[v1.ListServicePoliciesRequest]) (*connect.Response[v1.ListServicePoliciesResponse], error)
 	// Expose Service -> delete an OpenZiti service policy by ID.
 	DeleteServicePolicy(context.Context, *connect.Request[v1.DeleteServicePolicyRequest]) (*connect.Response[v1.DeleteServicePolicyResponse], error)
 	// Expose Service -> delete an OpenZiti service by ID.
@@ -130,6 +179,22 @@ type ZitiManagementServiceClient interface {
 	CreateDeviceIdentity(context.Context, *connect.Request[v1.CreateDeviceIdentityRequest]) (*connect.Response[v1.CreateDeviceIdentityResponse], error)
 	// Users Service -> delete a device's OpenZiti identity.
 	DeleteDeviceIdentity(context.Context, *connect.Request[v1.DeleteDeviceIdentityRequest]) (*connect.Response[v1.DeleteDeviceIdentityResponse], error)
+	// Networks Service -> create an OpenZiti identity for a private-network tunnel.
+	CreateTunnelIdentity(context.Context, *connect.Request[v1.CreateTunnelIdentityRequest]) (*connect.Response[v1.CreateTunnelIdentityResponse], error)
+	// Networks Service -> delete a tunnel's OpenZiti identity.
+	DeleteTunnelIdentity(context.Context, *connect.Request[v1.DeleteTunnelIdentityRequest]) (*connect.Response[v1.DeleteTunnelIdentityResponse], error)
+	// Users Service, Apps Service, Agents Orchestrator -> add and remove role attributes.
+	PatchIdentityRoleAttributes(context.Context, *connect.Request[v1.PatchIdentityRoleAttributesRequest]) (*connect.Response[v1.PatchIdentityRoleAttributesResponse], error)
+	// Networks Service -> fetch identity enrollment and connectivity state.
+	GetIdentityLiveness(context.Context, *connect.Request[v1.GetIdentityLivenessRequest]) (*connect.Response[v1.GetIdentityLivenessResponse], error)
+	// Services managing OpenZiti resources -> list services matching tag filters.
+	ListServicesByTag(context.Context, *connect.Request[v1.ListServicesByTagRequest]) (*connect.Response[v1.ListServicesByTagResponse], error)
+	// Networks Service -> list identities matching tag filters.
+	ListIdentitiesByTag(context.Context, *connect.Request[v1.ListIdentitiesByTagRequest]) (*connect.Response[v1.ListIdentitiesByTagResponse], error)
+	// Services managing OpenZiti resources -> list service policies matching tag filters.
+	ListServicePoliciesByTag(context.Context, *connect.Request[v1.ListServicePoliciesByTagRequest]) (*connect.Response[v1.ListServicePoliciesByTagResponse], error)
+	// Networks Service -> update an existing OpenZiti service's attached configs.
+	UpdateService(context.Context, *connect.Request[v1.UpdateServiceRequest]) (*connect.Response[v1.UpdateServiceResponse], error)
 }
 
 // NewZitiManagementServiceClient constructs a client for the
@@ -150,6 +215,12 @@ func NewZitiManagementServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(zitiManagementServiceMethods.ByName("CreateAgentIdentity")),
 			connect.WithClientOptions(opts...),
 		),
+		createSandboxIdentity: connect.NewClient[v1.CreateSandboxIdentityRequest, v1.CreateSandboxIdentityResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceCreateSandboxIdentityProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("CreateSandboxIdentity")),
+			connect.WithClientOptions(opts...),
+		),
 		createAppIdentity: connect.NewClient[v1.CreateAppIdentityRequest, v1.CreateAppIdentityResponse](
 			httpClient,
 			baseURL+ZitiManagementServiceCreateAppIdentityProcedure,
@@ -160,6 +231,18 @@ func NewZitiManagementServiceClient(httpClient connect.HTTPClient, baseURL strin
 			httpClient,
 			baseURL+ZitiManagementServiceCreateServiceProcedure,
 			connect.WithSchema(zitiManagementServiceMethods.ByName("CreateService")),
+			connect.WithClientOptions(opts...),
+		),
+		getService: connect.NewClient[v1.GetServiceRequest, v1.GetServiceResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceGetServiceProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("GetService")),
+			connect.WithClientOptions(opts...),
+		),
+		listServices: connect.NewClient[v1.ListServicesRequest, v1.ListServicesResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceListServicesProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("ListServices")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteIdentity: connect.NewClient[v1.DeleteIdentityRequest, v1.DeleteIdentityResponse](
@@ -216,6 +299,18 @@ func NewZitiManagementServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(zitiManagementServiceMethods.ByName("CreateServicePolicy")),
 			connect.WithClientOptions(opts...),
 		),
+		getServicePolicy: connect.NewClient[v1.GetServicePolicyRequest, v1.GetServicePolicyResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceGetServicePolicyProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("GetServicePolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		listServicePolicies: connect.NewClient[v1.ListServicePoliciesRequest, v1.ListServicePoliciesResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceListServicePoliciesProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("ListServicePolicies")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteServicePolicy: connect.NewClient[v1.DeleteServicePolicyRequest, v1.DeleteServicePolicyResponse](
 			httpClient,
 			baseURL+ZitiManagementServiceDeleteServicePolicyProcedure,
@@ -240,33 +335,100 @@ func NewZitiManagementServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(zitiManagementServiceMethods.ByName("DeleteDeviceIdentity")),
 			connect.WithClientOptions(opts...),
 		),
+		createTunnelIdentity: connect.NewClient[v1.CreateTunnelIdentityRequest, v1.CreateTunnelIdentityResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceCreateTunnelIdentityProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("CreateTunnelIdentity")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteTunnelIdentity: connect.NewClient[v1.DeleteTunnelIdentityRequest, v1.DeleteTunnelIdentityResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceDeleteTunnelIdentityProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("DeleteTunnelIdentity")),
+			connect.WithClientOptions(opts...),
+		),
+		patchIdentityRoleAttributes: connect.NewClient[v1.PatchIdentityRoleAttributesRequest, v1.PatchIdentityRoleAttributesResponse](
+			httpClient,
+			baseURL+ZitiManagementServicePatchIdentityRoleAttributesProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("PatchIdentityRoleAttributes")),
+			connect.WithClientOptions(opts...),
+		),
+		getIdentityLiveness: connect.NewClient[v1.GetIdentityLivenessRequest, v1.GetIdentityLivenessResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceGetIdentityLivenessProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("GetIdentityLiveness")),
+			connect.WithClientOptions(opts...),
+		),
+		listServicesByTag: connect.NewClient[v1.ListServicesByTagRequest, v1.ListServicesByTagResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceListServicesByTagProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("ListServicesByTag")),
+			connect.WithClientOptions(opts...),
+		),
+		listIdentitiesByTag: connect.NewClient[v1.ListIdentitiesByTagRequest, v1.ListIdentitiesByTagResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceListIdentitiesByTagProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("ListIdentitiesByTag")),
+			connect.WithClientOptions(opts...),
+		),
+		listServicePoliciesByTag: connect.NewClient[v1.ListServicePoliciesByTagRequest, v1.ListServicePoliciesByTagResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceListServicePoliciesByTagProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("ListServicePoliciesByTag")),
+			connect.WithClientOptions(opts...),
+		),
+		updateService: connect.NewClient[v1.UpdateServiceRequest, v1.UpdateServiceResponse](
+			httpClient,
+			baseURL+ZitiManagementServiceUpdateServiceProcedure,
+			connect.WithSchema(zitiManagementServiceMethods.ByName("UpdateService")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // zitiManagementServiceClient implements ZitiManagementServiceClient.
 type zitiManagementServiceClient struct {
-	createAgentIdentity    *connect.Client[v1.CreateAgentIdentityRequest, v1.CreateAgentIdentityResponse]
-	createAppIdentity      *connect.Client[v1.CreateAppIdentityRequest, v1.CreateAppIdentityResponse]
-	createService          *connect.Client[v1.CreateServiceRequest, v1.CreateServiceResponse]
-	deleteIdentity         *connect.Client[v1.DeleteIdentityRequest, v1.DeleteIdentityResponse]
-	deleteAppIdentity      *connect.Client[v1.DeleteAppIdentityRequest, v1.DeleteAppIdentityResponse]
-	createRunnerIdentity   *connect.Client[v1.CreateRunnerIdentityRequest, v1.CreateRunnerIdentityResponse]
-	deleteRunnerIdentity   *connect.Client[v1.DeleteRunnerIdentityRequest, v1.DeleteRunnerIdentityResponse]
-	listManagedIdentities  *connect.Client[v1.ListManagedIdentitiesRequest, v1.ListManagedIdentitiesResponse]
-	resolveIdentity        *connect.Client[v1.ResolveIdentityRequest, v1.ResolveIdentityResponse]
-	requestServiceIdentity *connect.Client[v1.RequestServiceIdentityRequest, v1.RequestServiceIdentityResponse]
-	extendIdentityLease    *connect.Client[v1.ExtendIdentityLeaseRequest, v1.ExtendIdentityLeaseResponse]
-	createServicePolicy    *connect.Client[v1.CreateServicePolicyRequest, v1.CreateServicePolicyResponse]
-	deleteServicePolicy    *connect.Client[v1.DeleteServicePolicyRequest, v1.DeleteServicePolicyResponse]
-	deleteService          *connect.Client[v1.DeleteServiceRequest, v1.DeleteServiceResponse]
-	createDeviceIdentity   *connect.Client[v1.CreateDeviceIdentityRequest, v1.CreateDeviceIdentityResponse]
-	deleteDeviceIdentity   *connect.Client[v1.DeleteDeviceIdentityRequest, v1.DeleteDeviceIdentityResponse]
+	createAgentIdentity         *connect.Client[v1.CreateAgentIdentityRequest, v1.CreateAgentIdentityResponse]
+	createSandboxIdentity       *connect.Client[v1.CreateSandboxIdentityRequest, v1.CreateSandboxIdentityResponse]
+	createAppIdentity           *connect.Client[v1.CreateAppIdentityRequest, v1.CreateAppIdentityResponse]
+	createService               *connect.Client[v1.CreateServiceRequest, v1.CreateServiceResponse]
+	getService                  *connect.Client[v1.GetServiceRequest, v1.GetServiceResponse]
+	listServices                *connect.Client[v1.ListServicesRequest, v1.ListServicesResponse]
+	deleteIdentity              *connect.Client[v1.DeleteIdentityRequest, v1.DeleteIdentityResponse]
+	deleteAppIdentity           *connect.Client[v1.DeleteAppIdentityRequest, v1.DeleteAppIdentityResponse]
+	createRunnerIdentity        *connect.Client[v1.CreateRunnerIdentityRequest, v1.CreateRunnerIdentityResponse]
+	deleteRunnerIdentity        *connect.Client[v1.DeleteRunnerIdentityRequest, v1.DeleteRunnerIdentityResponse]
+	listManagedIdentities       *connect.Client[v1.ListManagedIdentitiesRequest, v1.ListManagedIdentitiesResponse]
+	resolveIdentity             *connect.Client[v1.ResolveIdentityRequest, v1.ResolveIdentityResponse]
+	requestServiceIdentity      *connect.Client[v1.RequestServiceIdentityRequest, v1.RequestServiceIdentityResponse]
+	extendIdentityLease         *connect.Client[v1.ExtendIdentityLeaseRequest, v1.ExtendIdentityLeaseResponse]
+	createServicePolicy         *connect.Client[v1.CreateServicePolicyRequest, v1.CreateServicePolicyResponse]
+	getServicePolicy            *connect.Client[v1.GetServicePolicyRequest, v1.GetServicePolicyResponse]
+	listServicePolicies         *connect.Client[v1.ListServicePoliciesRequest, v1.ListServicePoliciesResponse]
+	deleteServicePolicy         *connect.Client[v1.DeleteServicePolicyRequest, v1.DeleteServicePolicyResponse]
+	deleteService               *connect.Client[v1.DeleteServiceRequest, v1.DeleteServiceResponse]
+	createDeviceIdentity        *connect.Client[v1.CreateDeviceIdentityRequest, v1.CreateDeviceIdentityResponse]
+	deleteDeviceIdentity        *connect.Client[v1.DeleteDeviceIdentityRequest, v1.DeleteDeviceIdentityResponse]
+	createTunnelIdentity        *connect.Client[v1.CreateTunnelIdentityRequest, v1.CreateTunnelIdentityResponse]
+	deleteTunnelIdentity        *connect.Client[v1.DeleteTunnelIdentityRequest, v1.DeleteTunnelIdentityResponse]
+	patchIdentityRoleAttributes *connect.Client[v1.PatchIdentityRoleAttributesRequest, v1.PatchIdentityRoleAttributesResponse]
+	getIdentityLiveness         *connect.Client[v1.GetIdentityLivenessRequest, v1.GetIdentityLivenessResponse]
+	listServicesByTag           *connect.Client[v1.ListServicesByTagRequest, v1.ListServicesByTagResponse]
+	listIdentitiesByTag         *connect.Client[v1.ListIdentitiesByTagRequest, v1.ListIdentitiesByTagResponse]
+	listServicePoliciesByTag    *connect.Client[v1.ListServicePoliciesByTagRequest, v1.ListServicePoliciesByTagResponse]
+	updateService               *connect.Client[v1.UpdateServiceRequest, v1.UpdateServiceResponse]
 }
 
 // CreateAgentIdentity calls
 // agynio.api.ziti_management.v1.ZitiManagementService.CreateAgentIdentity.
 func (c *zitiManagementServiceClient) CreateAgentIdentity(ctx context.Context, req *connect.Request[v1.CreateAgentIdentityRequest]) (*connect.Response[v1.CreateAgentIdentityResponse], error) {
 	return c.createAgentIdentity.CallUnary(ctx, req)
+}
+
+// CreateSandboxIdentity calls
+// agynio.api.ziti_management.v1.ZitiManagementService.CreateSandboxIdentity.
+func (c *zitiManagementServiceClient) CreateSandboxIdentity(ctx context.Context, req *connect.Request[v1.CreateSandboxIdentityRequest]) (*connect.Response[v1.CreateSandboxIdentityResponse], error) {
+	return c.createSandboxIdentity.CallUnary(ctx, req)
 }
 
 // CreateAppIdentity calls agynio.api.ziti_management.v1.ZitiManagementService.CreateAppIdentity.
@@ -277,6 +439,16 @@ func (c *zitiManagementServiceClient) CreateAppIdentity(ctx context.Context, req
 // CreateService calls agynio.api.ziti_management.v1.ZitiManagementService.CreateService.
 func (c *zitiManagementServiceClient) CreateService(ctx context.Context, req *connect.Request[v1.CreateServiceRequest]) (*connect.Response[v1.CreateServiceResponse], error) {
 	return c.createService.CallUnary(ctx, req)
+}
+
+// GetService calls agynio.api.ziti_management.v1.ZitiManagementService.GetService.
+func (c *zitiManagementServiceClient) GetService(ctx context.Context, req *connect.Request[v1.GetServiceRequest]) (*connect.Response[v1.GetServiceResponse], error) {
+	return c.getService.CallUnary(ctx, req)
+}
+
+// ListServices calls agynio.api.ziti_management.v1.ZitiManagementService.ListServices.
+func (c *zitiManagementServiceClient) ListServices(ctx context.Context, req *connect.Request[v1.ListServicesRequest]) (*connect.Response[v1.ListServicesResponse], error) {
+	return c.listServices.CallUnary(ctx, req)
 }
 
 // DeleteIdentity calls agynio.api.ziti_management.v1.ZitiManagementService.DeleteIdentity.
@@ -330,6 +502,17 @@ func (c *zitiManagementServiceClient) CreateServicePolicy(ctx context.Context, r
 	return c.createServicePolicy.CallUnary(ctx, req)
 }
 
+// GetServicePolicy calls agynio.api.ziti_management.v1.ZitiManagementService.GetServicePolicy.
+func (c *zitiManagementServiceClient) GetServicePolicy(ctx context.Context, req *connect.Request[v1.GetServicePolicyRequest]) (*connect.Response[v1.GetServicePolicyResponse], error) {
+	return c.getServicePolicy.CallUnary(ctx, req)
+}
+
+// ListServicePolicies calls
+// agynio.api.ziti_management.v1.ZitiManagementService.ListServicePolicies.
+func (c *zitiManagementServiceClient) ListServicePolicies(ctx context.Context, req *connect.Request[v1.ListServicePoliciesRequest]) (*connect.Response[v1.ListServicePoliciesResponse], error) {
+	return c.listServicePolicies.CallUnary(ctx, req)
+}
+
 // DeleteServicePolicy calls
 // agynio.api.ziti_management.v1.ZitiManagementService.DeleteServicePolicy.
 func (c *zitiManagementServiceClient) DeleteServicePolicy(ctx context.Context, req *connect.Request[v1.DeleteServicePolicyRequest]) (*connect.Response[v1.DeleteServicePolicyResponse], error) {
@@ -353,16 +536,68 @@ func (c *zitiManagementServiceClient) DeleteDeviceIdentity(ctx context.Context, 
 	return c.deleteDeviceIdentity.CallUnary(ctx, req)
 }
 
+// CreateTunnelIdentity calls
+// agynio.api.ziti_management.v1.ZitiManagementService.CreateTunnelIdentity.
+func (c *zitiManagementServiceClient) CreateTunnelIdentity(ctx context.Context, req *connect.Request[v1.CreateTunnelIdentityRequest]) (*connect.Response[v1.CreateTunnelIdentityResponse], error) {
+	return c.createTunnelIdentity.CallUnary(ctx, req)
+}
+
+// DeleteTunnelIdentity calls
+// agynio.api.ziti_management.v1.ZitiManagementService.DeleteTunnelIdentity.
+func (c *zitiManagementServiceClient) DeleteTunnelIdentity(ctx context.Context, req *connect.Request[v1.DeleteTunnelIdentityRequest]) (*connect.Response[v1.DeleteTunnelIdentityResponse], error) {
+	return c.deleteTunnelIdentity.CallUnary(ctx, req)
+}
+
+// PatchIdentityRoleAttributes calls
+// agynio.api.ziti_management.v1.ZitiManagementService.PatchIdentityRoleAttributes.
+func (c *zitiManagementServiceClient) PatchIdentityRoleAttributes(ctx context.Context, req *connect.Request[v1.PatchIdentityRoleAttributesRequest]) (*connect.Response[v1.PatchIdentityRoleAttributesResponse], error) {
+	return c.patchIdentityRoleAttributes.CallUnary(ctx, req)
+}
+
+// GetIdentityLiveness calls
+// agynio.api.ziti_management.v1.ZitiManagementService.GetIdentityLiveness.
+func (c *zitiManagementServiceClient) GetIdentityLiveness(ctx context.Context, req *connect.Request[v1.GetIdentityLivenessRequest]) (*connect.Response[v1.GetIdentityLivenessResponse], error) {
+	return c.getIdentityLiveness.CallUnary(ctx, req)
+}
+
+// ListServicesByTag calls agynio.api.ziti_management.v1.ZitiManagementService.ListServicesByTag.
+func (c *zitiManagementServiceClient) ListServicesByTag(ctx context.Context, req *connect.Request[v1.ListServicesByTagRequest]) (*connect.Response[v1.ListServicesByTagResponse], error) {
+	return c.listServicesByTag.CallUnary(ctx, req)
+}
+
+// ListIdentitiesByTag calls
+// agynio.api.ziti_management.v1.ZitiManagementService.ListIdentitiesByTag.
+func (c *zitiManagementServiceClient) ListIdentitiesByTag(ctx context.Context, req *connect.Request[v1.ListIdentitiesByTagRequest]) (*connect.Response[v1.ListIdentitiesByTagResponse], error) {
+	return c.listIdentitiesByTag.CallUnary(ctx, req)
+}
+
+// ListServicePoliciesByTag calls
+// agynio.api.ziti_management.v1.ZitiManagementService.ListServicePoliciesByTag.
+func (c *zitiManagementServiceClient) ListServicePoliciesByTag(ctx context.Context, req *connect.Request[v1.ListServicePoliciesByTagRequest]) (*connect.Response[v1.ListServicePoliciesByTagResponse], error) {
+	return c.listServicePoliciesByTag.CallUnary(ctx, req)
+}
+
+// UpdateService calls agynio.api.ziti_management.v1.ZitiManagementService.UpdateService.
+func (c *zitiManagementServiceClient) UpdateService(ctx context.Context, req *connect.Request[v1.UpdateServiceRequest]) (*connect.Response[v1.UpdateServiceResponse], error) {
+	return c.updateService.CallUnary(ctx, req)
+}
+
 // ZitiManagementServiceHandler is an implementation of the
 // agynio.api.ziti_management.v1.ZitiManagementService service.
 type ZitiManagementServiceHandler interface {
 	// Orchestrator -> create OpenZiti identity for an agent, return enrollment JWT.
 	CreateAgentIdentity(context.Context, *connect.Request[v1.CreateAgentIdentityRequest]) (*connect.Response[v1.CreateAgentIdentityResponse], error)
+	// Orchestrator -> create OpenZiti identity for a sandbox workload, return enrollment JWT.
+	CreateSandboxIdentity(context.Context, *connect.Request[v1.CreateSandboxIdentityRequest]) (*connect.Response[v1.CreateSandboxIdentityResponse], error)
 	// Apps Service -> create and enroll an OpenZiti identity for an app. If a previous
 	// identity exists, deletes it first. Returns enrolled credentials.
 	CreateAppIdentity(context.Context, *connect.Request[v1.CreateAppIdentityRequest]) (*connect.Response[v1.CreateAppIdentityResponse], error)
 	// Runners Service, Apps Service -> create a per-runner or per-app OpenZiti service.
 	CreateService(context.Context, *connect.Request[v1.CreateServiceRequest]) (*connect.Response[v1.CreateServiceResponse], error)
+	// Services managing OpenZiti resources -> fetch a service by ID or exact name.
+	GetService(context.Context, *connect.Request[v1.GetServiceRequest]) (*connect.Response[v1.GetServiceResponse], error)
+	// Services managing OpenZiti resources -> list services by name, prefix, role attributes, and pagination.
+	ListServices(context.Context, *connect.Request[v1.ListServicesRequest]) (*connect.Response[v1.ListServicesResponse], error)
 	// Orchestrator -> delete OpenZiti identity and its platform mapping.
 	DeleteIdentity(context.Context, *connect.Request[v1.DeleteIdentityRequest]) (*connect.Response[v1.DeleteIdentityResponse], error)
 	// Apps Service -> delete an app's OpenZiti identity and its associated service.
@@ -389,6 +624,10 @@ type ZitiManagementServiceHandler interface {
 	// Expose Service -> create a single OpenZiti service policy (Bind or Dial).
 	// Returns the policy ID.
 	CreateServicePolicy(context.Context, *connect.Request[v1.CreateServicePolicyRequest]) (*connect.Response[v1.CreateServicePolicyResponse], error)
+	// Services managing OpenZiti resources -> fetch a service policy by ID or exact name.
+	GetServicePolicy(context.Context, *connect.Request[v1.GetServicePolicyRequest]) (*connect.Response[v1.GetServicePolicyResponse], error)
+	// Services managing OpenZiti resources -> list service policies by name, prefix, type, roles, and pagination.
+	ListServicePolicies(context.Context, *connect.Request[v1.ListServicePoliciesRequest]) (*connect.Response[v1.ListServicePoliciesResponse], error)
 	// Expose Service -> delete an OpenZiti service policy by ID.
 	DeleteServicePolicy(context.Context, *connect.Request[v1.DeleteServicePolicyRequest]) (*connect.Response[v1.DeleteServicePolicyResponse], error)
 	// Expose Service -> delete an OpenZiti service by ID.
@@ -400,6 +639,22 @@ type ZitiManagementServiceHandler interface {
 	CreateDeviceIdentity(context.Context, *connect.Request[v1.CreateDeviceIdentityRequest]) (*connect.Response[v1.CreateDeviceIdentityResponse], error)
 	// Users Service -> delete a device's OpenZiti identity.
 	DeleteDeviceIdentity(context.Context, *connect.Request[v1.DeleteDeviceIdentityRequest]) (*connect.Response[v1.DeleteDeviceIdentityResponse], error)
+	// Networks Service -> create an OpenZiti identity for a private-network tunnel.
+	CreateTunnelIdentity(context.Context, *connect.Request[v1.CreateTunnelIdentityRequest]) (*connect.Response[v1.CreateTunnelIdentityResponse], error)
+	// Networks Service -> delete a tunnel's OpenZiti identity.
+	DeleteTunnelIdentity(context.Context, *connect.Request[v1.DeleteTunnelIdentityRequest]) (*connect.Response[v1.DeleteTunnelIdentityResponse], error)
+	// Users Service, Apps Service, Agents Orchestrator -> add and remove role attributes.
+	PatchIdentityRoleAttributes(context.Context, *connect.Request[v1.PatchIdentityRoleAttributesRequest]) (*connect.Response[v1.PatchIdentityRoleAttributesResponse], error)
+	// Networks Service -> fetch identity enrollment and connectivity state.
+	GetIdentityLiveness(context.Context, *connect.Request[v1.GetIdentityLivenessRequest]) (*connect.Response[v1.GetIdentityLivenessResponse], error)
+	// Services managing OpenZiti resources -> list services matching tag filters.
+	ListServicesByTag(context.Context, *connect.Request[v1.ListServicesByTagRequest]) (*connect.Response[v1.ListServicesByTagResponse], error)
+	// Networks Service -> list identities matching tag filters.
+	ListIdentitiesByTag(context.Context, *connect.Request[v1.ListIdentitiesByTagRequest]) (*connect.Response[v1.ListIdentitiesByTagResponse], error)
+	// Services managing OpenZiti resources -> list service policies matching tag filters.
+	ListServicePoliciesByTag(context.Context, *connect.Request[v1.ListServicePoliciesByTagRequest]) (*connect.Response[v1.ListServicePoliciesByTagResponse], error)
+	// Networks Service -> update an existing OpenZiti service's attached configs.
+	UpdateService(context.Context, *connect.Request[v1.UpdateServiceRequest]) (*connect.Response[v1.UpdateServiceResponse], error)
 }
 
 // NewZitiManagementServiceHandler builds an HTTP handler from the service implementation. It
@@ -415,6 +670,12 @@ func NewZitiManagementServiceHandler(svc ZitiManagementServiceHandler, opts ...c
 		connect.WithSchema(zitiManagementServiceMethods.ByName("CreateAgentIdentity")),
 		connect.WithHandlerOptions(opts...),
 	)
+	zitiManagementServiceCreateSandboxIdentityHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceCreateSandboxIdentityProcedure,
+		svc.CreateSandboxIdentity,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("CreateSandboxIdentity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	zitiManagementServiceCreateAppIdentityHandler := connect.NewUnaryHandler(
 		ZitiManagementServiceCreateAppIdentityProcedure,
 		svc.CreateAppIdentity,
@@ -425,6 +686,18 @@ func NewZitiManagementServiceHandler(svc ZitiManagementServiceHandler, opts ...c
 		ZitiManagementServiceCreateServiceProcedure,
 		svc.CreateService,
 		connect.WithSchema(zitiManagementServiceMethods.ByName("CreateService")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceGetServiceHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceGetServiceProcedure,
+		svc.GetService,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("GetService")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceListServicesHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceListServicesProcedure,
+		svc.ListServices,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("ListServices")),
 		connect.WithHandlerOptions(opts...),
 	)
 	zitiManagementServiceDeleteIdentityHandler := connect.NewUnaryHandler(
@@ -481,6 +754,18 @@ func NewZitiManagementServiceHandler(svc ZitiManagementServiceHandler, opts ...c
 		connect.WithSchema(zitiManagementServiceMethods.ByName("CreateServicePolicy")),
 		connect.WithHandlerOptions(opts...),
 	)
+	zitiManagementServiceGetServicePolicyHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceGetServicePolicyProcedure,
+		svc.GetServicePolicy,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("GetServicePolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceListServicePoliciesHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceListServicePoliciesProcedure,
+		svc.ListServicePolicies,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("ListServicePolicies")),
+		connect.WithHandlerOptions(opts...),
+	)
 	zitiManagementServiceDeleteServicePolicyHandler := connect.NewUnaryHandler(
 		ZitiManagementServiceDeleteServicePolicyProcedure,
 		svc.DeleteServicePolicy,
@@ -505,14 +790,68 @@ func NewZitiManagementServiceHandler(svc ZitiManagementServiceHandler, opts ...c
 		connect.WithSchema(zitiManagementServiceMethods.ByName("DeleteDeviceIdentity")),
 		connect.WithHandlerOptions(opts...),
 	)
+	zitiManagementServiceCreateTunnelIdentityHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceCreateTunnelIdentityProcedure,
+		svc.CreateTunnelIdentity,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("CreateTunnelIdentity")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceDeleteTunnelIdentityHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceDeleteTunnelIdentityProcedure,
+		svc.DeleteTunnelIdentity,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("DeleteTunnelIdentity")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServicePatchIdentityRoleAttributesHandler := connect.NewUnaryHandler(
+		ZitiManagementServicePatchIdentityRoleAttributesProcedure,
+		svc.PatchIdentityRoleAttributes,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("PatchIdentityRoleAttributes")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceGetIdentityLivenessHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceGetIdentityLivenessProcedure,
+		svc.GetIdentityLiveness,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("GetIdentityLiveness")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceListServicesByTagHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceListServicesByTagProcedure,
+		svc.ListServicesByTag,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("ListServicesByTag")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceListIdentitiesByTagHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceListIdentitiesByTagProcedure,
+		svc.ListIdentitiesByTag,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("ListIdentitiesByTag")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceListServicePoliciesByTagHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceListServicePoliciesByTagProcedure,
+		svc.ListServicePoliciesByTag,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("ListServicePoliciesByTag")),
+		connect.WithHandlerOptions(opts...),
+	)
+	zitiManagementServiceUpdateServiceHandler := connect.NewUnaryHandler(
+		ZitiManagementServiceUpdateServiceProcedure,
+		svc.UpdateService,
+		connect.WithSchema(zitiManagementServiceMethods.ByName("UpdateService")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agynio.api.ziti_management.v1.ZitiManagementService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ZitiManagementServiceCreateAgentIdentityProcedure:
 			zitiManagementServiceCreateAgentIdentityHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceCreateSandboxIdentityProcedure:
+			zitiManagementServiceCreateSandboxIdentityHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceCreateAppIdentityProcedure:
 			zitiManagementServiceCreateAppIdentityHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceCreateServiceProcedure:
 			zitiManagementServiceCreateServiceHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceGetServiceProcedure:
+			zitiManagementServiceGetServiceHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceListServicesProcedure:
+			zitiManagementServiceListServicesHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceDeleteIdentityProcedure:
 			zitiManagementServiceDeleteIdentityHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceDeleteAppIdentityProcedure:
@@ -531,6 +870,10 @@ func NewZitiManagementServiceHandler(svc ZitiManagementServiceHandler, opts ...c
 			zitiManagementServiceExtendIdentityLeaseHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceCreateServicePolicyProcedure:
 			zitiManagementServiceCreateServicePolicyHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceGetServicePolicyProcedure:
+			zitiManagementServiceGetServicePolicyHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceListServicePoliciesProcedure:
+			zitiManagementServiceListServicePoliciesHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceDeleteServicePolicyProcedure:
 			zitiManagementServiceDeleteServicePolicyHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceDeleteServiceProcedure:
@@ -539,6 +882,22 @@ func NewZitiManagementServiceHandler(svc ZitiManagementServiceHandler, opts ...c
 			zitiManagementServiceCreateDeviceIdentityHandler.ServeHTTP(w, r)
 		case ZitiManagementServiceDeleteDeviceIdentityProcedure:
 			zitiManagementServiceDeleteDeviceIdentityHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceCreateTunnelIdentityProcedure:
+			zitiManagementServiceCreateTunnelIdentityHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceDeleteTunnelIdentityProcedure:
+			zitiManagementServiceDeleteTunnelIdentityHandler.ServeHTTP(w, r)
+		case ZitiManagementServicePatchIdentityRoleAttributesProcedure:
+			zitiManagementServicePatchIdentityRoleAttributesHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceGetIdentityLivenessProcedure:
+			zitiManagementServiceGetIdentityLivenessHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceListServicesByTagProcedure:
+			zitiManagementServiceListServicesByTagHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceListIdentitiesByTagProcedure:
+			zitiManagementServiceListIdentitiesByTagHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceListServicePoliciesByTagProcedure:
+			zitiManagementServiceListServicePoliciesByTagHandler.ServeHTTP(w, r)
+		case ZitiManagementServiceUpdateServiceProcedure:
+			zitiManagementServiceUpdateServiceHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -552,12 +911,24 @@ func (UnimplementedZitiManagementServiceHandler) CreateAgentIdentity(context.Con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.CreateAgentIdentity is not implemented"))
 }
 
+func (UnimplementedZitiManagementServiceHandler) CreateSandboxIdentity(context.Context, *connect.Request[v1.CreateSandboxIdentityRequest]) (*connect.Response[v1.CreateSandboxIdentityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.CreateSandboxIdentity is not implemented"))
+}
+
 func (UnimplementedZitiManagementServiceHandler) CreateAppIdentity(context.Context, *connect.Request[v1.CreateAppIdentityRequest]) (*connect.Response[v1.CreateAppIdentityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.CreateAppIdentity is not implemented"))
 }
 
 func (UnimplementedZitiManagementServiceHandler) CreateService(context.Context, *connect.Request[v1.CreateServiceRequest]) (*connect.Response[v1.CreateServiceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.CreateService is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) GetService(context.Context, *connect.Request[v1.GetServiceRequest]) (*connect.Response[v1.GetServiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.GetService is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) ListServices(context.Context, *connect.Request[v1.ListServicesRequest]) (*connect.Response[v1.ListServicesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.ListServices is not implemented"))
 }
 
 func (UnimplementedZitiManagementServiceHandler) DeleteIdentity(context.Context, *connect.Request[v1.DeleteIdentityRequest]) (*connect.Response[v1.DeleteIdentityResponse], error) {
@@ -596,6 +967,14 @@ func (UnimplementedZitiManagementServiceHandler) CreateServicePolicy(context.Con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.CreateServicePolicy is not implemented"))
 }
 
+func (UnimplementedZitiManagementServiceHandler) GetServicePolicy(context.Context, *connect.Request[v1.GetServicePolicyRequest]) (*connect.Response[v1.GetServicePolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.GetServicePolicy is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) ListServicePolicies(context.Context, *connect.Request[v1.ListServicePoliciesRequest]) (*connect.Response[v1.ListServicePoliciesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.ListServicePolicies is not implemented"))
+}
+
 func (UnimplementedZitiManagementServiceHandler) DeleteServicePolicy(context.Context, *connect.Request[v1.DeleteServicePolicyRequest]) (*connect.Response[v1.DeleteServicePolicyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.DeleteServicePolicy is not implemented"))
 }
@@ -610,4 +989,36 @@ func (UnimplementedZitiManagementServiceHandler) CreateDeviceIdentity(context.Co
 
 func (UnimplementedZitiManagementServiceHandler) DeleteDeviceIdentity(context.Context, *connect.Request[v1.DeleteDeviceIdentityRequest]) (*connect.Response[v1.DeleteDeviceIdentityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.DeleteDeviceIdentity is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) CreateTunnelIdentity(context.Context, *connect.Request[v1.CreateTunnelIdentityRequest]) (*connect.Response[v1.CreateTunnelIdentityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.CreateTunnelIdentity is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) DeleteTunnelIdentity(context.Context, *connect.Request[v1.DeleteTunnelIdentityRequest]) (*connect.Response[v1.DeleteTunnelIdentityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.DeleteTunnelIdentity is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) PatchIdentityRoleAttributes(context.Context, *connect.Request[v1.PatchIdentityRoleAttributesRequest]) (*connect.Response[v1.PatchIdentityRoleAttributesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.PatchIdentityRoleAttributes is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) GetIdentityLiveness(context.Context, *connect.Request[v1.GetIdentityLivenessRequest]) (*connect.Response[v1.GetIdentityLivenessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.GetIdentityLiveness is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) ListServicesByTag(context.Context, *connect.Request[v1.ListServicesByTagRequest]) (*connect.Response[v1.ListServicesByTagResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.ListServicesByTag is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) ListIdentitiesByTag(context.Context, *connect.Request[v1.ListIdentitiesByTagRequest]) (*connect.Response[v1.ListIdentitiesByTagResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.ListIdentitiesByTag is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) ListServicePoliciesByTag(context.Context, *connect.Request[v1.ListServicePoliciesByTagRequest]) (*connect.Response[v1.ListServicePoliciesByTagResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.ListServicePoliciesByTag is not implemented"))
+}
+
+func (UnimplementedZitiManagementServiceHandler) UpdateService(context.Context, *connect.Request[v1.UpdateServiceRequest]) (*connect.Response[v1.UpdateServiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.ziti_management.v1.ZitiManagementService.UpdateService is not implemented"))
 }
