@@ -29,7 +29,6 @@ func TestAccAgynAgent_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("agyn_agent.test", "capabilities.#", "1"),
 					resource.TestCheckResourceAttr("agyn_agent.test", "capabilities.0", "docker"),
 					resource.TestCheckResourceAttr("agyn_agent.test", "availability", "internal"),
-					resource.TestCheckResourceAttr("agyn_agent.test", "init_image", env.AgentInitImage),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "organization_id"),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "model"),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "image"),
@@ -61,7 +60,6 @@ func TestAccAgynAgent_update(t *testing.T) {
 					resource.TestCheckResourceAttr("agyn_agent.test", "capabilities.#", "1"),
 					resource.TestCheckResourceAttr("agyn_agent.test", "capabilities.0", "docker"),
 					resource.TestCheckResourceAttr("agyn_agent.test", "availability", "internal"),
-					resource.TestCheckResourceAttr("agyn_agent.test", "init_image", env.AgentInitImage),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "organization_id"),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "model"),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "image"),
@@ -77,7 +75,6 @@ func TestAccAgynAgent_update(t *testing.T) {
 					resource.TestCheckResourceAttr("agyn_agent.test", "role", "Terraform acceptance role updated"),
 					resource.TestCheckResourceAttr("agyn_agent.test", "capabilities.#", "2"),
 					resource.TestCheckResourceAttr("agyn_agent.test", "availability", "private"),
-					resource.TestCheckResourceAttr("agyn_agent.test", "init_image", env.AgentInitImage),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "organization_id"),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "model"),
 					resource.TestCheckResourceAttrSet("agyn_agent.test", "image"),
@@ -158,12 +155,11 @@ resource "agyn_agent" "test" {
 	  role         = %q
 	  model        = %q
 	  image        = %q
-	  init_image   = %q
 	  availability = %q
 %s
 %s
 }
-`, testAccProviderConfig(t), organizationName, title, description, role, env.ModelID, env.AgentImage, env.AgentInitImage, availability, nicknameLine, capabilityLine)
+`, testAccProviderConfig(t), organizationName, title, description, role, env.ModelID, env.AgentImage, availability, nicknameLine, capabilityLine)
 }
 
 func testAccAgynAgentInvalidConfig(t *testing.T, organizationName string) string {
@@ -182,11 +178,10 @@ resource "agyn_agent" "test" {
 	  role          = "invalid"
 	  model         = %q
 	  image         = %q
-	  init_image    = %q
 	  availability  = "internal"
 	  configuration = "{invalid"
 }
-`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage, env.AgentInitImage)
+`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage)
 }
 
 func testAccAgynAgentInvalidNicknameConfig(t *testing.T, organizationName string) string {
@@ -206,8 +201,7 @@ resource "agyn_agent" "test" {
 	  role          = "invalid"
 	  model         = %q
 	  image         = %q
-	  init_image    = %q
 	  availability  = "internal"
 }
-`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage, env.AgentInitImage)
+`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage)
 }
