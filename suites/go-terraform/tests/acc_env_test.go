@@ -12,20 +12,18 @@ import (
 )
 
 type accEnv struct {
-	BaseURL        string
-	ModelID        string
-	AgentImage     string
-	AgentInitImage string
+	BaseURL    string
+	ModelID    string
+	AgentImage string
 }
 
 func testAccEnv(t *testing.T) accEnv {
 	t.Helper()
 
 	return accEnv{
-		BaseURL:        requireEnv(t, "AGYN_BASE_URL"),
-		ModelID:        requireEnv(t, "AGYN_MODEL_ID"),
-		AgentImage:     requireEnv(t, "AGYN_AGENT_IMAGE"),
-		AgentInitImage: requireEnv(t, "AGYN_AGENT_INIT_IMAGE"),
+		BaseURL:    requireEnv(t, "AGYN_BASE_URL"),
+		ModelID:    requireEnv(t, "AGYN_MODEL_ID"),
+		AgentImage: requireEnv(t, "AGYN_AGENT_IMAGE"),
 	}
 }
 

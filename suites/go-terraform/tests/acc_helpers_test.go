@@ -19,10 +19,9 @@ resource "agyn_agent" "test" {
 	  role         = %q
 	  model        = %q
 	  image        = %q
-	  init_image   = %q
 	  availability = "internal"
 }
-`, organizationID, name, description, role, env.ModelID, env.AgentImage, env.AgentInitImage)
+`, organizationID, name, description, role, env.ModelID, env.AgentImage)
 }
 
 func formatCapabilitiesLine(capabilities []string, indent string) string {
