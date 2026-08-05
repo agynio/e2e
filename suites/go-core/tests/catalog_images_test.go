@@ -225,7 +225,7 @@ func TestAWorkloadGetsThreeInitContainers(t *testing.T) {
 	}
 }
 
-// sharedBinaries lists what the init containers left in /agyn-bin, waiting for
+// sharedBinaries lists what the init containers left in /agyn/bin, waiting for
 // the workload to run first: the volume is only populated once they complete.
 func sharedBinaries(t *testing.T, ctx context.Context, pod *corev1.Pod) map[string]bool {
 	t.Helper()
@@ -241,9 +241,9 @@ func sharedBinaries(t *testing.T, ctx context.Context, pod *corev1.Pod) map[stri
 			// The three images write disjoint paths, so the listing is one level
 			// deep: agynd and the agent CLI at the root, the agyn CLI under cli/.
 			stdout, err := catalogExec(t, ctx, namespace, pod.Name, current.Spec.Containers[0].Name,
-				[]string{"sh", "-c", "cd /agyn-bin && ls . cli 2>/dev/null | sed 's|^|/|'; ls cli 2>/dev/null | sed 's|^|cli/|'"})
+				[]string{"sh", "-c", "cd /agyn/bin && ls . cli 2>/dev/null | sed 's|^|/|'; ls cli 2>/dev/null | sed 's|^|cli/|'"})
 			if err != nil {
-				t.Fatalf("ls /agyn-bin: %v", err)
+				t.Fatalf("ls /agyn/bin: %v", err)
 			}
 			present := map[string]bool{}
 			for _, entry := range strings.Fields(stdout) {
