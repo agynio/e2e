@@ -14,7 +14,6 @@ import (
 func TestAccAgynAgent_basic(t *testing.T) {
 	resourceName := acctest.RandomWithPrefix("tf-acc-agent")
 	organizationName := acctest.RandomWithPrefix("tf-acc-org")
-	env := testAccEnv(t)
 	resource.Test(t, resource.TestCase{
 		ExternalProviders: testAccExternalProviders(),
 		PreCheck:          func() { testAccOrganizationPreCheck(t) },
@@ -45,7 +44,6 @@ func TestAccAgynAgent_update(t *testing.T) {
 	organizationName := acctest.RandomWithPrefix("tf-acc-org")
 	nickname := "tf-acc-nickname"
 	updatedNickname := "tf-acc-nickname-updated"
-	env := testAccEnv(t)
 	resource.Test(t, resource.TestCase{
 		ExternalProviders: testAccExternalProviders(),
 		PreCheck:          func() { testAccOrganizationPreCheck(t) },
