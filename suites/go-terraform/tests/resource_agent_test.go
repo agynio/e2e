@@ -146,12 +146,26 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+resource "agyn_runner" "test" {
+	  organization_id = agyn_organization.test.id
+	  name            = "tf-acc-runner"
+	  capabilities    = ["docker"]
+}
+
+resource "agyn_image" "test" {
+	  organization_id = agyn_organization.test.id
+	  name            = "tf-acc-workspace"
+	  type            = "workspace"
+	  repository      = "ghcr.io/agynio/devcontainer"
+	  visibility      = "internal"
+}
+
 resource "agyn_environment" "test" {
 	  organization_id     = agyn_organization.test.id
 	  name                = "tf-acc-environment"
-	  runner_id           = %q
-	  workspace_image_id  = %q
-	  workspace_image_tag = %q
+	  runner_id           = agyn_runner.test.id
+	  workspace_image_id  = agyn_image.test.id
+	  workspace_image_tag = "latest"
 }
 
 resource "agyn_agent" "test" {
@@ -166,7 +180,7 @@ resource "agyn_agent" "test" {
 %s
 %s
 }
-`, testAccProviderConfig(t), organizationName, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, title, description, role, env.ModelID, env.AgentImage, availability, nicknameLine, capabilityLine)
+`, testAccProviderConfig(t), organizationName, title, description, role, env.ModelID, env.AgentImage, availability, nicknameLine, capabilityLine)
 }
 
 func testAccAgynAgentInvalidConfig(t *testing.T, organizationName string) string {
@@ -179,12 +193,26 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+resource "agyn_runner" "test" {
+	  organization_id = agyn_organization.test.id
+	  name            = "tf-acc-runner"
+	  capabilities    = ["docker"]
+}
+
+resource "agyn_image" "test" {
+	  organization_id = agyn_organization.test.id
+	  name            = "tf-acc-workspace"
+	  type            = "workspace"
+	  repository      = "ghcr.io/agynio/devcontainer"
+	  visibility      = "internal"
+}
+
 resource "agyn_environment" "test" {
 	  organization_id     = agyn_organization.test.id
 	  name                = "tf-acc-environment"
-	  runner_id           = %q
-	  workspace_image_id  = %q
-	  workspace_image_tag = %q
+	  runner_id           = agyn_runner.test.id
+	  workspace_image_id  = agyn_image.test.id
+	  workspace_image_tag = "latest"
 }
 
 resource "agyn_agent" "test" {
@@ -197,7 +225,7 @@ resource "agyn_agent" "test" {
 	  availability  = "internal"
 	  configuration = "{invalid"
 }
-`, testAccProviderConfig(t), organizationName, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, env.ModelID, env.AgentImage)
+`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage)
 }
 
 func testAccAgynAgentInvalidNicknameConfig(t *testing.T, organizationName string) string {
@@ -210,12 +238,26 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+resource "agyn_runner" "test" {
+	  organization_id = agyn_organization.test.id
+	  name            = "tf-acc-runner"
+	  capabilities    = ["docker"]
+}
+
+resource "agyn_image" "test" {
+	  organization_id = agyn_organization.test.id
+	  name            = "tf-acc-workspace"
+	  type            = "workspace"
+	  repository      = "ghcr.io/agynio/devcontainer"
+	  visibility      = "internal"
+}
+
 resource "agyn_environment" "test" {
 	  organization_id     = agyn_organization.test.id
 	  name                = "tf-acc-environment"
-	  runner_id           = %q
-	  workspace_image_id  = %q
-	  workspace_image_tag = %q
+	  runner_id           = agyn_runner.test.id
+	  workspace_image_id  = agyn_image.test.id
+	  workspace_image_tag = "latest"
 }
 
 resource "agyn_agent" "test" {
@@ -228,5 +270,5 @@ resource "agyn_agent" "test" {
 	  image         = %q
 	  availability  = "internal"
 }
-`, testAccProviderConfig(t), organizationName, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, env.ModelID, env.AgentImage)
+`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage)
 }

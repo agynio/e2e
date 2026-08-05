@@ -12,12 +12,26 @@ func testAccAgynAgentResourceBlock(t *testing.T, organizationID, name, descripti
 	env := testAccEnv(t)
 
 	return fmt.Sprintf(`
+resource "agyn_runner" "test" {
+	  organization_id = %s
+	  name            = "tf-acc-runner"
+	  capabilities    = ["docker"]
+}
+
+resource "agyn_image" "test" {
+	  organization_id = %s
+	  name            = "tf-acc-workspace"
+	  type            = "workspace"
+	  repository      = "ghcr.io/agynio/devcontainer"
+	  visibility      = "internal"
+}
+
 resource "agyn_environment" "test" {
 	  organization_id     = %s
 	  name                = "tf-acc-environment"
-	  runner_id           = %q
-	  workspace_image_id  = %q
-	  workspace_image_tag = %q
+	  runner_id           = agyn_runner.test.id
+	  workspace_image_id  = agyn_image.test.id
+	  workspace_image_tag = "latest"
 }
 
 resource "agyn_agent" "test" {
@@ -30,7 +44,7 @@ resource "agyn_agent" "test" {
 	  image        = %q
 	  availability = "internal"
 }
-`, organizationID, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, organizationID, name, description, role, env.ModelID, env.AgentImage)
+`, organizationID, organizationID, organizationID, organizationID, name, description, role, env.ModelID, env.AgentImage)
 }
 
 func formatCapabilitiesLine(capabilities []string, indent string) string {
