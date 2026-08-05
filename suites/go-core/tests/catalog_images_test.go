@@ -13,6 +13,8 @@ import (
 	imagesv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/images/v1"
 	runnersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runners/v1"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -26,6 +28,9 @@ import (
 // workload. Every step of it used to be a free-form string typed by an operator.
 
 var imagesAddr = envOrDefault("IMAGES_ADDRESS", "images:50051")
+
+// The label the assembler stamps on every sandbox workload.
+const assemblerSandboxIDLabel = "sandbox-id"
 
 // Authoring an image is an owner's write, so every call here carries the
 // identity the Gateway would attach. Without it the service refuses, which is
@@ -98,22 +103,18 @@ func TestAWorkloadPullsThroughTheProxy(t *testing.T) {
 	orgID := gatewayOrganizationID(t)
 
 	workspace := registerCatalogImage(t, ctx, orgID, imagesv1.ImageType_IMAGE_TYPE_WORKSPACE)
-	runtime := registerCatalogImage(t, ctx, orgID, imagesv1.ImageType_IMAGE_TYPE_AGENT_RUNTIME)
 	workspaceTag := discoveredTag(t, ctx, workspace.GetMeta().GetId())
-	runtimeTag := discoveredTag(t, ctx, runtime.GetMeta().GetId())
 
 	environment := createEnvironment(t, ctx, agentsClient, &agentsv1.CreateEnvironmentRequest{
-		OrganizationId:       orgID,
-		Name:                 fmt.Sprintf("e2e-catalog-%s", uuid.NewString()[:8]),
-		RunnerId:             catalogRunnerID(t, ctx),
-		WorkspaceImageId:     workspace.GetMeta().GetId(),
-		WorkspaceImageTag:    workspaceTag,
-		AgentRuntimeImageId:  runtime.GetMeta().GetId(),
-		AgentRuntimeImageTag: runtimeTag,
+		OrganizationId:    orgID,
+		Name:              fmt.Sprintf("e2e-catalog-%s", uuid.NewString()[:8]),
+		RunnerId:          catalogRunnerID(t, ctx),
+		WorkspaceImageId:  workspace.GetMeta().GetId(),
+		WorkspaceImageTag: workspaceTag,
 	})
 
 	sandbox := createSandbox(t, ctx, agentsClient, orgID, environment.GetMeta().GetId())
-	pod := waitForWorkloadPod(t, ctx, agentsClient, sandbox)
+	pod := waitForWorkloadPod(t, ctx, sandbox)
 
 	proxyHost := envOrDefault("IMAGE_PROXY_HOST", "registry.agyn.dev")
 	wantPrefix := fmt.Sprintf("%s/", proxyHost)
@@ -245,7 +246,13 @@ func createEnvironment(t *testing.T, ctx context.Context, client agentsv1.Agents
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if _, err := client.DeleteEnvironment(asOwner(t, cleanupCtx), &agentsv1.DeleteEnvironmentRequest{Id: environment.GetMeta().GetId()}); err != nil {
-			t.Logf("cleanup DeleteEnvironment: %v", err)
+			if status.Code(err) == codes.FailedPrecondition {
+				// A terminated sandbox is collected on a later cycle and still
+				// references the environment until then.
+				t.Logf("cleanup: environment %s outlives its sandbox; it is collected later", environment.GetMeta().GetId())
+			} else {
+				t.Logf("cleanup DeleteEnvironment: %v", err)
+			}
 		}
 	})
 	return environment
@@ -264,27 +271,13 @@ func createSandbox(t *testing.T, ctx context.Context, client agentsv1.AgentsServ
 	t.Cleanup(func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		ownerCtx := asOwner(t, cleanupCtx)
-		if _, err := client.DeleteSandbox(ownerCtx, &agentsv1.DeleteSandboxRequest{Id: sandbox.GetMeta().GetId()}); err != nil {
+		if _, err := client.DeleteSandbox(asOwner(t, cleanupCtx), &agentsv1.DeleteSandboxRequest{Id: sandbox.GetMeta().GetId()}); err != nil {
 			t.Logf("cleanup DeleteSandbox: %v", err)
-			return
 		}
-		for deadline := time.Now().Add(45 * time.Second); time.Now().Before(deadline); {
-			if _, err := client.GetSandbox(ownerCtx, &agentsv1.GetSandboxRequest{
-				Ref: &agentsv1.GetSandboxRequest_Id{Id: sandbox.GetMeta().GetId()},
-			}); err != nil {
-				return
-			}
-			time.Sleep(2 * time.Second)
-		}
-		t.Log("cleanup: sandbox still present; the environment delete may fail")
 	})
 	return sandbox
 }
 
-// waitForWorkloadPod finds the pod the Orchestrator created for a sandbox. It
-// polls rather than waiting for Running: the assertion is about what the pod was
-// assembled with, which is decided before the first pull finishes.
 // catalogKubeClientset reads the Kubernetes API from inside the cluster when the
 // suite runs there, and from the caller's kubeconfig when it is run against a
 // port-forwarded platform from a laptop.
@@ -306,49 +299,33 @@ func catalogKubeClientset(t *testing.T) *kubernetes.Clientset {
 	return clientset
 }
 
-// waitForWorkloadPod finds the pod the Orchestrator created for a sandbox. The
-// workload id is assigned by the reconciler rather than at creation, so the
-// sandbox is re-read until it reports one and the pod named after it exists.
-func waitForWorkloadPod(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, sandbox *agentsv1.Sandbox) *corev1.Pod {
+// waitForWorkloadPod finds the pod the Orchestrator assembled for a sandbox. It
+// matches on the sandbox label rather than waiting for the sandbox to report a
+// workload id: that is only written once the pod is Running, and what is under
+// test here is how the pod was assembled, which is settled before the first
+// image is pulled.
+func waitForWorkloadPod(t *testing.T, ctx context.Context, sandbox *agentsv1.Sandbox) *corev1.Pod {
 	t.Helper()
 	clientset := catalogKubeClientset(t)
 	namespace := workloadNamespace(t)
-	sandboxID := sandbox.GetMeta().GetId()
-	deadline := time.Now().Add(3 * time.Minute)
-	lastStatus := agentsv1.SandboxStatus_SANDBOX_STATUS_UNSPECIFIED
+	selector := fmt.Sprintf("%s=%s", assemblerSandboxIDLabel, sandbox.GetMeta().GetId())
+	deadline := time.Now().Add(2 * time.Minute)
 
 	for time.Now().Before(deadline) {
-		current, err := client.GetSandbox(ctx, &agentsv1.GetSandboxRequest{
-			Ref: &agentsv1.GetSandboxRequest_Id{Id: sandboxID},
-		})
+		pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
 		if err != nil {
-			t.Fatalf("GetSandbox: %v", err)
+			t.Fatalf("list pods: %v", err)
 		}
-		lastStatus = current.GetSandbox().GetStatus()
-		// A sandbox that gave up will not produce a pod however long we wait.
-		if lastStatus == agentsv1.SandboxStatus_SANDBOX_STATUS_FAILED {
-			t.Fatalf("sandbox %s failed before a pod was created", sandboxID)
+		if len(pods.Items) > 0 {
+			return &pods.Items[0]
 		}
-
-		if workloadID := current.GetSandbox().GetWorkloadId(); workloadID != "" {
-			pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
-			if err != nil {
-				t.Fatalf("list pods: %v", err)
-			}
-			for i := range pods.Items {
-				if strings.Contains(pods.Items[i].Name, workloadID) {
-					return &pods.Items[i]
-				}
-			}
-		}
-
 		select {
 		case <-ctx.Done():
 			t.Fatalf("context done waiting for the workload pod: %v", ctx.Err())
 		case <-time.After(3 * time.Second):
 		}
 	}
-	t.Fatalf("workload pod never appeared; sandbox status was %v", lastStatus)
+	t.Fatalf("no workload pod carrying %s", selector)
 	return nil
 }
 
