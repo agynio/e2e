@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -18,8 +19,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Covers the path an image reference takes end to end: registered in the
@@ -49,12 +52,18 @@ func newImagesClient(t *testing.T) imagesv1.ImagesServiceClient {
 // discovery has real tags to find rather than a stub's.
 func registerCatalogImage(t *testing.T, ctx context.Context, organizationID string, imageType imagesv1.ImageType) *imagesv1.Image {
 	t.Helper()
+	return registerCatalogImageFrom(t, ctx, organizationID, imageType,
+		envOrDefault("TEST_PUBLIC_REPOSITORY", "ghcr.io/agynio/devcontainer-go"))
+}
+
+func registerCatalogImageFrom(t *testing.T, ctx context.Context, organizationID string, imageType imagesv1.ImageType, repository string) *imagesv1.Image {
+	t.Helper()
 	client := newImagesClient(t)
 	created, err := client.CreateImage(ctx, &imagesv1.CreateImageRequest{
 		OrganizationId: organizationID,
 		Name:           fmt.Sprintf("e2e-catalog-%s", uuid.NewString()[:8]),
 		Type:           imageType,
-		Repository:     envOrDefault("TEST_PUBLIC_REPOSITORY", "ghcr.io/agynio/devcontainer-go"),
+		Repository:     repository,
 		Visibility:     imagesv1.ImageVisibility_IMAGE_VISIBILITY_INTERNAL,
 	})
 	if err != nil {
@@ -150,6 +159,153 @@ func TestAWorkloadPullsThroughTheProxy(t *testing.T) {
 	// anonymously.
 	if len(pod.Spec.ImagePullSecrets) == 0 {
 		t.Fatal("workload has no image pull secret")
+	}
+}
+
+// The acceptance signal of Environment and Runtime Unification: agynd and the
+// agyn CLI arrive from chart-pinned init images, and the agent CLI from the
+// environment — so what a workload runs is the platform's build plus one agent
+// CLI the environment names, not whatever a single image happened to bundle.
+func TestAWorkloadGetsThreeInitContainers(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ctx = asOwner(t, ctx)
+
+	agentsClient := agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr))
+	orgID := gatewayOrganizationID(t)
+
+	workspace := registerCatalogImage(t, ctx, orgID, imagesv1.ImageType_IMAGE_TYPE_WORKSPACE)
+	runtime := registerCatalogImageFrom(t, ctx, orgID, imagesv1.ImageType_IMAGE_TYPE_AGENT_RUNTIME,
+		envOrDefault("TEST_RUNTIME_REPOSITORY", "ghcr.io/agynio/agyn-runtime-codex"))
+
+	environment := createEnvironment(t, ctx, agentsClient, &agentsv1.CreateEnvironmentRequest{
+		OrganizationId:       orgID,
+		Name:                 fmt.Sprintf("e2e-three-init-%s", uuid.NewString()[:8]),
+		RunnerId:             catalogRunnerID(t, ctx),
+		WorkspaceImageId:     workspace.GetMeta().GetId(),
+		WorkspaceImageTag:    discoveredTag(t, ctx, workspace.GetMeta().GetId()),
+		AgentRuntimeImageId:  runtime.GetMeta().GetId(),
+		AgentRuntimeImageTag: discoveredTag(t, ctx, runtime.GetMeta().GetId()),
+	})
+
+	sandbox := createSandbox(t, ctx, agentsClient, orgID, environment.GetMeta().GetId())
+	pod := waitForWorkloadPod(t, ctx, sandbox)
+
+	present := map[string]string{}
+	for _, container := range pod.Spec.InitContainers {
+		present[container.Name] = container.Image
+	}
+	for _, name := range []string{"agynd-cli-init", "agyn-cli-init", "agent-runtime"} {
+		if _, ok := present[name]; !ok {
+			t.Fatalf("init container %q missing; pod has %v", name, present)
+		}
+	}
+	// The platform's own binaries are pinned by the chart, so they must not come
+	// from the proxy or from the agent runtime image.
+	for _, name := range []string{"agynd-cli-init", "agyn-cli-init"} {
+		if strings.Contains(present[name], envOrDefault("IMAGE_PROXY_HOST", "registry.agyn.dev")) {
+			t.Fatalf("%s is pulled through the proxy (%s); it is a platform component", name, present[name])
+		}
+	}
+	if !strings.Contains(present["agent-runtime"], envOrDefault("IMAGE_PROXY_HOST", "registry.agyn.dev")) {
+		t.Fatalf("agent-runtime does not pull through the proxy: %s", present["agent-runtime"])
+	}
+	// The pre-split single init container must be gone.
+	if _, ok := present["agent-init"]; ok {
+		t.Fatal("the legacy agent-init container is still assembled")
+	}
+
+	// What the init containers were for: the platform's binaries and one agent
+	// CLI, all in the shared volume the main container sees.
+	binaries := sharedBinaries(t, ctx, pod)
+	for _, want := range []string{"/agynd", "cli/agyn", "/codex", "/config.json"} {
+		if !binaries[want] {
+			t.Fatalf("%s missing from the shared volume; it holds %v", want, binaries)
+		}
+	}
+}
+
+// sharedBinaries lists what the init containers left in /agyn-bin, waiting for
+// the workload to run first: the volume is only populated once they complete.
+func sharedBinaries(t *testing.T, ctx context.Context, pod *corev1.Pod) map[string]bool {
+	t.Helper()
+	namespace := workloadNamespace(t)
+	clientset := catalogKubeClientset(t)
+
+	for deadline := time.Now().Add(4 * time.Minute); time.Now().Before(deadline); {
+		current, err := clientset.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("get pod: %v", err)
+		}
+		if current.Status.Phase == corev1.PodRunning {
+			// The three images write disjoint paths, so the listing is one level
+			// deep: agynd and the agent CLI at the root, the agyn CLI under cli/.
+			stdout, err := catalogExec(t, ctx, namespace, pod.Name, current.Spec.Containers[0].Name,
+				[]string{"sh", "-c", "cd /agyn-bin && ls . cli 2>/dev/null | sed 's|^|/|'; ls cli 2>/dev/null | sed 's|^|cli/|'"})
+			if err != nil {
+				t.Fatalf("ls /agyn-bin: %v", err)
+			}
+			present := map[string]bool{}
+			for _, entry := range strings.Fields(stdout) {
+				present[entry] = true
+			}
+			return present
+		}
+		if current.Status.Phase == corev1.PodFailed {
+			t.Fatalf("workload pod failed before running")
+		}
+		time.Sleep(5 * time.Second)
+	}
+	t.Fatal("workload pod never reached Running")
+	return nil
+}
+
+// A workspace-only environment is the sandbox case: the platform binaries
+// arrive, and no agent CLI does.
+func TestAWorkspaceOnlyWorkloadGetsOnlyThePlatformInitContainers(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ctx = asOwner(t, ctx)
+
+	agentsClient := agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr))
+	orgID := gatewayOrganizationID(t)
+	workspace := registerCatalogImage(t, ctx, orgID, imagesv1.ImageType_IMAGE_TYPE_WORKSPACE)
+
+	environment := createEnvironment(t, ctx, agentsClient, &agentsv1.CreateEnvironmentRequest{
+		OrganizationId:    orgID,
+		Name:              fmt.Sprintf("e2e-two-init-%s", uuid.NewString()[:8]),
+		RunnerId:          catalogRunnerID(t, ctx),
+		WorkspaceImageId:  workspace.GetMeta().GetId(),
+		WorkspaceImageTag: discoveredTag(t, ctx, workspace.GetMeta().GetId()),
+	})
+
+	sandbox := createSandbox(t, ctx, agentsClient, orgID, environment.GetMeta().GetId())
+	pod := waitForWorkloadPod(t, ctx, sandbox)
+
+	present := map[string]bool{}
+	for _, container := range pod.Spec.InitContainers {
+		present[container.Name] = true
+	}
+	for _, name := range []string{"agynd-cli-init", "agyn-cli-init"} {
+		if !present[name] {
+			t.Fatalf("init container %q missing from a workspace-only workload", name)
+		}
+	}
+	if present["agent-runtime"] {
+		t.Fatal("a workspace-only environment supplied an agent runtime container")
+	}
+
+	// The sandbox case: the platform's own CLI is there, and no agent CLI is.
+	binaries := sharedBinaries(t, ctx, pod)
+	for _, want := range []string{"/agynd", "cli/agyn"} {
+		if !binaries[want] {
+			t.Fatalf("%s missing from a workspace-only workload; volume holds %v", want, binaries)
+		}
+	}
+	for _, cli := range []string{"/codex", "/claude", "/agn"} {
+		if binaries[cli] {
+			t.Fatalf("%s is present without the environment naming an agent runtime", cli)
+		}
 	}
 }
 
@@ -281,22 +437,55 @@ func createSandbox(t *testing.T, ctx context.Context, client agentsv1.AgentsServ
 // catalogKubeClientset reads the Kubernetes API from inside the cluster when the
 // suite runs there, and from the caller's kubeconfig when it is run against a
 // port-forwarded platform from a laptop.
-func catalogKubeClientset(t *testing.T) *kubernetes.Clientset {
+func catalogRestConfig(t *testing.T) *rest.Config {
 	t.Helper()
 	config, err := rest.InClusterConfig()
-	if err != nil {
-		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{},
-		).ClientConfig()
-		if err != nil {
-			t.Skipf("no Kubernetes access: %v", err)
-		}
+	if err == nil {
+		return config
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{},
+	).ClientConfig()
+	if err != nil {
+		t.Skipf("no Kubernetes access: %v", err)
+	}
+	return config
+}
+
+func catalogKubeClientset(t *testing.T) *kubernetes.Clientset {
+	t.Helper()
+	clientset, err := kubernetes.NewForConfig(catalogRestConfig(t))
 	if err != nil {
 		t.Fatalf("kubernetes client: %v", err)
 	}
 	return clientset
+}
+
+// catalogExec runs a command in a workload container. The suite's own helper is
+// in-cluster only; this one works from a laptop against a port-forwarded
+// platform too, which is how these are run locally.
+func catalogExec(t *testing.T, ctx context.Context, namespace, podName, containerName string, command []string) (string, error) {
+	t.Helper()
+	clientset := catalogKubeClientset(t)
+	request := clientset.CoreV1().RESTClient().Post().
+		Namespace(namespace).Resource("pods").Name(podName).SubResource("exec")
+	request.VersionedParams(&corev1.PodExecOptions{
+		Container: containerName,
+		Command:   command,
+		Stdout:    true,
+		Stderr:    true,
+	}, scheme.ParameterCodec)
+
+	executor, err := remotecommand.NewSPDYExecutor(catalogRestConfig(t), "POST", request.URL())
+	if err != nil {
+		t.Fatalf("create exec: %v", err)
+	}
+	var stdout, stderr bytes.Buffer
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{Stdout: &stdout, Stderr: &stderr})
+	if err != nil {
+		return stdout.String(), fmt.Errorf("%w: %s", err, stderr.String())
+	}
+	return stdout.String(), nil
 }
 
 // waitForWorkloadPod finds the pod the Orchestrator assembled for a sandbox. It
