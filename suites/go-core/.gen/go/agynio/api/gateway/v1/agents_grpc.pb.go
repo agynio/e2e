@@ -29,6 +29,27 @@ const (
 	AgentsGateway_RemoveAgentRole_FullMethodName                 = "/agynio.api.gateway.v1.AgentsGateway/RemoveAgentRole"
 	AgentsGateway_ListAgentRoles_FullMethodName                  = "/agynio.api.gateway.v1.AgentsGateway/ListAgentRoles"
 	AgentsGateway_ListMyAgentRoles_FullMethodName                = "/agynio.api.gateway.v1.AgentsGateway/ListMyAgentRoles"
+	AgentsGateway_CreateEnvironment_FullMethodName               = "/agynio.api.gateway.v1.AgentsGateway/CreateEnvironment"
+	AgentsGateway_GetEnvironment_FullMethodName                  = "/agynio.api.gateway.v1.AgentsGateway/GetEnvironment"
+	AgentsGateway_UpdateEnvironment_FullMethodName               = "/agynio.api.gateway.v1.AgentsGateway/UpdateEnvironment"
+	AgentsGateway_DeleteEnvironment_FullMethodName               = "/agynio.api.gateway.v1.AgentsGateway/DeleteEnvironment"
+	AgentsGateway_ListEnvironments_FullMethodName                = "/agynio.api.gateway.v1.AgentsGateway/ListEnvironments"
+	AgentsGateway_CreateSandbox_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/CreateSandbox"
+	AgentsGateway_GetSandbox_FullMethodName                      = "/agynio.api.gateway.v1.AgentsGateway/GetSandbox"
+	AgentsGateway_ListSandboxes_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/ListSandboxes"
+	AgentsGateway_StopSandbox_FullMethodName                     = "/agynio.api.gateway.v1.AgentsGateway/StopSandbox"
+	AgentsGateway_DeleteSandbox_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/DeleteSandbox"
+	AgentsGateway_EnsureSandboxRunning_FullMethodName            = "/agynio.api.gateway.v1.AgentsGateway/EnsureSandboxRunning"
+	AgentsGateway_CreateInstance_FullMethodName                  = "/agynio.api.gateway.v1.AgentsGateway/CreateInstance"
+	AgentsGateway_GetInstance_FullMethodName                     = "/agynio.api.gateway.v1.AgentsGateway/GetInstance"
+	AgentsGateway_ListInstances_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/ListInstances"
+	AgentsGateway_PauseInstance_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/PauseInstance"
+	AgentsGateway_ResumeInstance_FullMethodName                  = "/agynio.api.gateway.v1.AgentsGateway/ResumeInstance"
+	AgentsGateway_DeleteInstance_FullMethodName                  = "/agynio.api.gateway.v1.AgentsGateway/DeleteInstance"
+	AgentsGateway_WriteInboxItem_FullMethodName                  = "/agynio.api.gateway.v1.AgentsGateway/WriteInboxItem"
+	AgentsGateway_GetUnackedInboxItems_FullMethodName            = "/agynio.api.gateway.v1.AgentsGateway/GetUnackedInboxItems"
+	AgentsGateway_AckInboxItems_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/AckInboxItems"
+	AgentsGateway_GetUnackedInboxCount_FullMethodName            = "/agynio.api.gateway.v1.AgentsGateway/GetUnackedInboxCount"
 	AgentsGateway_CreateVolume_FullMethodName                    = "/agynio.api.gateway.v1.AgentsGateway/CreateVolume"
 	AgentsGateway_GetVolume_FullMethodName                       = "/agynio.api.gateway.v1.AgentsGateway/GetVolume"
 	AgentsGateway_UpdateVolume_FullMethodName                    = "/agynio.api.gateway.v1.AgentsGateway/UpdateVolume"
@@ -83,6 +104,31 @@ type AgentsGatewayClient interface {
 	RemoveAgentRole(ctx context.Context, in *v1.RemoveAgentRoleRequest, opts ...grpc.CallOption) (*v1.RemoveAgentRoleResponse, error)
 	ListAgentRoles(ctx context.Context, in *v1.ListAgentRolesRequest, opts ...grpc.CallOption) (*v1.ListAgentRolesResponse, error)
 	ListMyAgentRoles(ctx context.Context, in *v1.ListMyAgentRolesRequest, opts ...grpc.CallOption) (*v1.ListMyAgentRolesResponse, error)
+	// --- Environments ---
+	CreateEnvironment(ctx context.Context, in *v1.CreateEnvironmentRequest, opts ...grpc.CallOption) (*v1.CreateEnvironmentResponse, error)
+	GetEnvironment(ctx context.Context, in *v1.GetEnvironmentRequest, opts ...grpc.CallOption) (*v1.GetEnvironmentResponse, error)
+	UpdateEnvironment(ctx context.Context, in *v1.UpdateEnvironmentRequest, opts ...grpc.CallOption) (*v1.UpdateEnvironmentResponse, error)
+	DeleteEnvironment(ctx context.Context, in *v1.DeleteEnvironmentRequest, opts ...grpc.CallOption) (*v1.DeleteEnvironmentResponse, error)
+	ListEnvironments(ctx context.Context, in *v1.ListEnvironmentsRequest, opts ...grpc.CallOption) (*v1.ListEnvironmentsResponse, error)
+	// --- Sandboxes ---
+	CreateSandbox(ctx context.Context, in *v1.CreateSandboxRequest, opts ...grpc.CallOption) (*v1.CreateSandboxResponse, error)
+	GetSandbox(ctx context.Context, in *v1.GetSandboxRequest, opts ...grpc.CallOption) (*v1.GetSandboxResponse, error)
+	ListSandboxes(ctx context.Context, in *v1.ListSandboxesRequest, opts ...grpc.CallOption) (*v1.ListSandboxesResponse, error)
+	StopSandbox(ctx context.Context, in *v1.StopSandboxRequest, opts ...grpc.CallOption) (*v1.StopSandboxResponse, error)
+	DeleteSandbox(ctx context.Context, in *v1.DeleteSandboxRequest, opts ...grpc.CallOption) (*v1.DeleteSandboxResponse, error)
+	EnsureSandboxRunning(ctx context.Context, in *v1.EnsureSandboxRunningRequest, opts ...grpc.CallOption) (*v1.EnsureSandboxRunningResponse, error)
+	// --- Agent Instances ---
+	CreateInstance(ctx context.Context, in *v1.CreateInstanceRequest, opts ...grpc.CallOption) (*v1.CreateInstanceResponse, error)
+	GetInstance(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceResponse, error)
+	ListInstances(ctx context.Context, in *v1.ListInstancesRequest, opts ...grpc.CallOption) (*v1.ListInstancesResponse, error)
+	PauseInstance(ctx context.Context, in *v1.PauseInstanceRequest, opts ...grpc.CallOption) (*v1.PauseInstanceResponse, error)
+	ResumeInstance(ctx context.Context, in *v1.ResumeInstanceRequest, opts ...grpc.CallOption) (*v1.ResumeInstanceResponse, error)
+	DeleteInstance(ctx context.Context, in *v1.DeleteInstanceRequest, opts ...grpc.CallOption) (*v1.DeleteInstanceResponse, error)
+	// --- Instance Inbox ---
+	WriteInboxItem(ctx context.Context, in *v1.WriteInboxItemRequest, opts ...grpc.CallOption) (*v1.WriteInboxItemResponse, error)
+	GetUnackedInboxItems(ctx context.Context, in *v1.GetUnackedInboxItemsRequest, opts ...grpc.CallOption) (*v1.GetUnackedInboxItemsResponse, error)
+	AckInboxItems(ctx context.Context, in *v1.AckInboxItemsRequest, opts ...grpc.CallOption) (*v1.AckInboxItemsResponse, error)
+	GetUnackedInboxCount(ctx context.Context, in *v1.GetUnackedInboxCountRequest, opts ...grpc.CallOption) (*v1.GetUnackedInboxCountResponse, error)
 	// --- Volumes ---
 	CreateVolume(ctx context.Context, in *v1.CreateVolumeRequest, opts ...grpc.CallOption) (*v1.CreateVolumeResponse, error)
 	GetVolume(ctx context.Context, in *v1.GetVolumeRequest, opts ...grpc.CallOption) (*v1.GetVolumeResponse, error)
@@ -106,11 +152,16 @@ type AgentsGatewayClient interface {
 	UpdateSkill(ctx context.Context, in *v1.UpdateSkillRequest, opts ...grpc.CallOption) (*v1.UpdateSkillResponse, error)
 	DeleteSkill(ctx context.Context, in *v1.DeleteSkillRequest, opts ...grpc.CallOption) (*v1.DeleteSkillResponse, error)
 	ListSkills(ctx context.Context, in *v1.ListSkillsRequest, opts ...grpc.CallOption) (*v1.ListSkillsResponse, error)
+	// Deprecated: Do not use.
 	// --- Hooks ---
 	CreateHook(ctx context.Context, in *v1.CreateHookRequest, opts ...grpc.CallOption) (*v1.CreateHookResponse, error)
+	// Deprecated: Do not use.
 	GetHook(ctx context.Context, in *v1.GetHookRequest, opts ...grpc.CallOption) (*v1.GetHookResponse, error)
+	// Deprecated: Do not use.
 	UpdateHook(ctx context.Context, in *v1.UpdateHookRequest, opts ...grpc.CallOption) (*v1.UpdateHookResponse, error)
+	// Deprecated: Do not use.
 	DeleteHook(ctx context.Context, in *v1.DeleteHookRequest, opts ...grpc.CallOption) (*v1.DeleteHookResponse, error)
+	// Deprecated: Do not use.
 	ListHooks(ctx context.Context, in *v1.ListHooksRequest, opts ...grpc.CallOption) (*v1.ListHooksResponse, error)
 	// --- Envs ---
 	CreateEnv(ctx context.Context, in *v1.CreateEnvRequest, opts ...grpc.CallOption) (*v1.CreateEnvResponse, error)
@@ -124,10 +175,14 @@ type AgentsGatewayClient interface {
 	UpdateInitScript(ctx context.Context, in *v1.UpdateInitScriptRequest, opts ...grpc.CallOption) (*v1.UpdateInitScriptResponse, error)
 	DeleteInitScript(ctx context.Context, in *v1.DeleteInitScriptRequest, opts ...grpc.CallOption) (*v1.DeleteInitScriptResponse, error)
 	ListInitScripts(ctx context.Context, in *v1.ListInitScriptsRequest, opts ...grpc.CallOption) (*v1.ListInitScriptsResponse, error)
+	// Deprecated: Do not use.
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
 	CreateImagePullSecretAttachment(ctx context.Context, in *v1.CreateImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	GetImagePullSecretAttachment(ctx context.Context, in *v1.GetImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.GetImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	DeleteImagePullSecretAttachment(ctx context.Context, in *v1.DeleteImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	ListImagePullSecretAttachments(ctx context.Context, in *v1.ListImagePullSecretAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListImagePullSecretAttachmentsResponse, error)
 }
 
@@ -223,6 +278,216 @@ func (c *agentsGatewayClient) ListMyAgentRoles(ctx context.Context, in *v1.ListM
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListMyAgentRolesResponse)
 	err := c.cc.Invoke(ctx, AgentsGateway_ListMyAgentRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) CreateEnvironment(ctx context.Context, in *v1.CreateEnvironmentRequest, opts ...grpc.CallOption) (*v1.CreateEnvironmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CreateEnvironmentResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_CreateEnvironment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) GetEnvironment(ctx context.Context, in *v1.GetEnvironmentRequest, opts ...grpc.CallOption) (*v1.GetEnvironmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetEnvironmentResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_GetEnvironment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) UpdateEnvironment(ctx context.Context, in *v1.UpdateEnvironmentRequest, opts ...grpc.CallOption) (*v1.UpdateEnvironmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.UpdateEnvironmentResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_UpdateEnvironment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) DeleteEnvironment(ctx context.Context, in *v1.DeleteEnvironmentRequest, opts ...grpc.CallOption) (*v1.DeleteEnvironmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DeleteEnvironmentResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_DeleteEnvironment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) ListEnvironments(ctx context.Context, in *v1.ListEnvironmentsRequest, opts ...grpc.CallOption) (*v1.ListEnvironmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListEnvironmentsResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_ListEnvironments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) CreateSandbox(ctx context.Context, in *v1.CreateSandboxRequest, opts ...grpc.CallOption) (*v1.CreateSandboxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CreateSandboxResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_CreateSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) GetSandbox(ctx context.Context, in *v1.GetSandboxRequest, opts ...grpc.CallOption) (*v1.GetSandboxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetSandboxResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_GetSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) ListSandboxes(ctx context.Context, in *v1.ListSandboxesRequest, opts ...grpc.CallOption) (*v1.ListSandboxesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListSandboxesResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_ListSandboxes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) StopSandbox(ctx context.Context, in *v1.StopSandboxRequest, opts ...grpc.CallOption) (*v1.StopSandboxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.StopSandboxResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_StopSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) DeleteSandbox(ctx context.Context, in *v1.DeleteSandboxRequest, opts ...grpc.CallOption) (*v1.DeleteSandboxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DeleteSandboxResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_DeleteSandbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) EnsureSandboxRunning(ctx context.Context, in *v1.EnsureSandboxRunningRequest, opts ...grpc.CallOption) (*v1.EnsureSandboxRunningResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.EnsureSandboxRunningResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_EnsureSandboxRunning_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) CreateInstance(ctx context.Context, in *v1.CreateInstanceRequest, opts ...grpc.CallOption) (*v1.CreateInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CreateInstanceResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_CreateInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) GetInstance(ctx context.Context, in *v1.GetInstanceRequest, opts ...grpc.CallOption) (*v1.GetInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetInstanceResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_GetInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) ListInstances(ctx context.Context, in *v1.ListInstancesRequest, opts ...grpc.CallOption) (*v1.ListInstancesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListInstancesResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_ListInstances_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) PauseInstance(ctx context.Context, in *v1.PauseInstanceRequest, opts ...grpc.CallOption) (*v1.PauseInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.PauseInstanceResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_PauseInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) ResumeInstance(ctx context.Context, in *v1.ResumeInstanceRequest, opts ...grpc.CallOption) (*v1.ResumeInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ResumeInstanceResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_ResumeInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) DeleteInstance(ctx context.Context, in *v1.DeleteInstanceRequest, opts ...grpc.CallOption) (*v1.DeleteInstanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DeleteInstanceResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_DeleteInstance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) WriteInboxItem(ctx context.Context, in *v1.WriteInboxItemRequest, opts ...grpc.CallOption) (*v1.WriteInboxItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.WriteInboxItemResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_WriteInboxItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) GetUnackedInboxItems(ctx context.Context, in *v1.GetUnackedInboxItemsRequest, opts ...grpc.CallOption) (*v1.GetUnackedInboxItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetUnackedInboxItemsResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_GetUnackedInboxItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) AckInboxItems(ctx context.Context, in *v1.AckInboxItemsRequest, opts ...grpc.CallOption) (*v1.AckInboxItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AckInboxItemsResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_AckInboxItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) GetUnackedInboxCount(ctx context.Context, in *v1.GetUnackedInboxCountRequest, opts ...grpc.CallOption) (*v1.GetUnackedInboxCountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetUnackedInboxCountResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_GetUnackedInboxCount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -419,6 +684,7 @@ func (c *agentsGatewayClient) ListSkills(ctx context.Context, in *v1.ListSkillsR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) CreateHook(ctx context.Context, in *v1.CreateHookRequest, opts ...grpc.CallOption) (*v1.CreateHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.CreateHookResponse)
@@ -429,6 +695,7 @@ func (c *agentsGatewayClient) CreateHook(ctx context.Context, in *v1.CreateHookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) GetHook(ctx context.Context, in *v1.GetHookRequest, opts ...grpc.CallOption) (*v1.GetHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetHookResponse)
@@ -439,6 +706,7 @@ func (c *agentsGatewayClient) GetHook(ctx context.Context, in *v1.GetHookRequest
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) UpdateHook(ctx context.Context, in *v1.UpdateHookRequest, opts ...grpc.CallOption) (*v1.UpdateHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.UpdateHookResponse)
@@ -449,6 +717,7 @@ func (c *agentsGatewayClient) UpdateHook(ctx context.Context, in *v1.UpdateHookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) DeleteHook(ctx context.Context, in *v1.DeleteHookRequest, opts ...grpc.CallOption) (*v1.DeleteHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.DeleteHookResponse)
@@ -459,6 +728,7 @@ func (c *agentsGatewayClient) DeleteHook(ctx context.Context, in *v1.DeleteHookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) ListHooks(ctx context.Context, in *v1.ListHooksRequest, opts ...grpc.CallOption) (*v1.ListHooksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListHooksResponse)
@@ -569,6 +839,7 @@ func (c *agentsGatewayClient) ListInitScripts(ctx context.Context, in *v1.ListIn
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) CreateImagePullSecretAttachment(ctx context.Context, in *v1.CreateImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateImagePullSecretAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.CreateImagePullSecretAttachmentResponse)
@@ -579,6 +850,7 @@ func (c *agentsGatewayClient) CreateImagePullSecretAttachment(ctx context.Contex
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) GetImagePullSecretAttachment(ctx context.Context, in *v1.GetImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.GetImagePullSecretAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetImagePullSecretAttachmentResponse)
@@ -589,6 +861,7 @@ func (c *agentsGatewayClient) GetImagePullSecretAttachment(ctx context.Context, 
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) DeleteImagePullSecretAttachment(ctx context.Context, in *v1.DeleteImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteImagePullSecretAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.DeleteImagePullSecretAttachmentResponse)
@@ -599,6 +872,7 @@ func (c *agentsGatewayClient) DeleteImagePullSecretAttachment(ctx context.Contex
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) ListImagePullSecretAttachments(ctx context.Context, in *v1.ListImagePullSecretAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListImagePullSecretAttachmentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListImagePullSecretAttachmentsResponse)
@@ -623,6 +897,31 @@ type AgentsGatewayServer interface {
 	RemoveAgentRole(context.Context, *v1.RemoveAgentRoleRequest) (*v1.RemoveAgentRoleResponse, error)
 	ListAgentRoles(context.Context, *v1.ListAgentRolesRequest) (*v1.ListAgentRolesResponse, error)
 	ListMyAgentRoles(context.Context, *v1.ListMyAgentRolesRequest) (*v1.ListMyAgentRolesResponse, error)
+	// --- Environments ---
+	CreateEnvironment(context.Context, *v1.CreateEnvironmentRequest) (*v1.CreateEnvironmentResponse, error)
+	GetEnvironment(context.Context, *v1.GetEnvironmentRequest) (*v1.GetEnvironmentResponse, error)
+	UpdateEnvironment(context.Context, *v1.UpdateEnvironmentRequest) (*v1.UpdateEnvironmentResponse, error)
+	DeleteEnvironment(context.Context, *v1.DeleteEnvironmentRequest) (*v1.DeleteEnvironmentResponse, error)
+	ListEnvironments(context.Context, *v1.ListEnvironmentsRequest) (*v1.ListEnvironmentsResponse, error)
+	// --- Sandboxes ---
+	CreateSandbox(context.Context, *v1.CreateSandboxRequest) (*v1.CreateSandboxResponse, error)
+	GetSandbox(context.Context, *v1.GetSandboxRequest) (*v1.GetSandboxResponse, error)
+	ListSandboxes(context.Context, *v1.ListSandboxesRequest) (*v1.ListSandboxesResponse, error)
+	StopSandbox(context.Context, *v1.StopSandboxRequest) (*v1.StopSandboxResponse, error)
+	DeleteSandbox(context.Context, *v1.DeleteSandboxRequest) (*v1.DeleteSandboxResponse, error)
+	EnsureSandboxRunning(context.Context, *v1.EnsureSandboxRunningRequest) (*v1.EnsureSandboxRunningResponse, error)
+	// --- Agent Instances ---
+	CreateInstance(context.Context, *v1.CreateInstanceRequest) (*v1.CreateInstanceResponse, error)
+	GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceResponse, error)
+	ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error)
+	PauseInstance(context.Context, *v1.PauseInstanceRequest) (*v1.PauseInstanceResponse, error)
+	ResumeInstance(context.Context, *v1.ResumeInstanceRequest) (*v1.ResumeInstanceResponse, error)
+	DeleteInstance(context.Context, *v1.DeleteInstanceRequest) (*v1.DeleteInstanceResponse, error)
+	// --- Instance Inbox ---
+	WriteInboxItem(context.Context, *v1.WriteInboxItemRequest) (*v1.WriteInboxItemResponse, error)
+	GetUnackedInboxItems(context.Context, *v1.GetUnackedInboxItemsRequest) (*v1.GetUnackedInboxItemsResponse, error)
+	AckInboxItems(context.Context, *v1.AckInboxItemsRequest) (*v1.AckInboxItemsResponse, error)
+	GetUnackedInboxCount(context.Context, *v1.GetUnackedInboxCountRequest) (*v1.GetUnackedInboxCountResponse, error)
 	// --- Volumes ---
 	CreateVolume(context.Context, *v1.CreateVolumeRequest) (*v1.CreateVolumeResponse, error)
 	GetVolume(context.Context, *v1.GetVolumeRequest) (*v1.GetVolumeResponse, error)
@@ -646,11 +945,16 @@ type AgentsGatewayServer interface {
 	UpdateSkill(context.Context, *v1.UpdateSkillRequest) (*v1.UpdateSkillResponse, error)
 	DeleteSkill(context.Context, *v1.DeleteSkillRequest) (*v1.DeleteSkillResponse, error)
 	ListSkills(context.Context, *v1.ListSkillsRequest) (*v1.ListSkillsResponse, error)
+	// Deprecated: Do not use.
 	// --- Hooks ---
 	CreateHook(context.Context, *v1.CreateHookRequest) (*v1.CreateHookResponse, error)
+	// Deprecated: Do not use.
 	GetHook(context.Context, *v1.GetHookRequest) (*v1.GetHookResponse, error)
+	// Deprecated: Do not use.
 	UpdateHook(context.Context, *v1.UpdateHookRequest) (*v1.UpdateHookResponse, error)
+	// Deprecated: Do not use.
 	DeleteHook(context.Context, *v1.DeleteHookRequest) (*v1.DeleteHookResponse, error)
+	// Deprecated: Do not use.
 	ListHooks(context.Context, *v1.ListHooksRequest) (*v1.ListHooksResponse, error)
 	// --- Envs ---
 	CreateEnv(context.Context, *v1.CreateEnvRequest) (*v1.CreateEnvResponse, error)
@@ -664,10 +968,14 @@ type AgentsGatewayServer interface {
 	UpdateInitScript(context.Context, *v1.UpdateInitScriptRequest) (*v1.UpdateInitScriptResponse, error)
 	DeleteInitScript(context.Context, *v1.DeleteInitScriptRequest) (*v1.DeleteInitScriptResponse, error)
 	ListInitScripts(context.Context, *v1.ListInitScriptsRequest) (*v1.ListInitScriptsResponse, error)
+	// Deprecated: Do not use.
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
 	CreateImagePullSecretAttachment(context.Context, *v1.CreateImagePullSecretAttachmentRequest) (*v1.CreateImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	GetImagePullSecretAttachment(context.Context, *v1.GetImagePullSecretAttachmentRequest) (*v1.GetImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	DeleteImagePullSecretAttachment(context.Context, *v1.DeleteImagePullSecretAttachmentRequest) (*v1.DeleteImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	ListImagePullSecretAttachments(context.Context, *v1.ListImagePullSecretAttachmentsRequest) (*v1.ListImagePullSecretAttachmentsResponse, error)
 }
 
@@ -704,6 +1012,69 @@ func (UnimplementedAgentsGatewayServer) ListAgentRoles(context.Context, *v1.List
 }
 func (UnimplementedAgentsGatewayServer) ListMyAgentRoles(context.Context, *v1.ListMyAgentRolesRequest) (*v1.ListMyAgentRolesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMyAgentRoles not implemented")
+}
+func (UnimplementedAgentsGatewayServer) CreateEnvironment(context.Context, *v1.CreateEnvironmentRequest) (*v1.CreateEnvironmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateEnvironment not implemented")
+}
+func (UnimplementedAgentsGatewayServer) GetEnvironment(context.Context, *v1.GetEnvironmentRequest) (*v1.GetEnvironmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEnvironment not implemented")
+}
+func (UnimplementedAgentsGatewayServer) UpdateEnvironment(context.Context, *v1.UpdateEnvironmentRequest) (*v1.UpdateEnvironmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateEnvironment not implemented")
+}
+func (UnimplementedAgentsGatewayServer) DeleteEnvironment(context.Context, *v1.DeleteEnvironmentRequest) (*v1.DeleteEnvironmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteEnvironment not implemented")
+}
+func (UnimplementedAgentsGatewayServer) ListEnvironments(context.Context, *v1.ListEnvironmentsRequest) (*v1.ListEnvironmentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEnvironments not implemented")
+}
+func (UnimplementedAgentsGatewayServer) CreateSandbox(context.Context, *v1.CreateSandboxRequest) (*v1.CreateSandboxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSandbox not implemented")
+}
+func (UnimplementedAgentsGatewayServer) GetSandbox(context.Context, *v1.GetSandboxRequest) (*v1.GetSandboxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSandbox not implemented")
+}
+func (UnimplementedAgentsGatewayServer) ListSandboxes(context.Context, *v1.ListSandboxesRequest) (*v1.ListSandboxesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSandboxes not implemented")
+}
+func (UnimplementedAgentsGatewayServer) StopSandbox(context.Context, *v1.StopSandboxRequest) (*v1.StopSandboxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopSandbox not implemented")
+}
+func (UnimplementedAgentsGatewayServer) DeleteSandbox(context.Context, *v1.DeleteSandboxRequest) (*v1.DeleteSandboxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSandbox not implemented")
+}
+func (UnimplementedAgentsGatewayServer) EnsureSandboxRunning(context.Context, *v1.EnsureSandboxRunningRequest) (*v1.EnsureSandboxRunningResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EnsureSandboxRunning not implemented")
+}
+func (UnimplementedAgentsGatewayServer) CreateInstance(context.Context, *v1.CreateInstanceRequest) (*v1.CreateInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateInstance not implemented")
+}
+func (UnimplementedAgentsGatewayServer) GetInstance(context.Context, *v1.GetInstanceRequest) (*v1.GetInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInstance not implemented")
+}
+func (UnimplementedAgentsGatewayServer) ListInstances(context.Context, *v1.ListInstancesRequest) (*v1.ListInstancesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInstances not implemented")
+}
+func (UnimplementedAgentsGatewayServer) PauseInstance(context.Context, *v1.PauseInstanceRequest) (*v1.PauseInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PauseInstance not implemented")
+}
+func (UnimplementedAgentsGatewayServer) ResumeInstance(context.Context, *v1.ResumeInstanceRequest) (*v1.ResumeInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeInstance not implemented")
+}
+func (UnimplementedAgentsGatewayServer) DeleteInstance(context.Context, *v1.DeleteInstanceRequest) (*v1.DeleteInstanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteInstance not implemented")
+}
+func (UnimplementedAgentsGatewayServer) WriteInboxItem(context.Context, *v1.WriteInboxItemRequest) (*v1.WriteInboxItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method WriteInboxItem not implemented")
+}
+func (UnimplementedAgentsGatewayServer) GetUnackedInboxItems(context.Context, *v1.GetUnackedInboxItemsRequest) (*v1.GetUnackedInboxItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUnackedInboxItems not implemented")
+}
+func (UnimplementedAgentsGatewayServer) AckInboxItems(context.Context, *v1.AckInboxItemsRequest) (*v1.AckInboxItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AckInboxItems not implemented")
+}
+func (UnimplementedAgentsGatewayServer) GetUnackedInboxCount(context.Context, *v1.GetUnackedInboxCountRequest) (*v1.GetUnackedInboxCountResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUnackedInboxCount not implemented")
 }
 func (UnimplementedAgentsGatewayServer) CreateVolume(context.Context, *v1.CreateVolumeRequest) (*v1.CreateVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVolume not implemented")
@@ -997,6 +1368,384 @@ func _AgentsGateway_ListMyAgentRoles_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentsGatewayServer).ListMyAgentRoles(ctx, req.(*v1.ListMyAgentRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_CreateEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).CreateEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_CreateEnvironment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).CreateEnvironment(ctx, req.(*v1.CreateEnvironmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_GetEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).GetEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_GetEnvironment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).GetEnvironment(ctx, req.(*v1.GetEnvironmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_UpdateEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.UpdateEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).UpdateEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_UpdateEnvironment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).UpdateEnvironment(ctx, req.(*v1.UpdateEnvironmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_DeleteEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DeleteEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).DeleteEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_DeleteEnvironment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).DeleteEnvironment(ctx, req.(*v1.DeleteEnvironmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_ListEnvironments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListEnvironmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).ListEnvironments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_ListEnvironments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).ListEnvironments(ctx, req.(*v1.ListEnvironmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_CreateSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateSandboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).CreateSandbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_CreateSandbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).CreateSandbox(ctx, req.(*v1.CreateSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_GetSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetSandboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).GetSandbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_GetSandbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).GetSandbox(ctx, req.(*v1.GetSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_ListSandboxes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListSandboxesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).ListSandboxes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_ListSandboxes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).ListSandboxes(ctx, req.(*v1.ListSandboxesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_StopSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.StopSandboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).StopSandbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_StopSandbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).StopSandbox(ctx, req.(*v1.StopSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_DeleteSandbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DeleteSandboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).DeleteSandbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_DeleteSandbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).DeleteSandbox(ctx, req.(*v1.DeleteSandboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_EnsureSandboxRunning_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.EnsureSandboxRunningRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).EnsureSandboxRunning(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_EnsureSandboxRunning_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).EnsureSandboxRunning(ctx, req.(*v1.EnsureSandboxRunningRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_CreateInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).CreateInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_CreateInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).CreateInstance(ctx, req.(*v1.CreateInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_GetInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).GetInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_GetInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).GetInstance(ctx, req.(*v1.GetInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_ListInstances_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListInstancesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).ListInstances(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_ListInstances_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).ListInstances(ctx, req.(*v1.ListInstancesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_PauseInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.PauseInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).PauseInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_PauseInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).PauseInstance(ctx, req.(*v1.PauseInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_ResumeInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ResumeInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).ResumeInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_ResumeInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).ResumeInstance(ctx, req.(*v1.ResumeInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_DeleteInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DeleteInstanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).DeleteInstance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_DeleteInstance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).DeleteInstance(ctx, req.(*v1.DeleteInstanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_WriteInboxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.WriteInboxItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).WriteInboxItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_WriteInboxItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).WriteInboxItem(ctx, req.(*v1.WriteInboxItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_GetUnackedInboxItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetUnackedInboxItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).GetUnackedInboxItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_GetUnackedInboxItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).GetUnackedInboxItems(ctx, req.(*v1.GetUnackedInboxItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_AckInboxItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.AckInboxItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).AckInboxItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_AckInboxItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).AckInboxItems(ctx, req.(*v1.AckInboxItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_GetUnackedInboxCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetUnackedInboxCountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).GetUnackedInboxCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_GetUnackedInboxCount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).GetUnackedInboxCount(ctx, req.(*v1.GetUnackedInboxCountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1727,6 +2476,90 @@ var AgentsGateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListMyAgentRoles",
 			Handler:    _AgentsGateway_ListMyAgentRoles_Handler,
+		},
+		{
+			MethodName: "CreateEnvironment",
+			Handler:    _AgentsGateway_CreateEnvironment_Handler,
+		},
+		{
+			MethodName: "GetEnvironment",
+			Handler:    _AgentsGateway_GetEnvironment_Handler,
+		},
+		{
+			MethodName: "UpdateEnvironment",
+			Handler:    _AgentsGateway_UpdateEnvironment_Handler,
+		},
+		{
+			MethodName: "DeleteEnvironment",
+			Handler:    _AgentsGateway_DeleteEnvironment_Handler,
+		},
+		{
+			MethodName: "ListEnvironments",
+			Handler:    _AgentsGateway_ListEnvironments_Handler,
+		},
+		{
+			MethodName: "CreateSandbox",
+			Handler:    _AgentsGateway_CreateSandbox_Handler,
+		},
+		{
+			MethodName: "GetSandbox",
+			Handler:    _AgentsGateway_GetSandbox_Handler,
+		},
+		{
+			MethodName: "ListSandboxes",
+			Handler:    _AgentsGateway_ListSandboxes_Handler,
+		},
+		{
+			MethodName: "StopSandbox",
+			Handler:    _AgentsGateway_StopSandbox_Handler,
+		},
+		{
+			MethodName: "DeleteSandbox",
+			Handler:    _AgentsGateway_DeleteSandbox_Handler,
+		},
+		{
+			MethodName: "EnsureSandboxRunning",
+			Handler:    _AgentsGateway_EnsureSandboxRunning_Handler,
+		},
+		{
+			MethodName: "CreateInstance",
+			Handler:    _AgentsGateway_CreateInstance_Handler,
+		},
+		{
+			MethodName: "GetInstance",
+			Handler:    _AgentsGateway_GetInstance_Handler,
+		},
+		{
+			MethodName: "ListInstances",
+			Handler:    _AgentsGateway_ListInstances_Handler,
+		},
+		{
+			MethodName: "PauseInstance",
+			Handler:    _AgentsGateway_PauseInstance_Handler,
+		},
+		{
+			MethodName: "ResumeInstance",
+			Handler:    _AgentsGateway_ResumeInstance_Handler,
+		},
+		{
+			MethodName: "DeleteInstance",
+			Handler:    _AgentsGateway_DeleteInstance_Handler,
+		},
+		{
+			MethodName: "WriteInboxItem",
+			Handler:    _AgentsGateway_WriteInboxItem_Handler,
+		},
+		{
+			MethodName: "GetUnackedInboxItems",
+			Handler:    _AgentsGateway_GetUnackedInboxItems_Handler,
+		},
+		{
+			MethodName: "AckInboxItems",
+			Handler:    _AgentsGateway_AckInboxItems_Handler,
+		},
+		{
+			MethodName: "GetUnackedInboxCount",
+			Handler:    _AgentsGateway_GetUnackedInboxCount_Handler,
 		},
 		{
 			MethodName: "CreateVolume",

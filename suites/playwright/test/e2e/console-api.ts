@@ -26,6 +26,7 @@ const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
 const EGRESS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.EgressRulesGateway';
 const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const RUNNERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.RunnersGateway';
+const IMAGES_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ImagesGateway';
 const THREADS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ThreadsGateway';
 const METERING_GATEWAY_PATH = '/api/agynio.api.gateway.v1.MeteringGateway';
 
@@ -184,8 +185,6 @@ type McpWire = {
   agentId?: string;
 };
 
-type HookWire = {
-  meta?: { id?: string };
   event?: string;
   agentId?: string;
 };
@@ -209,10 +208,6 @@ type LlmProviderWire = {
 type CreateSecretResponseWire = {
   secret?: { meta?: { id?: string } };
 };
-type CreateImagePullSecretResponseWire = {
-  imagePullSecret?: { meta?: { id?: string } };
-};
-
 type EgressRuleWire = {
   meta?: { id?: string };
   name?: string;
@@ -270,10 +265,6 @@ type CreateAgentResponseWire = {
 
 type CreateMcpResponseWire = {
   mcp?: McpWire;
-};
-
-type CreateHookResponseWire = {
-  hook?: HookWire;
 };
 
 type ListRunnersResponseWire = {
@@ -928,28 +919,8 @@ export async function createSecret(
   return secretId;
 }
 
-export async function createImagePullSecret(
-  page: Page,
-  opts: { organizationId: string; registry: string; username: string; value: string; description?: string },
+,
 ): Promise<string> {
-  const response = await postConnect<CreateImagePullSecretResponseWire>(
-    page,
-    SECRETS_GATEWAY_PATH,
-    'CreateImagePullSecret',
-    {
-      description: opts.description ?? `E2E image pull secret for ${opts.registry}`,
-      registry: opts.registry,
-      username: opts.username,
-      value: opts.value,
-      organizationId: opts.organizationId,
-    },
-  );
-  const secretId = response.imagePullSecret?.meta?.id;
-  if (!secretId) {
-    throw new Error('CreateImagePullSecret response missing image pull secret id.');
-  }
-  return secretId;
-}
 
 export async function createEgressRule(
   page: Page,
@@ -1072,30 +1043,6 @@ export async function createMcp(
     throw new Error('CreateMcp response missing mcp id.');
   }
   return mcpId;
-}
-
-export async function createHook(
-  page: Page,
-  opts: {
-    agentId: string;
-    event: string;
-    functionName: string;
-    image: string;
-    description?: string;
-  },
-): Promise<string> {
-  const response = await postConnect<CreateHookResponseWire>(page, AGENTS_GATEWAY_PATH, 'CreateHook', {
-    agentId: opts.agentId,
-    event: opts.event,
-    function: opts.functionName,
-    image: opts.image,
-    description: opts.description ?? '',
-  });
-  const hookId = response.hook?.meta?.id;
-  if (!hookId) {
-    throw new Error('CreateHook response missing hook id.');
-  }
-  return hookId;
 }
 
 export async function deleteSecret(page: Page, secretId: string): Promise<void> {
@@ -1297,4 +1244,26 @@ export async function getRunner(page: Page, runnerId: string): Promise<RunnerWir
     throw new Error('GetRunner response missing runner.');
   }
   return response.runner;
+}
+
+type CreateImageResponseWire = {
+  image?: { meta?: { id?: string } };
+};
+
+export async function createImage(
+  page: Page,
+  opts: { organizationId: string; name: string; repository: string; type: string },
+): Promise<string> {
+  const response = await postConnect<CreateImageResponseWire>(page, IMAGES_GATEWAY_PATH, 'CreateImage', {
+    organizationId: opts.organizationId,
+    name: opts.name,
+    repository: opts.repository,
+    type: opts.type,
+    visibility: 'IMAGE_VISIBILITY_INTERNAL',
+  });
+  const imageId = response.image?.meta?.id;
+  if (!imageId) {
+    throw new Error('CreateImage response missing image id.');
+  }
+  return imageId;
 }

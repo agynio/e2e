@@ -60,6 +60,69 @@ const (
 	// AgentsGatewayListMyAgentRolesProcedure is the fully-qualified name of the AgentsGateway's
 	// ListMyAgentRoles RPC.
 	AgentsGatewayListMyAgentRolesProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListMyAgentRoles"
+	// AgentsGatewayCreateEnvironmentProcedure is the fully-qualified name of the AgentsGateway's
+	// CreateEnvironment RPC.
+	AgentsGatewayCreateEnvironmentProcedure = "/agynio.api.gateway.v1.AgentsGateway/CreateEnvironment"
+	// AgentsGatewayGetEnvironmentProcedure is the fully-qualified name of the AgentsGateway's
+	// GetEnvironment RPC.
+	AgentsGatewayGetEnvironmentProcedure = "/agynio.api.gateway.v1.AgentsGateway/GetEnvironment"
+	// AgentsGatewayUpdateEnvironmentProcedure is the fully-qualified name of the AgentsGateway's
+	// UpdateEnvironment RPC.
+	AgentsGatewayUpdateEnvironmentProcedure = "/agynio.api.gateway.v1.AgentsGateway/UpdateEnvironment"
+	// AgentsGatewayDeleteEnvironmentProcedure is the fully-qualified name of the AgentsGateway's
+	// DeleteEnvironment RPC.
+	AgentsGatewayDeleteEnvironmentProcedure = "/agynio.api.gateway.v1.AgentsGateway/DeleteEnvironment"
+	// AgentsGatewayListEnvironmentsProcedure is the fully-qualified name of the AgentsGateway's
+	// ListEnvironments RPC.
+	AgentsGatewayListEnvironmentsProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListEnvironments"
+	// AgentsGatewayCreateSandboxProcedure is the fully-qualified name of the AgentsGateway's
+	// CreateSandbox RPC.
+	AgentsGatewayCreateSandboxProcedure = "/agynio.api.gateway.v1.AgentsGateway/CreateSandbox"
+	// AgentsGatewayGetSandboxProcedure is the fully-qualified name of the AgentsGateway's GetSandbox
+	// RPC.
+	AgentsGatewayGetSandboxProcedure = "/agynio.api.gateway.v1.AgentsGateway/GetSandbox"
+	// AgentsGatewayListSandboxesProcedure is the fully-qualified name of the AgentsGateway's
+	// ListSandboxes RPC.
+	AgentsGatewayListSandboxesProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListSandboxes"
+	// AgentsGatewayStopSandboxProcedure is the fully-qualified name of the AgentsGateway's StopSandbox
+	// RPC.
+	AgentsGatewayStopSandboxProcedure = "/agynio.api.gateway.v1.AgentsGateway/StopSandbox"
+	// AgentsGatewayDeleteSandboxProcedure is the fully-qualified name of the AgentsGateway's
+	// DeleteSandbox RPC.
+	AgentsGatewayDeleteSandboxProcedure = "/agynio.api.gateway.v1.AgentsGateway/DeleteSandbox"
+	// AgentsGatewayEnsureSandboxRunningProcedure is the fully-qualified name of the AgentsGateway's
+	// EnsureSandboxRunning RPC.
+	AgentsGatewayEnsureSandboxRunningProcedure = "/agynio.api.gateway.v1.AgentsGateway/EnsureSandboxRunning"
+	// AgentsGatewayCreateInstanceProcedure is the fully-qualified name of the AgentsGateway's
+	// CreateInstance RPC.
+	AgentsGatewayCreateInstanceProcedure = "/agynio.api.gateway.v1.AgentsGateway/CreateInstance"
+	// AgentsGatewayGetInstanceProcedure is the fully-qualified name of the AgentsGateway's GetInstance
+	// RPC.
+	AgentsGatewayGetInstanceProcedure = "/agynio.api.gateway.v1.AgentsGateway/GetInstance"
+	// AgentsGatewayListInstancesProcedure is the fully-qualified name of the AgentsGateway's
+	// ListInstances RPC.
+	AgentsGatewayListInstancesProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListInstances"
+	// AgentsGatewayPauseInstanceProcedure is the fully-qualified name of the AgentsGateway's
+	// PauseInstance RPC.
+	AgentsGatewayPauseInstanceProcedure = "/agynio.api.gateway.v1.AgentsGateway/PauseInstance"
+	// AgentsGatewayResumeInstanceProcedure is the fully-qualified name of the AgentsGateway's
+	// ResumeInstance RPC.
+	AgentsGatewayResumeInstanceProcedure = "/agynio.api.gateway.v1.AgentsGateway/ResumeInstance"
+	// AgentsGatewayDeleteInstanceProcedure is the fully-qualified name of the AgentsGateway's
+	// DeleteInstance RPC.
+	AgentsGatewayDeleteInstanceProcedure = "/agynio.api.gateway.v1.AgentsGateway/DeleteInstance"
+	// AgentsGatewayWriteInboxItemProcedure is the fully-qualified name of the AgentsGateway's
+	// WriteInboxItem RPC.
+	AgentsGatewayWriteInboxItemProcedure = "/agynio.api.gateway.v1.AgentsGateway/WriteInboxItem"
+	// AgentsGatewayGetUnackedInboxItemsProcedure is the fully-qualified name of the AgentsGateway's
+	// GetUnackedInboxItems RPC.
+	AgentsGatewayGetUnackedInboxItemsProcedure = "/agynio.api.gateway.v1.AgentsGateway/GetUnackedInboxItems"
+	// AgentsGatewayAckInboxItemsProcedure is the fully-qualified name of the AgentsGateway's
+	// AckInboxItems RPC.
+	AgentsGatewayAckInboxItemsProcedure = "/agynio.api.gateway.v1.AgentsGateway/AckInboxItems"
+	// AgentsGatewayGetUnackedInboxCountProcedure is the fully-qualified name of the AgentsGateway's
+	// GetUnackedInboxCount RPC.
+	AgentsGatewayGetUnackedInboxCountProcedure = "/agynio.api.gateway.v1.AgentsGateway/GetUnackedInboxCount"
 	// AgentsGatewayCreateVolumeProcedure is the fully-qualified name of the AgentsGateway's
 	// CreateVolume RPC.
 	AgentsGatewayCreateVolumeProcedure = "/agynio.api.gateway.v1.AgentsGateway/CreateVolume"
@@ -174,6 +237,31 @@ type AgentsGatewayClient interface {
 	RemoveAgentRole(context.Context, *connect.Request[v1.RemoveAgentRoleRequest]) (*connect.Response[v1.RemoveAgentRoleResponse], error)
 	ListAgentRoles(context.Context, *connect.Request[v1.ListAgentRolesRequest]) (*connect.Response[v1.ListAgentRolesResponse], error)
 	ListMyAgentRoles(context.Context, *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error)
+	// --- Environments ---
+	CreateEnvironment(context.Context, *connect.Request[v1.CreateEnvironmentRequest]) (*connect.Response[v1.CreateEnvironmentResponse], error)
+	GetEnvironment(context.Context, *connect.Request[v1.GetEnvironmentRequest]) (*connect.Response[v1.GetEnvironmentResponse], error)
+	UpdateEnvironment(context.Context, *connect.Request[v1.UpdateEnvironmentRequest]) (*connect.Response[v1.UpdateEnvironmentResponse], error)
+	DeleteEnvironment(context.Context, *connect.Request[v1.DeleteEnvironmentRequest]) (*connect.Response[v1.DeleteEnvironmentResponse], error)
+	ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error)
+	// --- Sandboxes ---
+	CreateSandbox(context.Context, *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error)
+	GetSandbox(context.Context, *connect.Request[v1.GetSandboxRequest]) (*connect.Response[v1.GetSandboxResponse], error)
+	ListSandboxes(context.Context, *connect.Request[v1.ListSandboxesRequest]) (*connect.Response[v1.ListSandboxesResponse], error)
+	StopSandbox(context.Context, *connect.Request[v1.StopSandboxRequest]) (*connect.Response[v1.StopSandboxResponse], error)
+	DeleteSandbox(context.Context, *connect.Request[v1.DeleteSandboxRequest]) (*connect.Response[v1.DeleteSandboxResponse], error)
+	EnsureSandboxRunning(context.Context, *connect.Request[v1.EnsureSandboxRunningRequest]) (*connect.Response[v1.EnsureSandboxRunningResponse], error)
+	// --- Agent Instances ---
+	CreateInstance(context.Context, *connect.Request[v1.CreateInstanceRequest]) (*connect.Response[v1.CreateInstanceResponse], error)
+	GetInstance(context.Context, *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error)
+	ListInstances(context.Context, *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error)
+	PauseInstance(context.Context, *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error)
+	ResumeInstance(context.Context, *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error)
+	DeleteInstance(context.Context, *connect.Request[v1.DeleteInstanceRequest]) (*connect.Response[v1.DeleteInstanceResponse], error)
+	// --- Instance Inbox ---
+	WriteInboxItem(context.Context, *connect.Request[v1.WriteInboxItemRequest]) (*connect.Response[v1.WriteInboxItemResponse], error)
+	GetUnackedInboxItems(context.Context, *connect.Request[v1.GetUnackedInboxItemsRequest]) (*connect.Response[v1.GetUnackedInboxItemsResponse], error)
+	AckInboxItems(context.Context, *connect.Request[v1.AckInboxItemsRequest]) (*connect.Response[v1.AckInboxItemsResponse], error)
+	GetUnackedInboxCount(context.Context, *connect.Request[v1.GetUnackedInboxCountRequest]) (*connect.Response[v1.GetUnackedInboxCountResponse], error)
 	// --- Volumes ---
 	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
@@ -198,10 +286,16 @@ type AgentsGatewayClient interface {
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// --- Hooks ---
+	//
+	// Deprecated: do not use.
 	CreateHook(context.Context, *connect.Request[v1.CreateHookRequest]) (*connect.Response[v1.CreateHookResponse], error)
+	// Deprecated: do not use.
 	GetHook(context.Context, *connect.Request[v1.GetHookRequest]) (*connect.Response[v1.GetHookResponse], error)
+	// Deprecated: do not use.
 	UpdateHook(context.Context, *connect.Request[v1.UpdateHookRequest]) (*connect.Response[v1.UpdateHookResponse], error)
+	// Deprecated: do not use.
 	DeleteHook(context.Context, *connect.Request[v1.DeleteHookRequest]) (*connect.Response[v1.DeleteHookResponse], error)
+	// Deprecated: do not use.
 	ListHooks(context.Context, *connect.Request[v1.ListHooksRequest]) (*connect.Response[v1.ListHooksResponse], error)
 	// --- Envs ---
 	CreateEnv(context.Context, *connect.Request[v1.CreateEnvRequest]) (*connect.Response[v1.CreateEnvResponse], error)
@@ -216,9 +310,14 @@ type AgentsGatewayClient interface {
 	DeleteInitScript(context.Context, *connect.Request[v1.DeleteInitScriptRequest]) (*connect.Response[v1.DeleteInitScriptResponse], error)
 	ListInitScripts(context.Context, *connect.Request[v1.ListInitScriptsRequest]) (*connect.Response[v1.ListInitScriptsResponse], error)
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
+	//
+	// Deprecated: do not use.
 	CreateImagePullSecretAttachment(context.Context, *connect.Request[v1.CreateImagePullSecretAttachmentRequest]) (*connect.Response[v1.CreateImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	GetImagePullSecretAttachment(context.Context, *connect.Request[v1.GetImagePullSecretAttachmentRequest]) (*connect.Response[v1.GetImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	DeleteImagePullSecretAttachment(context.Context, *connect.Request[v1.DeleteImagePullSecretAttachmentRequest]) (*connect.Response[v1.DeleteImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	ListImagePullSecretAttachments(context.Context, *connect.Request[v1.ListImagePullSecretAttachmentsRequest]) (*connect.Response[v1.ListImagePullSecretAttachmentsResponse], error)
 }
 
@@ -285,6 +384,132 @@ func NewAgentsGatewayClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+AgentsGatewayListMyAgentRolesProcedure,
 			connect.WithSchema(agentsGatewayMethods.ByName("ListMyAgentRoles")),
+			connect.WithClientOptions(opts...),
+		),
+		createEnvironment: connect.NewClient[v1.CreateEnvironmentRequest, v1.CreateEnvironmentResponse](
+			httpClient,
+			baseURL+AgentsGatewayCreateEnvironmentProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("CreateEnvironment")),
+			connect.WithClientOptions(opts...),
+		),
+		getEnvironment: connect.NewClient[v1.GetEnvironmentRequest, v1.GetEnvironmentResponse](
+			httpClient,
+			baseURL+AgentsGatewayGetEnvironmentProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("GetEnvironment")),
+			connect.WithClientOptions(opts...),
+		),
+		updateEnvironment: connect.NewClient[v1.UpdateEnvironmentRequest, v1.UpdateEnvironmentResponse](
+			httpClient,
+			baseURL+AgentsGatewayUpdateEnvironmentProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("UpdateEnvironment")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteEnvironment: connect.NewClient[v1.DeleteEnvironmentRequest, v1.DeleteEnvironmentResponse](
+			httpClient,
+			baseURL+AgentsGatewayDeleteEnvironmentProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("DeleteEnvironment")),
+			connect.WithClientOptions(opts...),
+		),
+		listEnvironments: connect.NewClient[v1.ListEnvironmentsRequest, v1.ListEnvironmentsResponse](
+			httpClient,
+			baseURL+AgentsGatewayListEnvironmentsProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ListEnvironments")),
+			connect.WithClientOptions(opts...),
+		),
+		createSandbox: connect.NewClient[v1.CreateSandboxRequest, v1.CreateSandboxResponse](
+			httpClient,
+			baseURL+AgentsGatewayCreateSandboxProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("CreateSandbox")),
+			connect.WithClientOptions(opts...),
+		),
+		getSandbox: connect.NewClient[v1.GetSandboxRequest, v1.GetSandboxResponse](
+			httpClient,
+			baseURL+AgentsGatewayGetSandboxProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("GetSandbox")),
+			connect.WithClientOptions(opts...),
+		),
+		listSandboxes: connect.NewClient[v1.ListSandboxesRequest, v1.ListSandboxesResponse](
+			httpClient,
+			baseURL+AgentsGatewayListSandboxesProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ListSandboxes")),
+			connect.WithClientOptions(opts...),
+		),
+		stopSandbox: connect.NewClient[v1.StopSandboxRequest, v1.StopSandboxResponse](
+			httpClient,
+			baseURL+AgentsGatewayStopSandboxProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("StopSandbox")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteSandbox: connect.NewClient[v1.DeleteSandboxRequest, v1.DeleteSandboxResponse](
+			httpClient,
+			baseURL+AgentsGatewayDeleteSandboxProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("DeleteSandbox")),
+			connect.WithClientOptions(opts...),
+		),
+		ensureSandboxRunning: connect.NewClient[v1.EnsureSandboxRunningRequest, v1.EnsureSandboxRunningResponse](
+			httpClient,
+			baseURL+AgentsGatewayEnsureSandboxRunningProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("EnsureSandboxRunning")),
+			connect.WithClientOptions(opts...),
+		),
+		createInstance: connect.NewClient[v1.CreateInstanceRequest, v1.CreateInstanceResponse](
+			httpClient,
+			baseURL+AgentsGatewayCreateInstanceProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("CreateInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		getInstance: connect.NewClient[v1.GetInstanceRequest, v1.GetInstanceResponse](
+			httpClient,
+			baseURL+AgentsGatewayGetInstanceProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("GetInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		listInstances: connect.NewClient[v1.ListInstancesRequest, v1.ListInstancesResponse](
+			httpClient,
+			baseURL+AgentsGatewayListInstancesProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ListInstances")),
+			connect.WithClientOptions(opts...),
+		),
+		pauseInstance: connect.NewClient[v1.PauseInstanceRequest, v1.PauseInstanceResponse](
+			httpClient,
+			baseURL+AgentsGatewayPauseInstanceProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("PauseInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		resumeInstance: connect.NewClient[v1.ResumeInstanceRequest, v1.ResumeInstanceResponse](
+			httpClient,
+			baseURL+AgentsGatewayResumeInstanceProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ResumeInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteInstance: connect.NewClient[v1.DeleteInstanceRequest, v1.DeleteInstanceResponse](
+			httpClient,
+			baseURL+AgentsGatewayDeleteInstanceProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("DeleteInstance")),
+			connect.WithClientOptions(opts...),
+		),
+		writeInboxItem: connect.NewClient[v1.WriteInboxItemRequest, v1.WriteInboxItemResponse](
+			httpClient,
+			baseURL+AgentsGatewayWriteInboxItemProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("WriteInboxItem")),
+			connect.WithClientOptions(opts...),
+		),
+		getUnackedInboxItems: connect.NewClient[v1.GetUnackedInboxItemsRequest, v1.GetUnackedInboxItemsResponse](
+			httpClient,
+			baseURL+AgentsGatewayGetUnackedInboxItemsProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("GetUnackedInboxItems")),
+			connect.WithClientOptions(opts...),
+		),
+		ackInboxItems: connect.NewClient[v1.AckInboxItemsRequest, v1.AckInboxItemsResponse](
+			httpClient,
+			baseURL+AgentsGatewayAckInboxItemsProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("AckInboxItems")),
+			connect.WithClientOptions(opts...),
+		),
+		getUnackedInboxCount: connect.NewClient[v1.GetUnackedInboxCountRequest, v1.GetUnackedInboxCountResponse](
+			httpClient,
+			baseURL+AgentsGatewayGetUnackedInboxCountProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("GetUnackedInboxCount")),
 			connect.WithClientOptions(opts...),
 		),
 		createVolume: connect.NewClient[v1.CreateVolumeRequest, v1.CreateVolumeResponse](
@@ -529,6 +754,27 @@ type agentsGatewayClient struct {
 	removeAgentRole                 *connect.Client[v1.RemoveAgentRoleRequest, v1.RemoveAgentRoleResponse]
 	listAgentRoles                  *connect.Client[v1.ListAgentRolesRequest, v1.ListAgentRolesResponse]
 	listMyAgentRoles                *connect.Client[v1.ListMyAgentRolesRequest, v1.ListMyAgentRolesResponse]
+	createEnvironment               *connect.Client[v1.CreateEnvironmentRequest, v1.CreateEnvironmentResponse]
+	getEnvironment                  *connect.Client[v1.GetEnvironmentRequest, v1.GetEnvironmentResponse]
+	updateEnvironment               *connect.Client[v1.UpdateEnvironmentRequest, v1.UpdateEnvironmentResponse]
+	deleteEnvironment               *connect.Client[v1.DeleteEnvironmentRequest, v1.DeleteEnvironmentResponse]
+	listEnvironments                *connect.Client[v1.ListEnvironmentsRequest, v1.ListEnvironmentsResponse]
+	createSandbox                   *connect.Client[v1.CreateSandboxRequest, v1.CreateSandboxResponse]
+	getSandbox                      *connect.Client[v1.GetSandboxRequest, v1.GetSandboxResponse]
+	listSandboxes                   *connect.Client[v1.ListSandboxesRequest, v1.ListSandboxesResponse]
+	stopSandbox                     *connect.Client[v1.StopSandboxRequest, v1.StopSandboxResponse]
+	deleteSandbox                   *connect.Client[v1.DeleteSandboxRequest, v1.DeleteSandboxResponse]
+	ensureSandboxRunning            *connect.Client[v1.EnsureSandboxRunningRequest, v1.EnsureSandboxRunningResponse]
+	createInstance                  *connect.Client[v1.CreateInstanceRequest, v1.CreateInstanceResponse]
+	getInstance                     *connect.Client[v1.GetInstanceRequest, v1.GetInstanceResponse]
+	listInstances                   *connect.Client[v1.ListInstancesRequest, v1.ListInstancesResponse]
+	pauseInstance                   *connect.Client[v1.PauseInstanceRequest, v1.PauseInstanceResponse]
+	resumeInstance                  *connect.Client[v1.ResumeInstanceRequest, v1.ResumeInstanceResponse]
+	deleteInstance                  *connect.Client[v1.DeleteInstanceRequest, v1.DeleteInstanceResponse]
+	writeInboxItem                  *connect.Client[v1.WriteInboxItemRequest, v1.WriteInboxItemResponse]
+	getUnackedInboxItems            *connect.Client[v1.GetUnackedInboxItemsRequest, v1.GetUnackedInboxItemsResponse]
+	ackInboxItems                   *connect.Client[v1.AckInboxItemsRequest, v1.AckInboxItemsResponse]
+	getUnackedInboxCount            *connect.Client[v1.GetUnackedInboxCountRequest, v1.GetUnackedInboxCountResponse]
 	createVolume                    *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
 	getVolume                       *connect.Client[v1.GetVolumeRequest, v1.GetVolumeResponse]
 	updateVolume                    *connect.Client[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse]
@@ -612,6 +858,111 @@ func (c *agentsGatewayClient) ListAgentRoles(ctx context.Context, req *connect.R
 // ListMyAgentRoles calls agynio.api.gateway.v1.AgentsGateway.ListMyAgentRoles.
 func (c *agentsGatewayClient) ListMyAgentRoles(ctx context.Context, req *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error) {
 	return c.listMyAgentRoles.CallUnary(ctx, req)
+}
+
+// CreateEnvironment calls agynio.api.gateway.v1.AgentsGateway.CreateEnvironment.
+func (c *agentsGatewayClient) CreateEnvironment(ctx context.Context, req *connect.Request[v1.CreateEnvironmentRequest]) (*connect.Response[v1.CreateEnvironmentResponse], error) {
+	return c.createEnvironment.CallUnary(ctx, req)
+}
+
+// GetEnvironment calls agynio.api.gateway.v1.AgentsGateway.GetEnvironment.
+func (c *agentsGatewayClient) GetEnvironment(ctx context.Context, req *connect.Request[v1.GetEnvironmentRequest]) (*connect.Response[v1.GetEnvironmentResponse], error) {
+	return c.getEnvironment.CallUnary(ctx, req)
+}
+
+// UpdateEnvironment calls agynio.api.gateway.v1.AgentsGateway.UpdateEnvironment.
+func (c *agentsGatewayClient) UpdateEnvironment(ctx context.Context, req *connect.Request[v1.UpdateEnvironmentRequest]) (*connect.Response[v1.UpdateEnvironmentResponse], error) {
+	return c.updateEnvironment.CallUnary(ctx, req)
+}
+
+// DeleteEnvironment calls agynio.api.gateway.v1.AgentsGateway.DeleteEnvironment.
+func (c *agentsGatewayClient) DeleteEnvironment(ctx context.Context, req *connect.Request[v1.DeleteEnvironmentRequest]) (*connect.Response[v1.DeleteEnvironmentResponse], error) {
+	return c.deleteEnvironment.CallUnary(ctx, req)
+}
+
+// ListEnvironments calls agynio.api.gateway.v1.AgentsGateway.ListEnvironments.
+func (c *agentsGatewayClient) ListEnvironments(ctx context.Context, req *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error) {
+	return c.listEnvironments.CallUnary(ctx, req)
+}
+
+// CreateSandbox calls agynio.api.gateway.v1.AgentsGateway.CreateSandbox.
+func (c *agentsGatewayClient) CreateSandbox(ctx context.Context, req *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error) {
+	return c.createSandbox.CallUnary(ctx, req)
+}
+
+// GetSandbox calls agynio.api.gateway.v1.AgentsGateway.GetSandbox.
+func (c *agentsGatewayClient) GetSandbox(ctx context.Context, req *connect.Request[v1.GetSandboxRequest]) (*connect.Response[v1.GetSandboxResponse], error) {
+	return c.getSandbox.CallUnary(ctx, req)
+}
+
+// ListSandboxes calls agynio.api.gateway.v1.AgentsGateway.ListSandboxes.
+func (c *agentsGatewayClient) ListSandboxes(ctx context.Context, req *connect.Request[v1.ListSandboxesRequest]) (*connect.Response[v1.ListSandboxesResponse], error) {
+	return c.listSandboxes.CallUnary(ctx, req)
+}
+
+// StopSandbox calls agynio.api.gateway.v1.AgentsGateway.StopSandbox.
+func (c *agentsGatewayClient) StopSandbox(ctx context.Context, req *connect.Request[v1.StopSandboxRequest]) (*connect.Response[v1.StopSandboxResponse], error) {
+	return c.stopSandbox.CallUnary(ctx, req)
+}
+
+// DeleteSandbox calls agynio.api.gateway.v1.AgentsGateway.DeleteSandbox.
+func (c *agentsGatewayClient) DeleteSandbox(ctx context.Context, req *connect.Request[v1.DeleteSandboxRequest]) (*connect.Response[v1.DeleteSandboxResponse], error) {
+	return c.deleteSandbox.CallUnary(ctx, req)
+}
+
+// EnsureSandboxRunning calls agynio.api.gateway.v1.AgentsGateway.EnsureSandboxRunning.
+func (c *agentsGatewayClient) EnsureSandboxRunning(ctx context.Context, req *connect.Request[v1.EnsureSandboxRunningRequest]) (*connect.Response[v1.EnsureSandboxRunningResponse], error) {
+	return c.ensureSandboxRunning.CallUnary(ctx, req)
+}
+
+// CreateInstance calls agynio.api.gateway.v1.AgentsGateway.CreateInstance.
+func (c *agentsGatewayClient) CreateInstance(ctx context.Context, req *connect.Request[v1.CreateInstanceRequest]) (*connect.Response[v1.CreateInstanceResponse], error) {
+	return c.createInstance.CallUnary(ctx, req)
+}
+
+// GetInstance calls agynio.api.gateway.v1.AgentsGateway.GetInstance.
+func (c *agentsGatewayClient) GetInstance(ctx context.Context, req *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error) {
+	return c.getInstance.CallUnary(ctx, req)
+}
+
+// ListInstances calls agynio.api.gateway.v1.AgentsGateway.ListInstances.
+func (c *agentsGatewayClient) ListInstances(ctx context.Context, req *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error) {
+	return c.listInstances.CallUnary(ctx, req)
+}
+
+// PauseInstance calls agynio.api.gateway.v1.AgentsGateway.PauseInstance.
+func (c *agentsGatewayClient) PauseInstance(ctx context.Context, req *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error) {
+	return c.pauseInstance.CallUnary(ctx, req)
+}
+
+// ResumeInstance calls agynio.api.gateway.v1.AgentsGateway.ResumeInstance.
+func (c *agentsGatewayClient) ResumeInstance(ctx context.Context, req *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error) {
+	return c.resumeInstance.CallUnary(ctx, req)
+}
+
+// DeleteInstance calls agynio.api.gateway.v1.AgentsGateway.DeleteInstance.
+func (c *agentsGatewayClient) DeleteInstance(ctx context.Context, req *connect.Request[v1.DeleteInstanceRequest]) (*connect.Response[v1.DeleteInstanceResponse], error) {
+	return c.deleteInstance.CallUnary(ctx, req)
+}
+
+// WriteInboxItem calls agynio.api.gateway.v1.AgentsGateway.WriteInboxItem.
+func (c *agentsGatewayClient) WriteInboxItem(ctx context.Context, req *connect.Request[v1.WriteInboxItemRequest]) (*connect.Response[v1.WriteInboxItemResponse], error) {
+	return c.writeInboxItem.CallUnary(ctx, req)
+}
+
+// GetUnackedInboxItems calls agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxItems.
+func (c *agentsGatewayClient) GetUnackedInboxItems(ctx context.Context, req *connect.Request[v1.GetUnackedInboxItemsRequest]) (*connect.Response[v1.GetUnackedInboxItemsResponse], error) {
+	return c.getUnackedInboxItems.CallUnary(ctx, req)
+}
+
+// AckInboxItems calls agynio.api.gateway.v1.AgentsGateway.AckInboxItems.
+func (c *agentsGatewayClient) AckInboxItems(ctx context.Context, req *connect.Request[v1.AckInboxItemsRequest]) (*connect.Response[v1.AckInboxItemsResponse], error) {
+	return c.ackInboxItems.CallUnary(ctx, req)
+}
+
+// GetUnackedInboxCount calls agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxCount.
+func (c *agentsGatewayClient) GetUnackedInboxCount(ctx context.Context, req *connect.Request[v1.GetUnackedInboxCountRequest]) (*connect.Response[v1.GetUnackedInboxCountResponse], error) {
+	return c.getUnackedInboxCount.CallUnary(ctx, req)
 }
 
 // CreateVolume calls agynio.api.gateway.v1.AgentsGateway.CreateVolume.
@@ -710,26 +1061,36 @@ func (c *agentsGatewayClient) ListSkills(ctx context.Context, req *connect.Reque
 }
 
 // CreateHook calls agynio.api.gateway.v1.AgentsGateway.CreateHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) CreateHook(ctx context.Context, req *connect.Request[v1.CreateHookRequest]) (*connect.Response[v1.CreateHookResponse], error) {
 	return c.createHook.CallUnary(ctx, req)
 }
 
 // GetHook calls agynio.api.gateway.v1.AgentsGateway.GetHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) GetHook(ctx context.Context, req *connect.Request[v1.GetHookRequest]) (*connect.Response[v1.GetHookResponse], error) {
 	return c.getHook.CallUnary(ctx, req)
 }
 
 // UpdateHook calls agynio.api.gateway.v1.AgentsGateway.UpdateHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) UpdateHook(ctx context.Context, req *connect.Request[v1.UpdateHookRequest]) (*connect.Response[v1.UpdateHookResponse], error) {
 	return c.updateHook.CallUnary(ctx, req)
 }
 
 // DeleteHook calls agynio.api.gateway.v1.AgentsGateway.DeleteHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) DeleteHook(ctx context.Context, req *connect.Request[v1.DeleteHookRequest]) (*connect.Response[v1.DeleteHookResponse], error) {
 	return c.deleteHook.CallUnary(ctx, req)
 }
 
 // ListHooks calls agynio.api.gateway.v1.AgentsGateway.ListHooks.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) ListHooks(ctx context.Context, req *connect.Request[v1.ListHooksRequest]) (*connect.Response[v1.ListHooksResponse], error) {
 	return c.listHooks.CallUnary(ctx, req)
 }
@@ -786,24 +1147,32 @@ func (c *agentsGatewayClient) ListInitScripts(ctx context.Context, req *connect.
 
 // CreateImagePullSecretAttachment calls
 // agynio.api.gateway.v1.AgentsGateway.CreateImagePullSecretAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) CreateImagePullSecretAttachment(ctx context.Context, req *connect.Request[v1.CreateImagePullSecretAttachmentRequest]) (*connect.Response[v1.CreateImagePullSecretAttachmentResponse], error) {
 	return c.createImagePullSecretAttachment.CallUnary(ctx, req)
 }
 
 // GetImagePullSecretAttachment calls
 // agynio.api.gateway.v1.AgentsGateway.GetImagePullSecretAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) GetImagePullSecretAttachment(ctx context.Context, req *connect.Request[v1.GetImagePullSecretAttachmentRequest]) (*connect.Response[v1.GetImagePullSecretAttachmentResponse], error) {
 	return c.getImagePullSecretAttachment.CallUnary(ctx, req)
 }
 
 // DeleteImagePullSecretAttachment calls
 // agynio.api.gateway.v1.AgentsGateway.DeleteImagePullSecretAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) DeleteImagePullSecretAttachment(ctx context.Context, req *connect.Request[v1.DeleteImagePullSecretAttachmentRequest]) (*connect.Response[v1.DeleteImagePullSecretAttachmentResponse], error) {
 	return c.deleteImagePullSecretAttachment.CallUnary(ctx, req)
 }
 
 // ListImagePullSecretAttachments calls
 // agynio.api.gateway.v1.AgentsGateway.ListImagePullSecretAttachments.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) ListImagePullSecretAttachments(ctx context.Context, req *connect.Request[v1.ListImagePullSecretAttachmentsRequest]) (*connect.Response[v1.ListImagePullSecretAttachmentsResponse], error) {
 	return c.listImagePullSecretAttachments.CallUnary(ctx, req)
 }
@@ -820,6 +1189,31 @@ type AgentsGatewayHandler interface {
 	RemoveAgentRole(context.Context, *connect.Request[v1.RemoveAgentRoleRequest]) (*connect.Response[v1.RemoveAgentRoleResponse], error)
 	ListAgentRoles(context.Context, *connect.Request[v1.ListAgentRolesRequest]) (*connect.Response[v1.ListAgentRolesResponse], error)
 	ListMyAgentRoles(context.Context, *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error)
+	// --- Environments ---
+	CreateEnvironment(context.Context, *connect.Request[v1.CreateEnvironmentRequest]) (*connect.Response[v1.CreateEnvironmentResponse], error)
+	GetEnvironment(context.Context, *connect.Request[v1.GetEnvironmentRequest]) (*connect.Response[v1.GetEnvironmentResponse], error)
+	UpdateEnvironment(context.Context, *connect.Request[v1.UpdateEnvironmentRequest]) (*connect.Response[v1.UpdateEnvironmentResponse], error)
+	DeleteEnvironment(context.Context, *connect.Request[v1.DeleteEnvironmentRequest]) (*connect.Response[v1.DeleteEnvironmentResponse], error)
+	ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error)
+	// --- Sandboxes ---
+	CreateSandbox(context.Context, *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error)
+	GetSandbox(context.Context, *connect.Request[v1.GetSandboxRequest]) (*connect.Response[v1.GetSandboxResponse], error)
+	ListSandboxes(context.Context, *connect.Request[v1.ListSandboxesRequest]) (*connect.Response[v1.ListSandboxesResponse], error)
+	StopSandbox(context.Context, *connect.Request[v1.StopSandboxRequest]) (*connect.Response[v1.StopSandboxResponse], error)
+	DeleteSandbox(context.Context, *connect.Request[v1.DeleteSandboxRequest]) (*connect.Response[v1.DeleteSandboxResponse], error)
+	EnsureSandboxRunning(context.Context, *connect.Request[v1.EnsureSandboxRunningRequest]) (*connect.Response[v1.EnsureSandboxRunningResponse], error)
+	// --- Agent Instances ---
+	CreateInstance(context.Context, *connect.Request[v1.CreateInstanceRequest]) (*connect.Response[v1.CreateInstanceResponse], error)
+	GetInstance(context.Context, *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error)
+	ListInstances(context.Context, *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error)
+	PauseInstance(context.Context, *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error)
+	ResumeInstance(context.Context, *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error)
+	DeleteInstance(context.Context, *connect.Request[v1.DeleteInstanceRequest]) (*connect.Response[v1.DeleteInstanceResponse], error)
+	// --- Instance Inbox ---
+	WriteInboxItem(context.Context, *connect.Request[v1.WriteInboxItemRequest]) (*connect.Response[v1.WriteInboxItemResponse], error)
+	GetUnackedInboxItems(context.Context, *connect.Request[v1.GetUnackedInboxItemsRequest]) (*connect.Response[v1.GetUnackedInboxItemsResponse], error)
+	AckInboxItems(context.Context, *connect.Request[v1.AckInboxItemsRequest]) (*connect.Response[v1.AckInboxItemsResponse], error)
+	GetUnackedInboxCount(context.Context, *connect.Request[v1.GetUnackedInboxCountRequest]) (*connect.Response[v1.GetUnackedInboxCountResponse], error)
 	// --- Volumes ---
 	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
@@ -844,10 +1238,16 @@ type AgentsGatewayHandler interface {
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// --- Hooks ---
+	//
+	// Deprecated: do not use.
 	CreateHook(context.Context, *connect.Request[v1.CreateHookRequest]) (*connect.Response[v1.CreateHookResponse], error)
+	// Deprecated: do not use.
 	GetHook(context.Context, *connect.Request[v1.GetHookRequest]) (*connect.Response[v1.GetHookResponse], error)
+	// Deprecated: do not use.
 	UpdateHook(context.Context, *connect.Request[v1.UpdateHookRequest]) (*connect.Response[v1.UpdateHookResponse], error)
+	// Deprecated: do not use.
 	DeleteHook(context.Context, *connect.Request[v1.DeleteHookRequest]) (*connect.Response[v1.DeleteHookResponse], error)
+	// Deprecated: do not use.
 	ListHooks(context.Context, *connect.Request[v1.ListHooksRequest]) (*connect.Response[v1.ListHooksResponse], error)
 	// --- Envs ---
 	CreateEnv(context.Context, *connect.Request[v1.CreateEnvRequest]) (*connect.Response[v1.CreateEnvResponse], error)
@@ -862,9 +1262,14 @@ type AgentsGatewayHandler interface {
 	DeleteInitScript(context.Context, *connect.Request[v1.DeleteInitScriptRequest]) (*connect.Response[v1.DeleteInitScriptResponse], error)
 	ListInitScripts(context.Context, *connect.Request[v1.ListInitScriptsRequest]) (*connect.Response[v1.ListInitScriptsResponse], error)
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
+	//
+	// Deprecated: do not use.
 	CreateImagePullSecretAttachment(context.Context, *connect.Request[v1.CreateImagePullSecretAttachmentRequest]) (*connect.Response[v1.CreateImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	GetImagePullSecretAttachment(context.Context, *connect.Request[v1.GetImagePullSecretAttachmentRequest]) (*connect.Response[v1.GetImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	DeleteImagePullSecretAttachment(context.Context, *connect.Request[v1.DeleteImagePullSecretAttachmentRequest]) (*connect.Response[v1.DeleteImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	ListImagePullSecretAttachments(context.Context, *connect.Request[v1.ListImagePullSecretAttachmentsRequest]) (*connect.Response[v1.ListImagePullSecretAttachmentsResponse], error)
 }
 
@@ -927,6 +1332,132 @@ func NewAgentsGatewayHandler(svc AgentsGatewayHandler, opts ...connect.HandlerOp
 		AgentsGatewayListMyAgentRolesProcedure,
 		svc.ListMyAgentRoles,
 		connect.WithSchema(agentsGatewayMethods.ByName("ListMyAgentRoles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayCreateEnvironmentHandler := connect.NewUnaryHandler(
+		AgentsGatewayCreateEnvironmentProcedure,
+		svc.CreateEnvironment,
+		connect.WithSchema(agentsGatewayMethods.ByName("CreateEnvironment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayGetEnvironmentHandler := connect.NewUnaryHandler(
+		AgentsGatewayGetEnvironmentProcedure,
+		svc.GetEnvironment,
+		connect.WithSchema(agentsGatewayMethods.ByName("GetEnvironment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayUpdateEnvironmentHandler := connect.NewUnaryHandler(
+		AgentsGatewayUpdateEnvironmentProcedure,
+		svc.UpdateEnvironment,
+		connect.WithSchema(agentsGatewayMethods.ByName("UpdateEnvironment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayDeleteEnvironmentHandler := connect.NewUnaryHandler(
+		AgentsGatewayDeleteEnvironmentProcedure,
+		svc.DeleteEnvironment,
+		connect.WithSchema(agentsGatewayMethods.ByName("DeleteEnvironment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayListEnvironmentsHandler := connect.NewUnaryHandler(
+		AgentsGatewayListEnvironmentsProcedure,
+		svc.ListEnvironments,
+		connect.WithSchema(agentsGatewayMethods.ByName("ListEnvironments")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayCreateSandboxHandler := connect.NewUnaryHandler(
+		AgentsGatewayCreateSandboxProcedure,
+		svc.CreateSandbox,
+		connect.WithSchema(agentsGatewayMethods.ByName("CreateSandbox")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayGetSandboxHandler := connect.NewUnaryHandler(
+		AgentsGatewayGetSandboxProcedure,
+		svc.GetSandbox,
+		connect.WithSchema(agentsGatewayMethods.ByName("GetSandbox")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayListSandboxesHandler := connect.NewUnaryHandler(
+		AgentsGatewayListSandboxesProcedure,
+		svc.ListSandboxes,
+		connect.WithSchema(agentsGatewayMethods.ByName("ListSandboxes")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayStopSandboxHandler := connect.NewUnaryHandler(
+		AgentsGatewayStopSandboxProcedure,
+		svc.StopSandbox,
+		connect.WithSchema(agentsGatewayMethods.ByName("StopSandbox")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayDeleteSandboxHandler := connect.NewUnaryHandler(
+		AgentsGatewayDeleteSandboxProcedure,
+		svc.DeleteSandbox,
+		connect.WithSchema(agentsGatewayMethods.ByName("DeleteSandbox")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayEnsureSandboxRunningHandler := connect.NewUnaryHandler(
+		AgentsGatewayEnsureSandboxRunningProcedure,
+		svc.EnsureSandboxRunning,
+		connect.WithSchema(agentsGatewayMethods.ByName("EnsureSandboxRunning")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayCreateInstanceHandler := connect.NewUnaryHandler(
+		AgentsGatewayCreateInstanceProcedure,
+		svc.CreateInstance,
+		connect.WithSchema(agentsGatewayMethods.ByName("CreateInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayGetInstanceHandler := connect.NewUnaryHandler(
+		AgentsGatewayGetInstanceProcedure,
+		svc.GetInstance,
+		connect.WithSchema(agentsGatewayMethods.ByName("GetInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayListInstancesHandler := connect.NewUnaryHandler(
+		AgentsGatewayListInstancesProcedure,
+		svc.ListInstances,
+		connect.WithSchema(agentsGatewayMethods.ByName("ListInstances")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayPauseInstanceHandler := connect.NewUnaryHandler(
+		AgentsGatewayPauseInstanceProcedure,
+		svc.PauseInstance,
+		connect.WithSchema(agentsGatewayMethods.ByName("PauseInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayResumeInstanceHandler := connect.NewUnaryHandler(
+		AgentsGatewayResumeInstanceProcedure,
+		svc.ResumeInstance,
+		connect.WithSchema(agentsGatewayMethods.ByName("ResumeInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayDeleteInstanceHandler := connect.NewUnaryHandler(
+		AgentsGatewayDeleteInstanceProcedure,
+		svc.DeleteInstance,
+		connect.WithSchema(agentsGatewayMethods.ByName("DeleteInstance")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayWriteInboxItemHandler := connect.NewUnaryHandler(
+		AgentsGatewayWriteInboxItemProcedure,
+		svc.WriteInboxItem,
+		connect.WithSchema(agentsGatewayMethods.ByName("WriteInboxItem")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayGetUnackedInboxItemsHandler := connect.NewUnaryHandler(
+		AgentsGatewayGetUnackedInboxItemsProcedure,
+		svc.GetUnackedInboxItems,
+		connect.WithSchema(agentsGatewayMethods.ByName("GetUnackedInboxItems")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayAckInboxItemsHandler := connect.NewUnaryHandler(
+		AgentsGatewayAckInboxItemsProcedure,
+		svc.AckInboxItems,
+		connect.WithSchema(agentsGatewayMethods.ByName("AckInboxItems")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayGetUnackedInboxCountHandler := connect.NewUnaryHandler(
+		AgentsGatewayGetUnackedInboxCountProcedure,
+		svc.GetUnackedInboxCount,
+		connect.WithSchema(agentsGatewayMethods.ByName("GetUnackedInboxCount")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentsGatewayCreateVolumeHandler := connect.NewUnaryHandler(
@@ -1177,6 +1708,48 @@ func NewAgentsGatewayHandler(svc AgentsGatewayHandler, opts ...connect.HandlerOp
 			agentsGatewayListAgentRolesHandler.ServeHTTP(w, r)
 		case AgentsGatewayListMyAgentRolesProcedure:
 			agentsGatewayListMyAgentRolesHandler.ServeHTTP(w, r)
+		case AgentsGatewayCreateEnvironmentProcedure:
+			agentsGatewayCreateEnvironmentHandler.ServeHTTP(w, r)
+		case AgentsGatewayGetEnvironmentProcedure:
+			agentsGatewayGetEnvironmentHandler.ServeHTTP(w, r)
+		case AgentsGatewayUpdateEnvironmentProcedure:
+			agentsGatewayUpdateEnvironmentHandler.ServeHTTP(w, r)
+		case AgentsGatewayDeleteEnvironmentProcedure:
+			agentsGatewayDeleteEnvironmentHandler.ServeHTTP(w, r)
+		case AgentsGatewayListEnvironmentsProcedure:
+			agentsGatewayListEnvironmentsHandler.ServeHTTP(w, r)
+		case AgentsGatewayCreateSandboxProcedure:
+			agentsGatewayCreateSandboxHandler.ServeHTTP(w, r)
+		case AgentsGatewayGetSandboxProcedure:
+			agentsGatewayGetSandboxHandler.ServeHTTP(w, r)
+		case AgentsGatewayListSandboxesProcedure:
+			agentsGatewayListSandboxesHandler.ServeHTTP(w, r)
+		case AgentsGatewayStopSandboxProcedure:
+			agentsGatewayStopSandboxHandler.ServeHTTP(w, r)
+		case AgentsGatewayDeleteSandboxProcedure:
+			agentsGatewayDeleteSandboxHandler.ServeHTTP(w, r)
+		case AgentsGatewayEnsureSandboxRunningProcedure:
+			agentsGatewayEnsureSandboxRunningHandler.ServeHTTP(w, r)
+		case AgentsGatewayCreateInstanceProcedure:
+			agentsGatewayCreateInstanceHandler.ServeHTTP(w, r)
+		case AgentsGatewayGetInstanceProcedure:
+			agentsGatewayGetInstanceHandler.ServeHTTP(w, r)
+		case AgentsGatewayListInstancesProcedure:
+			agentsGatewayListInstancesHandler.ServeHTTP(w, r)
+		case AgentsGatewayPauseInstanceProcedure:
+			agentsGatewayPauseInstanceHandler.ServeHTTP(w, r)
+		case AgentsGatewayResumeInstanceProcedure:
+			agentsGatewayResumeInstanceHandler.ServeHTTP(w, r)
+		case AgentsGatewayDeleteInstanceProcedure:
+			agentsGatewayDeleteInstanceHandler.ServeHTTP(w, r)
+		case AgentsGatewayWriteInboxItemProcedure:
+			agentsGatewayWriteInboxItemHandler.ServeHTTP(w, r)
+		case AgentsGatewayGetUnackedInboxItemsProcedure:
+			agentsGatewayGetUnackedInboxItemsHandler.ServeHTTP(w, r)
+		case AgentsGatewayAckInboxItemsProcedure:
+			agentsGatewayAckInboxItemsHandler.ServeHTTP(w, r)
+		case AgentsGatewayGetUnackedInboxCountProcedure:
+			agentsGatewayGetUnackedInboxCountHandler.ServeHTTP(w, r)
 		case AgentsGatewayCreateVolumeProcedure:
 			agentsGatewayCreateVolumeHandler.ServeHTTP(w, r)
 		case AgentsGatewayGetVolumeProcedure:
@@ -1296,6 +1869,90 @@ func (UnimplementedAgentsGatewayHandler) ListAgentRoles(context.Context, *connec
 
 func (UnimplementedAgentsGatewayHandler) ListMyAgentRoles(context.Context, *connect.Request[v1.ListMyAgentRolesRequest]) (*connect.Response[v1.ListMyAgentRolesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListMyAgentRoles is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) CreateEnvironment(context.Context, *connect.Request[v1.CreateEnvironmentRequest]) (*connect.Response[v1.CreateEnvironmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.CreateEnvironment is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) GetEnvironment(context.Context, *connect.Request[v1.GetEnvironmentRequest]) (*connect.Response[v1.GetEnvironmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.GetEnvironment is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) UpdateEnvironment(context.Context, *connect.Request[v1.UpdateEnvironmentRequest]) (*connect.Response[v1.UpdateEnvironmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.UpdateEnvironment is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) DeleteEnvironment(context.Context, *connect.Request[v1.DeleteEnvironmentRequest]) (*connect.Response[v1.DeleteEnvironmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.DeleteEnvironment is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListEnvironments is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) CreateSandbox(context.Context, *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.CreateSandbox is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) GetSandbox(context.Context, *connect.Request[v1.GetSandboxRequest]) (*connect.Response[v1.GetSandboxResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.GetSandbox is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ListSandboxes(context.Context, *connect.Request[v1.ListSandboxesRequest]) (*connect.Response[v1.ListSandboxesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListSandboxes is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) StopSandbox(context.Context, *connect.Request[v1.StopSandboxRequest]) (*connect.Response[v1.StopSandboxResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.StopSandbox is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) DeleteSandbox(context.Context, *connect.Request[v1.DeleteSandboxRequest]) (*connect.Response[v1.DeleteSandboxResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.DeleteSandbox is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) EnsureSandboxRunning(context.Context, *connect.Request[v1.EnsureSandboxRunningRequest]) (*connect.Response[v1.EnsureSandboxRunningResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.EnsureSandboxRunning is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) CreateInstance(context.Context, *connect.Request[v1.CreateInstanceRequest]) (*connect.Response[v1.CreateInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.CreateInstance is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) GetInstance(context.Context, *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.GetInstance is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ListInstances(context.Context, *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListInstances is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) PauseInstance(context.Context, *connect.Request[v1.PauseInstanceRequest]) (*connect.Response[v1.PauseInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.PauseInstance is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ResumeInstance(context.Context, *connect.Request[v1.ResumeInstanceRequest]) (*connect.Response[v1.ResumeInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ResumeInstance is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) DeleteInstance(context.Context, *connect.Request[v1.DeleteInstanceRequest]) (*connect.Response[v1.DeleteInstanceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.DeleteInstance is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) WriteInboxItem(context.Context, *connect.Request[v1.WriteInboxItemRequest]) (*connect.Response[v1.WriteInboxItemResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.WriteInboxItem is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) GetUnackedInboxItems(context.Context, *connect.Request[v1.GetUnackedInboxItemsRequest]) (*connect.Response[v1.GetUnackedInboxItemsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxItems is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) AckInboxItems(context.Context, *connect.Request[v1.AckInboxItemsRequest]) (*connect.Response[v1.AckInboxItemsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.AckInboxItems is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) GetUnackedInboxCount(context.Context, *connect.Request[v1.GetUnackedInboxCountRequest]) (*connect.Response[v1.GetUnackedInboxCountResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxCount is not implemented"))
 }
 
 func (UnimplementedAgentsGatewayHandler) CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error) {

@@ -1,4 +1,4 @@
-//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_llm || svc_llm_proxy || smoke)
+//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_llm || svc_llm_proxy || svc_images || smoke)
 
 package tests
 
@@ -16,7 +16,6 @@ import (
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
-	secretsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/secrets/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
@@ -310,72 +309,6 @@ func cleanupEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServic
 		if pageToken == "" {
 			return
 		}
-	}
-}
-
-func createImagePullSecret(
-	t *testing.T,
-	ctx context.Context,
-	client secretsv1.SecretsServiceClient,
-	description string,
-	registry string,
-	username string,
-	password string,
-	orgID string,
-) *secretsv1.ImagePullSecret {
-	t.Helper()
-	resp, err := client.CreateImagePullSecret(ctx, &secretsv1.CreateImagePullSecretRequest{
-		Description:    description,
-		Registry:       registry,
-		Username:       username,
-		Source:         &secretsv1.CreateImagePullSecretRequest_Value{Value: password},
-		OrganizationId: orgID,
-	})
-	if err != nil {
-		t.Fatalf("create image pull secret %q: %v", description, err)
-	}
-	secret := resp.GetImagePullSecret()
-	if secret == nil || secret.GetMeta() == nil {
-		t.Fatal("create image pull secret: nil response")
-	}
-	return secret
-}
-
-func deleteImagePullSecret(t *testing.T, ctx context.Context, client secretsv1.SecretsServiceClient, id string) {
-	t.Helper()
-	_, err := client.DeleteImagePullSecret(ctx, &secretsv1.DeleteImagePullSecretRequest{Id: id})
-	if err != nil {
-		t.Logf("cleanup: delete image pull secret %s: %v", id, err)
-	}
-}
-
-func createImagePullSecretAttachment(
-	t *testing.T,
-	ctx context.Context,
-	client agentsv1.AgentsServiceClient,
-	imagePullSecretID string,
-	agentID string,
-) *agentsv1.ImagePullSecretAttachment {
-	t.Helper()
-	resp, err := client.CreateImagePullSecretAttachment(ctx, &agentsv1.CreateImagePullSecretAttachmentRequest{
-		ImagePullSecretId: imagePullSecretID,
-		Target:            &agentsv1.CreateImagePullSecretAttachmentRequest_AgentId{AgentId: agentID},
-	})
-	if err != nil {
-		t.Fatalf("create image pull secret attachment: %v", err)
-	}
-	attachment := resp.GetImagePullSecretAttachment()
-	if attachment == nil || attachment.GetMeta() == nil {
-		t.Fatal("create image pull secret attachment: nil response")
-	}
-	return attachment
-}
-
-func deleteImagePullSecretAttachment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, id string) {
-	t.Helper()
-	_, err := client.DeleteImagePullSecretAttachment(ctx, &agentsv1.DeleteImagePullSecretAttachmentRequest{Id: id})
-	if err != nil {
-		t.Logf("cleanup: delete image pull secret attachment %s: %v", id, err)
 	}
 }
 
