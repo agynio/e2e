@@ -12,8 +12,17 @@ func testAccAgynAgentResourceBlock(t *testing.T, organizationID, name, descripti
 	env := testAccEnv(t)
 
 	return fmt.Sprintf(`
+resource "agyn_environment" "test" {
+	  organization_id     = %s
+	  name                = "tf-acc-environment"
+	  runner_id           = %q
+	  workspace_image_id  = %q
+	  workspace_image_tag = %q
+}
+
 resource "agyn_agent" "test" {
 	  organization_id = %s
+	  environment_id  = agyn_environment.test.id
 	  name         = %q
 	  description  = %q
 	  role         = %q
@@ -21,7 +30,7 @@ resource "agyn_agent" "test" {
 	  image        = %q
 	  availability = "internal"
 }
-`, organizationID, name, description, role, env.ModelID, env.AgentImage)
+`, organizationID, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, organizationID, name, description, role, env.ModelID, env.AgentImage)
 }
 
 func formatCapabilitiesLine(capabilities []string, indent string) string {

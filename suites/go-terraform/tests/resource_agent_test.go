@@ -146,8 +146,17 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+resource "agyn_environment" "test" {
+	  organization_id     = agyn_organization.test.id
+	  name                = "tf-acc-environment"
+	  runner_id           = %q
+	  workspace_image_id  = %q
+	  workspace_image_tag = %q
+}
+
 resource "agyn_agent" "test" {
 	  organization_id = agyn_organization.test.id
+	  environment_id  = agyn_environment.test.id
 	  name         = %q
 	  description  = %q
 	  role         = %q
@@ -157,7 +166,7 @@ resource "agyn_agent" "test" {
 %s
 %s
 }
-`, testAccProviderConfig(t), organizationName, title, description, role, env.ModelID, env.AgentImage, availability, nicknameLine, capabilityLine)
+`, testAccProviderConfig(t), organizationName, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, title, description, role, env.ModelID, env.AgentImage, availability, nicknameLine, capabilityLine)
 }
 
 func testAccAgynAgentInvalidConfig(t *testing.T, organizationName string) string {
@@ -170,8 +179,17 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+resource "agyn_environment" "test" {
+	  organization_id     = agyn_organization.test.id
+	  name                = "tf-acc-environment"
+	  runner_id           = %q
+	  workspace_image_id  = %q
+	  workspace_image_tag = %q
+}
+
 resource "agyn_agent" "test" {
 	  organization_id = agyn_organization.test.id
+	  environment_id  = agyn_environment.test.id
 	  name          = "invalid"
 	  role          = "invalid"
 	  model         = %q
@@ -179,7 +197,7 @@ resource "agyn_agent" "test" {
 	  availability  = "internal"
 	  configuration = "{invalid"
 }
-`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage)
+`, testAccProviderConfig(t), organizationName, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, env.ModelID, env.AgentImage)
 }
 
 func testAccAgynAgentInvalidNicknameConfig(t *testing.T, organizationName string) string {
@@ -192,8 +210,17 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+resource "agyn_environment" "test" {
+	  organization_id     = agyn_organization.test.id
+	  name                = "tf-acc-environment"
+	  runner_id           = %q
+	  workspace_image_id  = %q
+	  workspace_image_tag = %q
+}
+
 resource "agyn_agent" "test" {
 	  organization_id = agyn_organization.test.id
+	  environment_id  = agyn_environment.test.id
 	  name          = "invalid"
 	  nickname      = "Invalid Nick"
 	  role          = "invalid"
@@ -201,5 +228,5 @@ resource "agyn_agent" "test" {
 	  image         = %q
 	  availability  = "internal"
 }
-`, testAccProviderConfig(t), organizationName, env.ModelID, env.AgentImage)
+`, testAccProviderConfig(t), organizationName, env.RunnerID, env.WorkspaceImageID, env.WorkspaceImageTag, env.ModelID, env.AgentImage)
 }
