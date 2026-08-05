@@ -26,6 +26,7 @@ const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
 const EGRESS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.EgressRulesGateway';
 const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const RUNNERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.RunnersGateway';
+const IMAGES_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ImagesGateway';
 const THREADS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ThreadsGateway';
 const METERING_GATEWAY_PATH = '/api/agynio.api.gateway.v1.MeteringGateway';
 
@@ -1243,4 +1244,26 @@ export async function getRunner(page: Page, runnerId: string): Promise<RunnerWir
     throw new Error('GetRunner response missing runner.');
   }
   return response.runner;
+}
+
+type CreateImageResponseWire = {
+  image?: { meta?: { id?: string } };
+};
+
+export async function createImage(
+  page: Page,
+  opts: { organizationId: string; name: string; repository: string; type: string },
+): Promise<string> {
+  const response = await postConnect<CreateImageResponseWire>(page, IMAGES_GATEWAY_PATH, 'CreateImage', {
+    organizationId: opts.organizationId,
+    name: opts.name,
+    repository: opts.repository,
+    type: opts.type,
+    visibility: 'IMAGE_VISIBILITY_INTERNAL',
+  });
+  const imageId = response.image?.meta?.id;
+  if (!imageId) {
+    throw new Error('CreateImage response missing image id.');
+  }
+  return imageId;
 }

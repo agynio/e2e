@@ -286,10 +286,16 @@ type AgentsGatewayClient interface {
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// --- Hooks ---
+	//
+	// Deprecated: do not use.
 	CreateHook(context.Context, *connect.Request[v1.CreateHookRequest]) (*connect.Response[v1.CreateHookResponse], error)
+	// Deprecated: do not use.
 	GetHook(context.Context, *connect.Request[v1.GetHookRequest]) (*connect.Response[v1.GetHookResponse], error)
+	// Deprecated: do not use.
 	UpdateHook(context.Context, *connect.Request[v1.UpdateHookRequest]) (*connect.Response[v1.UpdateHookResponse], error)
+	// Deprecated: do not use.
 	DeleteHook(context.Context, *connect.Request[v1.DeleteHookRequest]) (*connect.Response[v1.DeleteHookResponse], error)
+	// Deprecated: do not use.
 	ListHooks(context.Context, *connect.Request[v1.ListHooksRequest]) (*connect.Response[v1.ListHooksResponse], error)
 	// --- Envs ---
 	CreateEnv(context.Context, *connect.Request[v1.CreateEnvRequest]) (*connect.Response[v1.CreateEnvResponse], error)
@@ -304,9 +310,14 @@ type AgentsGatewayClient interface {
 	DeleteInitScript(context.Context, *connect.Request[v1.DeleteInitScriptRequest]) (*connect.Response[v1.DeleteInitScriptResponse], error)
 	ListInitScripts(context.Context, *connect.Request[v1.ListInitScriptsRequest]) (*connect.Response[v1.ListInitScriptsResponse], error)
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
+	//
+	// Deprecated: do not use.
 	CreateImagePullSecretAttachment(context.Context, *connect.Request[v1.CreateImagePullSecretAttachmentRequest]) (*connect.Response[v1.CreateImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	GetImagePullSecretAttachment(context.Context, *connect.Request[v1.GetImagePullSecretAttachmentRequest]) (*connect.Response[v1.GetImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	DeleteImagePullSecretAttachment(context.Context, *connect.Request[v1.DeleteImagePullSecretAttachmentRequest]) (*connect.Response[v1.DeleteImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	ListImagePullSecretAttachments(context.Context, *connect.Request[v1.ListImagePullSecretAttachmentsRequest]) (*connect.Response[v1.ListImagePullSecretAttachmentsResponse], error)
 }
 
@@ -1050,26 +1061,36 @@ func (c *agentsGatewayClient) ListSkills(ctx context.Context, req *connect.Reque
 }
 
 // CreateHook calls agynio.api.gateway.v1.AgentsGateway.CreateHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) CreateHook(ctx context.Context, req *connect.Request[v1.CreateHookRequest]) (*connect.Response[v1.CreateHookResponse], error) {
 	return c.createHook.CallUnary(ctx, req)
 }
 
 // GetHook calls agynio.api.gateway.v1.AgentsGateway.GetHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) GetHook(ctx context.Context, req *connect.Request[v1.GetHookRequest]) (*connect.Response[v1.GetHookResponse], error) {
 	return c.getHook.CallUnary(ctx, req)
 }
 
 // UpdateHook calls agynio.api.gateway.v1.AgentsGateway.UpdateHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) UpdateHook(ctx context.Context, req *connect.Request[v1.UpdateHookRequest]) (*connect.Response[v1.UpdateHookResponse], error) {
 	return c.updateHook.CallUnary(ctx, req)
 }
 
 // DeleteHook calls agynio.api.gateway.v1.AgentsGateway.DeleteHook.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) DeleteHook(ctx context.Context, req *connect.Request[v1.DeleteHookRequest]) (*connect.Response[v1.DeleteHookResponse], error) {
 	return c.deleteHook.CallUnary(ctx, req)
 }
 
 // ListHooks calls agynio.api.gateway.v1.AgentsGateway.ListHooks.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) ListHooks(ctx context.Context, req *connect.Request[v1.ListHooksRequest]) (*connect.Response[v1.ListHooksResponse], error) {
 	return c.listHooks.CallUnary(ctx, req)
 }
@@ -1126,24 +1147,32 @@ func (c *agentsGatewayClient) ListInitScripts(ctx context.Context, req *connect.
 
 // CreateImagePullSecretAttachment calls
 // agynio.api.gateway.v1.AgentsGateway.CreateImagePullSecretAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) CreateImagePullSecretAttachment(ctx context.Context, req *connect.Request[v1.CreateImagePullSecretAttachmentRequest]) (*connect.Response[v1.CreateImagePullSecretAttachmentResponse], error) {
 	return c.createImagePullSecretAttachment.CallUnary(ctx, req)
 }
 
 // GetImagePullSecretAttachment calls
 // agynio.api.gateway.v1.AgentsGateway.GetImagePullSecretAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) GetImagePullSecretAttachment(ctx context.Context, req *connect.Request[v1.GetImagePullSecretAttachmentRequest]) (*connect.Response[v1.GetImagePullSecretAttachmentResponse], error) {
 	return c.getImagePullSecretAttachment.CallUnary(ctx, req)
 }
 
 // DeleteImagePullSecretAttachment calls
 // agynio.api.gateway.v1.AgentsGateway.DeleteImagePullSecretAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) DeleteImagePullSecretAttachment(ctx context.Context, req *connect.Request[v1.DeleteImagePullSecretAttachmentRequest]) (*connect.Response[v1.DeleteImagePullSecretAttachmentResponse], error) {
 	return c.deleteImagePullSecretAttachment.CallUnary(ctx, req)
 }
 
 // ListImagePullSecretAttachments calls
 // agynio.api.gateway.v1.AgentsGateway.ListImagePullSecretAttachments.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) ListImagePullSecretAttachments(ctx context.Context, req *connect.Request[v1.ListImagePullSecretAttachmentsRequest]) (*connect.Response[v1.ListImagePullSecretAttachmentsResponse], error) {
 	return c.listImagePullSecretAttachments.CallUnary(ctx, req)
 }
@@ -1209,10 +1238,16 @@ type AgentsGatewayHandler interface {
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// --- Hooks ---
+	//
+	// Deprecated: do not use.
 	CreateHook(context.Context, *connect.Request[v1.CreateHookRequest]) (*connect.Response[v1.CreateHookResponse], error)
+	// Deprecated: do not use.
 	GetHook(context.Context, *connect.Request[v1.GetHookRequest]) (*connect.Response[v1.GetHookResponse], error)
+	// Deprecated: do not use.
 	UpdateHook(context.Context, *connect.Request[v1.UpdateHookRequest]) (*connect.Response[v1.UpdateHookResponse], error)
+	// Deprecated: do not use.
 	DeleteHook(context.Context, *connect.Request[v1.DeleteHookRequest]) (*connect.Response[v1.DeleteHookResponse], error)
+	// Deprecated: do not use.
 	ListHooks(context.Context, *connect.Request[v1.ListHooksRequest]) (*connect.Response[v1.ListHooksResponse], error)
 	// --- Envs ---
 	CreateEnv(context.Context, *connect.Request[v1.CreateEnvRequest]) (*connect.Response[v1.CreateEnvResponse], error)
@@ -1227,9 +1262,14 @@ type AgentsGatewayHandler interface {
 	DeleteInitScript(context.Context, *connect.Request[v1.DeleteInitScriptRequest]) (*connect.Response[v1.DeleteInitScriptResponse], error)
 	ListInitScripts(context.Context, *connect.Request[v1.ListInitScriptsRequest]) (*connect.Response[v1.ListInitScriptsResponse], error)
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
+	//
+	// Deprecated: do not use.
 	CreateImagePullSecretAttachment(context.Context, *connect.Request[v1.CreateImagePullSecretAttachmentRequest]) (*connect.Response[v1.CreateImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	GetImagePullSecretAttachment(context.Context, *connect.Request[v1.GetImagePullSecretAttachmentRequest]) (*connect.Response[v1.GetImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	DeleteImagePullSecretAttachment(context.Context, *connect.Request[v1.DeleteImagePullSecretAttachmentRequest]) (*connect.Response[v1.DeleteImagePullSecretAttachmentResponse], error)
+	// Deprecated: do not use.
 	ListImagePullSecretAttachments(context.Context, *connect.Request[v1.ListImagePullSecretAttachmentsRequest]) (*connect.Response[v1.ListImagePullSecretAttachmentsResponse], error)
 }
 

@@ -152,11 +152,16 @@ type AgentsGatewayClient interface {
 	UpdateSkill(ctx context.Context, in *v1.UpdateSkillRequest, opts ...grpc.CallOption) (*v1.UpdateSkillResponse, error)
 	DeleteSkill(ctx context.Context, in *v1.DeleteSkillRequest, opts ...grpc.CallOption) (*v1.DeleteSkillResponse, error)
 	ListSkills(ctx context.Context, in *v1.ListSkillsRequest, opts ...grpc.CallOption) (*v1.ListSkillsResponse, error)
+	// Deprecated: Do not use.
 	// --- Hooks ---
 	CreateHook(ctx context.Context, in *v1.CreateHookRequest, opts ...grpc.CallOption) (*v1.CreateHookResponse, error)
+	// Deprecated: Do not use.
 	GetHook(ctx context.Context, in *v1.GetHookRequest, opts ...grpc.CallOption) (*v1.GetHookResponse, error)
+	// Deprecated: Do not use.
 	UpdateHook(ctx context.Context, in *v1.UpdateHookRequest, opts ...grpc.CallOption) (*v1.UpdateHookResponse, error)
+	// Deprecated: Do not use.
 	DeleteHook(ctx context.Context, in *v1.DeleteHookRequest, opts ...grpc.CallOption) (*v1.DeleteHookResponse, error)
+	// Deprecated: Do not use.
 	ListHooks(ctx context.Context, in *v1.ListHooksRequest, opts ...grpc.CallOption) (*v1.ListHooksResponse, error)
 	// --- Envs ---
 	CreateEnv(ctx context.Context, in *v1.CreateEnvRequest, opts ...grpc.CallOption) (*v1.CreateEnvResponse, error)
@@ -170,10 +175,14 @@ type AgentsGatewayClient interface {
 	UpdateInitScript(ctx context.Context, in *v1.UpdateInitScriptRequest, opts ...grpc.CallOption) (*v1.UpdateInitScriptResponse, error)
 	DeleteInitScript(ctx context.Context, in *v1.DeleteInitScriptRequest, opts ...grpc.CallOption) (*v1.DeleteInitScriptResponse, error)
 	ListInitScripts(ctx context.Context, in *v1.ListInitScriptsRequest, opts ...grpc.CallOption) (*v1.ListInitScriptsResponse, error)
+	// Deprecated: Do not use.
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
 	CreateImagePullSecretAttachment(ctx context.Context, in *v1.CreateImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	GetImagePullSecretAttachment(ctx context.Context, in *v1.GetImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.GetImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	DeleteImagePullSecretAttachment(ctx context.Context, in *v1.DeleteImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	ListImagePullSecretAttachments(ctx context.Context, in *v1.ListImagePullSecretAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListImagePullSecretAttachmentsResponse, error)
 }
 
@@ -675,6 +684,7 @@ func (c *agentsGatewayClient) ListSkills(ctx context.Context, in *v1.ListSkillsR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) CreateHook(ctx context.Context, in *v1.CreateHookRequest, opts ...grpc.CallOption) (*v1.CreateHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.CreateHookResponse)
@@ -685,6 +695,7 @@ func (c *agentsGatewayClient) CreateHook(ctx context.Context, in *v1.CreateHookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) GetHook(ctx context.Context, in *v1.GetHookRequest, opts ...grpc.CallOption) (*v1.GetHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetHookResponse)
@@ -695,6 +706,7 @@ func (c *agentsGatewayClient) GetHook(ctx context.Context, in *v1.GetHookRequest
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) UpdateHook(ctx context.Context, in *v1.UpdateHookRequest, opts ...grpc.CallOption) (*v1.UpdateHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.UpdateHookResponse)
@@ -705,6 +717,7 @@ func (c *agentsGatewayClient) UpdateHook(ctx context.Context, in *v1.UpdateHookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) DeleteHook(ctx context.Context, in *v1.DeleteHookRequest, opts ...grpc.CallOption) (*v1.DeleteHookResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.DeleteHookResponse)
@@ -715,6 +728,7 @@ func (c *agentsGatewayClient) DeleteHook(ctx context.Context, in *v1.DeleteHookR
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) ListHooks(ctx context.Context, in *v1.ListHooksRequest, opts ...grpc.CallOption) (*v1.ListHooksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListHooksResponse)
@@ -825,6 +839,7 @@ func (c *agentsGatewayClient) ListInitScripts(ctx context.Context, in *v1.ListIn
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) CreateImagePullSecretAttachment(ctx context.Context, in *v1.CreateImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateImagePullSecretAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.CreateImagePullSecretAttachmentResponse)
@@ -835,6 +850,7 @@ func (c *agentsGatewayClient) CreateImagePullSecretAttachment(ctx context.Contex
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) GetImagePullSecretAttachment(ctx context.Context, in *v1.GetImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.GetImagePullSecretAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetImagePullSecretAttachmentResponse)
@@ -845,6 +861,7 @@ func (c *agentsGatewayClient) GetImagePullSecretAttachment(ctx context.Context, 
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) DeleteImagePullSecretAttachment(ctx context.Context, in *v1.DeleteImagePullSecretAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteImagePullSecretAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.DeleteImagePullSecretAttachmentResponse)
@@ -855,6 +872,7 @@ func (c *agentsGatewayClient) DeleteImagePullSecretAttachment(ctx context.Contex
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) ListImagePullSecretAttachments(ctx context.Context, in *v1.ListImagePullSecretAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListImagePullSecretAttachmentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListImagePullSecretAttachmentsResponse)
@@ -927,11 +945,16 @@ type AgentsGatewayServer interface {
 	UpdateSkill(context.Context, *v1.UpdateSkillRequest) (*v1.UpdateSkillResponse, error)
 	DeleteSkill(context.Context, *v1.DeleteSkillRequest) (*v1.DeleteSkillResponse, error)
 	ListSkills(context.Context, *v1.ListSkillsRequest) (*v1.ListSkillsResponse, error)
+	// Deprecated: Do not use.
 	// --- Hooks ---
 	CreateHook(context.Context, *v1.CreateHookRequest) (*v1.CreateHookResponse, error)
+	// Deprecated: Do not use.
 	GetHook(context.Context, *v1.GetHookRequest) (*v1.GetHookResponse, error)
+	// Deprecated: Do not use.
 	UpdateHook(context.Context, *v1.UpdateHookRequest) (*v1.UpdateHookResponse, error)
+	// Deprecated: Do not use.
 	DeleteHook(context.Context, *v1.DeleteHookRequest) (*v1.DeleteHookResponse, error)
+	// Deprecated: Do not use.
 	ListHooks(context.Context, *v1.ListHooksRequest) (*v1.ListHooksResponse, error)
 	// --- Envs ---
 	CreateEnv(context.Context, *v1.CreateEnvRequest) (*v1.CreateEnvResponse, error)
@@ -945,10 +968,14 @@ type AgentsGatewayServer interface {
 	UpdateInitScript(context.Context, *v1.UpdateInitScriptRequest) (*v1.UpdateInitScriptResponse, error)
 	DeleteInitScript(context.Context, *v1.DeleteInitScriptRequest) (*v1.DeleteInitScriptResponse, error)
 	ListInitScripts(context.Context, *v1.ListInitScriptsRequest) (*v1.ListInitScriptsResponse, error)
+	// Deprecated: Do not use.
 	// --- Image Pull Secret Attachments (no Update - immutable) ---
 	CreateImagePullSecretAttachment(context.Context, *v1.CreateImagePullSecretAttachmentRequest) (*v1.CreateImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	GetImagePullSecretAttachment(context.Context, *v1.GetImagePullSecretAttachmentRequest) (*v1.GetImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	DeleteImagePullSecretAttachment(context.Context, *v1.DeleteImagePullSecretAttachmentRequest) (*v1.DeleteImagePullSecretAttachmentResponse, error)
+	// Deprecated: Do not use.
 	ListImagePullSecretAttachments(context.Context, *v1.ListImagePullSecretAttachmentsRequest) (*v1.ListImagePullSecretAttachmentsResponse, error)
 }
 

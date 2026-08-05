@@ -25,7 +25,7 @@ var File_agynio_api_gateway_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agynio_api_gateway_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\"agynio/api/gateway/v1/agents.proto\x12\x15agynio.api.gateway.v1\x1a!agynio/api/agents/v1/agents.proto2\xc89\n" +
+	"\"agynio/api/gateway/v1/agents.proto\x12\x15agynio.api.gateway.v1\x1a!agynio/api/agents/v1/agents.proto2\xf59\n" +
 	"\rAgentsGateway\x12b\n" +
 	"\vCreateAgent\x12(.agynio.api.agents.v1.CreateAgentRequest\x1a).agynio.api.agents.v1.CreateAgentResponse\x12Y\n" +
 	"\bGetAgent\x12%.agynio.api.agents.v1.GetAgentRequest\x1a&.agynio.api.agents.v1.GetAgentResponse\x12b\n" +
@@ -78,15 +78,15 @@ const file_agynio_api_gateway_v1_agents_proto_rawDesc = "" +
 	"\vUpdateSkill\x12(.agynio.api.agents.v1.UpdateSkillRequest\x1a).agynio.api.agents.v1.UpdateSkillResponse\x12b\n" +
 	"\vDeleteSkill\x12(.agynio.api.agents.v1.DeleteSkillRequest\x1a).agynio.api.agents.v1.DeleteSkillResponse\x12_\n" +
 	"\n" +
-	"ListSkills\x12'.agynio.api.agents.v1.ListSkillsRequest\x1a(.agynio.api.agents.v1.ListSkillsResponse\x12_\n" +
+	"ListSkills\x12'.agynio.api.agents.v1.ListSkillsRequest\x1a(.agynio.api.agents.v1.ListSkillsResponse\x12d\n" +
 	"\n" +
-	"CreateHook\x12'.agynio.api.agents.v1.CreateHookRequest\x1a(.agynio.api.agents.v1.CreateHookResponse\x12V\n" +
-	"\aGetHook\x12$.agynio.api.agents.v1.GetHookRequest\x1a%.agynio.api.agents.v1.GetHookResponse\x12_\n" +
+	"CreateHook\x12'.agynio.api.agents.v1.CreateHookRequest\x1a(.agynio.api.agents.v1.CreateHookResponse\"\x03\x88\x02\x01\x12[\n" +
+	"\aGetHook\x12$.agynio.api.agents.v1.GetHookRequest\x1a%.agynio.api.agents.v1.GetHookResponse\"\x03\x88\x02\x01\x12d\n" +
 	"\n" +
-	"UpdateHook\x12'.agynio.api.agents.v1.UpdateHookRequest\x1a(.agynio.api.agents.v1.UpdateHookResponse\x12_\n" +
+	"UpdateHook\x12'.agynio.api.agents.v1.UpdateHookRequest\x1a(.agynio.api.agents.v1.UpdateHookResponse\"\x03\x88\x02\x01\x12d\n" +
 	"\n" +
-	"DeleteHook\x12'.agynio.api.agents.v1.DeleteHookRequest\x1a(.agynio.api.agents.v1.DeleteHookResponse\x12\\\n" +
-	"\tListHooks\x12&.agynio.api.agents.v1.ListHooksRequest\x1a'.agynio.api.agents.v1.ListHooksResponse\x12\\\n" +
+	"DeleteHook\x12'.agynio.api.agents.v1.DeleteHookRequest\x1a(.agynio.api.agents.v1.DeleteHookResponse\"\x03\x88\x02\x01\x12a\n" +
+	"\tListHooks\x12&.agynio.api.agents.v1.ListHooksRequest\x1a'.agynio.api.agents.v1.ListHooksResponse\"\x03\x88\x02\x01\x12\\\n" +
 	"\tCreateEnv\x12&.agynio.api.agents.v1.CreateEnvRequest\x1a'.agynio.api.agents.v1.CreateEnvResponse\x12S\n" +
 	"\x06GetEnv\x12#.agynio.api.agents.v1.GetEnvRequest\x1a$.agynio.api.agents.v1.GetEnvResponse\x12\\\n" +
 	"\tUpdateEnv\x12&.agynio.api.agents.v1.UpdateEnvRequest\x1a'.agynio.api.agents.v1.UpdateEnvResponse\x12\\\n" +
@@ -96,11 +96,11 @@ const file_agynio_api_gateway_v1_agents_proto_rawDesc = "" +
 	"\rGetInitScript\x12*.agynio.api.agents.v1.GetInitScriptRequest\x1a+.agynio.api.agents.v1.GetInitScriptResponse\x12q\n" +
 	"\x10UpdateInitScript\x12-.agynio.api.agents.v1.UpdateInitScriptRequest\x1a..agynio.api.agents.v1.UpdateInitScriptResponse\x12q\n" +
 	"\x10DeleteInitScript\x12-.agynio.api.agents.v1.DeleteInitScriptRequest\x1a..agynio.api.agents.v1.DeleteInitScriptResponse\x12n\n" +
-	"\x0fListInitScripts\x12,.agynio.api.agents.v1.ListInitScriptsRequest\x1a-.agynio.api.agents.v1.ListInitScriptsResponse\x12\x9e\x01\n" +
-	"\x1fCreateImagePullSecretAttachment\x12<.agynio.api.agents.v1.CreateImagePullSecretAttachmentRequest\x1a=.agynio.api.agents.v1.CreateImagePullSecretAttachmentResponse\x12\x95\x01\n" +
-	"\x1cGetImagePullSecretAttachment\x129.agynio.api.agents.v1.GetImagePullSecretAttachmentRequest\x1a:.agynio.api.agents.v1.GetImagePullSecretAttachmentResponse\x12\x9e\x01\n" +
-	"\x1fDeleteImagePullSecretAttachment\x12<.agynio.api.agents.v1.DeleteImagePullSecretAttachmentRequest\x1a=.agynio.api.agents.v1.DeleteImagePullSecretAttachmentResponse\x12\x9b\x01\n" +
-	"\x1eListImagePullSecretAttachments\x12;.agynio.api.agents.v1.ListImagePullSecretAttachmentsRequest\x1a<.agynio.api.agents.v1.ListImagePullSecretAttachmentsResponseB\xed\x01\n" +
+	"\x0fListInitScripts\x12,.agynio.api.agents.v1.ListInitScriptsRequest\x1a-.agynio.api.agents.v1.ListInitScriptsResponse\x12\xa3\x01\n" +
+	"\x1fCreateImagePullSecretAttachment\x12<.agynio.api.agents.v1.CreateImagePullSecretAttachmentRequest\x1a=.agynio.api.agents.v1.CreateImagePullSecretAttachmentResponse\"\x03\x88\x02\x01\x12\x9a\x01\n" +
+	"\x1cGetImagePullSecretAttachment\x129.agynio.api.agents.v1.GetImagePullSecretAttachmentRequest\x1a:.agynio.api.agents.v1.GetImagePullSecretAttachmentResponse\"\x03\x88\x02\x01\x12\xa3\x01\n" +
+	"\x1fDeleteImagePullSecretAttachment\x12<.agynio.api.agents.v1.DeleteImagePullSecretAttachmentRequest\x1a=.agynio.api.agents.v1.DeleteImagePullSecretAttachmentResponse\"\x03\x88\x02\x01\x12\xa0\x01\n" +
+	"\x1eListImagePullSecretAttachments\x12;.agynio.api.agents.v1.ListImagePullSecretAttachmentsRequest\x1a<.agynio.api.agents.v1.ListImagePullSecretAttachmentsResponse\"\x03\x88\x02\x01B\xed\x01\n" +
 	"\x19com.agynio.api.gateway.v1B\vAgentsProtoP\x01ZLgithub.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/gateway/v1;gatewayv1\xa2\x02\x03AAG\xaa\x02\x15Agynio.Api.Gateway.V1\xca\x02\x15Agynio\\Api\\Gateway\\V1\xe2\x02!Agynio\\Api\\Gateway\\V1\\GPBMetadata\xea\x02\x18Agynio::Api::Gateway::V1b\x06proto3"
 
 var file_agynio_api_gateway_v1_agents_proto_goTypes = []any{
