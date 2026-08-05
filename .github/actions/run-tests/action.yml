@@ -156,11 +156,11 @@ runs:
         # agent-reply flake kept reproducing in a service whose workflow pinned
         # a version predating its fix. Resolution failure is fatal: falling back
         # to some hardcoded tag is the behaviour this replaces.
-        codex_init_image="$(latest_image agent-init-codex)"
-        agn_init_image="$(latest_image agent-init-agn)"
-        claude_init_image="$(latest_image agent-init-claude)"
+        codex_init_image="$(latest_image agyn-runtime-codex)"
+        agn_init_image="$(latest_image agyn-runtime-agn)"
+        claude_init_image="$(latest_image agyn-runtime-claude)"
 
-        # No agynio/agent-init image is published; the codex init image stands in.
+        # No agynio/agent-runtime image is published; the codex runtime stands in.
         {
           echo "CODEX_INIT_IMAGE=$codex_init_image"
           echo "AGYN_AGENT_INIT_IMAGE=$codex_init_image"
