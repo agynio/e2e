@@ -10,7 +10,7 @@ import { setSelectedOrganization } from './organization-helpers';
 
 const defaultTestLlmEndpoint = 'https://testllm.dev/v1/org/agynio/suite/codex/responses';
 const llmEndpoint = process.env.E2E_TEST_LLM_ENDPOINT ?? defaultTestLlmEndpoint;
-const testLlmRemoteName = process.env.E2E_TEST_LLM_REMOTE_NAME ?? 'simple-hello';
+const testLlmRemoteName = process.env.E2E_TEST_LLM_REMOTE_NAME ?? 'summarize-file';
 
 test.describe('file-upload', {
   tag: [
