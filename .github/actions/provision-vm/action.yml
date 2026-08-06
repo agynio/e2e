@@ -56,8 +56,10 @@ runs:
       run: |
         set -euo pipefail
         before=$(df -BG --output=avail / | awk 'NR==2{gsub("G","");print $1}')
+        # Not AGENT_TOOLSDIRECTORY: the caller's own tools live there, and a
+        # job that set one up still has to tear it down afterwards.
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-                    /usr/local/share/boost "${AGENT_TOOLSDIRECTORY:-}" || true
+                    /usr/local/share/boost || true
         sudo docker image prune --all --force || true
         after=$(df -BG --output=avail / | awk 'NR==2{gsub("G","");print $1}')
         echo "free disk: ${before}G -> ${after}G"
