@@ -26,12 +26,22 @@ resource "agyn_image" "test" {
 	  visibility      = "internal"
 }
 
+resource "agyn_image" "runtime" {
+	  organization_id = %s
+	  name            = "tf-acc-runtime"
+	  type            = "agent_runtime"
+	  repository      = "ghcr.io/agynio/agyn-runtime-codex"
+	  visibility      = "internal"
+}
+
 resource "agyn_environment" "test" {
 	  organization_id     = %s
 	  name                = "tf-acc-environment"
 	  runner_id           = agyn_runner.test.id
-	  workspace_image_id  = agyn_image.test.id
-	  workspace_image_tag = "latest"
+	  workspace_image_id      = agyn_image.test.id
+	  workspace_image_tag     = "latest"
+	  agent_runtime_image_id  = agyn_image.runtime.id
+	  agent_runtime_image_tag = "latest"
 }
 
 resource "agyn_agent" "test" {
@@ -44,7 +54,7 @@ resource "agyn_agent" "test" {
 	  image        = %q
 	  availability = "internal"
 }
-`, organizationID, organizationID, organizationID, organizationID, name, description, role, env.ModelID, env.AgentImage)
+`, organizationID, organizationID, organizationID, organizationID, organizationID, name, description, role, env.ModelID, env.AgentImage)
 }
 
 func formatCapabilitiesLine(capabilities []string, indent string) string {
