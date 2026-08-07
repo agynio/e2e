@@ -59,6 +59,30 @@ const (
 	LLMGatewayDeleteModelProcedure = "/agynio.api.gateway.v1.LLMGateway/DeleteModel"
 	// LLMGatewayListModelsProcedure is the fully-qualified name of the LLMGateway's ListModels RPC.
 	LLMGatewayListModelsProcedure = "/agynio.api.gateway.v1.LLMGateway/ListModels"
+	// LLMGatewayCreateSubscriptionProcedure is the fully-qualified name of the LLMGateway's
+	// CreateSubscription RPC.
+	LLMGatewayCreateSubscriptionProcedure = "/agynio.api.gateway.v1.LLMGateway/CreateSubscription"
+	// LLMGatewayGetSubscriptionProcedure is the fully-qualified name of the LLMGateway's
+	// GetSubscription RPC.
+	LLMGatewayGetSubscriptionProcedure = "/agynio.api.gateway.v1.LLMGateway/GetSubscription"
+	// LLMGatewayUpdateSubscriptionProcedure is the fully-qualified name of the LLMGateway's
+	// UpdateSubscription RPC.
+	LLMGatewayUpdateSubscriptionProcedure = "/agynio.api.gateway.v1.LLMGateway/UpdateSubscription"
+	// LLMGatewayDeleteSubscriptionProcedure is the fully-qualified name of the LLMGateway's
+	// DeleteSubscription RPC.
+	LLMGatewayDeleteSubscriptionProcedure = "/agynio.api.gateway.v1.LLMGateway/DeleteSubscription"
+	// LLMGatewayListSubscriptionsProcedure is the fully-qualified name of the LLMGateway's
+	// ListSubscriptions RPC.
+	LLMGatewayListSubscriptionsProcedure = "/agynio.api.gateway.v1.LLMGateway/ListSubscriptions"
+	// LLMGatewayCreateSubscriptionAttachmentProcedure is the fully-qualified name of the LLMGateway's
+	// CreateSubscriptionAttachment RPC.
+	LLMGatewayCreateSubscriptionAttachmentProcedure = "/agynio.api.gateway.v1.LLMGateway/CreateSubscriptionAttachment"
+	// LLMGatewayDeleteSubscriptionAttachmentProcedure is the fully-qualified name of the LLMGateway's
+	// DeleteSubscriptionAttachment RPC.
+	LLMGatewayDeleteSubscriptionAttachmentProcedure = "/agynio.api.gateway.v1.LLMGateway/DeleteSubscriptionAttachment"
+	// LLMGatewayListSubscriptionAttachmentsProcedure is the fully-qualified name of the LLMGateway's
+	// ListSubscriptionAttachments RPC.
+	LLMGatewayListSubscriptionAttachmentsProcedure = "/agynio.api.gateway.v1.LLMGateway/ListSubscriptionAttachments"
 	// LLMGatewayTestModelProcedure is the fully-qualified name of the LLMGateway's TestModel RPC.
 	LLMGatewayTestModelProcedure = "/agynio.api.gateway.v1.LLMGateway/TestModel"
 )
@@ -77,6 +101,16 @@ type LLMGatewayClient interface {
 	UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error)
 	DeleteModel(context.Context, *connect.Request[v1.DeleteModelRequest]) (*connect.Response[v1.DeleteModelResponse], error)
 	ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error)
+	// --- Subscriptions ---
+	CreateSubscription(context.Context, *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error)
+	GetSubscription(context.Context, *connect.Request[v1.GetSubscriptionRequest]) (*connect.Response[v1.GetSubscriptionResponse], error)
+	UpdateSubscription(context.Context, *connect.Request[v1.UpdateSubscriptionRequest]) (*connect.Response[v1.UpdateSubscriptionResponse], error)
+	DeleteSubscription(context.Context, *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error)
+	ListSubscriptions(context.Context, *connect.Request[v1.ListSubscriptionsRequest]) (*connect.Response[v1.ListSubscriptionsResponse], error)
+	// --- Subscription attachments ---
+	CreateSubscriptionAttachment(context.Context, *connect.Request[v1.CreateSubscriptionAttachmentRequest]) (*connect.Response[v1.CreateSubscriptionAttachmentResponse], error)
+	DeleteSubscriptionAttachment(context.Context, *connect.Request[v1.DeleteSubscriptionAttachmentRequest]) (*connect.Response[v1.DeleteSubscriptionAttachmentResponse], error)
+	ListSubscriptionAttachments(context.Context, *connect.Request[v1.ListSubscriptionAttachmentsRequest]) (*connect.Response[v1.ListSubscriptionAttachmentsResponse], error)
 	// --- Test ---
 	TestModel(context.Context, *connect.Request[v1.TestModelRequest]) (*connect.Response[v1.TestModelResponse], error)
 }
@@ -152,6 +186,54 @@ func NewLLMGatewayClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(lLMGatewayMethods.ByName("ListModels")),
 			connect.WithClientOptions(opts...),
 		),
+		createSubscription: connect.NewClient[v1.CreateSubscriptionRequest, v1.CreateSubscriptionResponse](
+			httpClient,
+			baseURL+LLMGatewayCreateSubscriptionProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("CreateSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		getSubscription: connect.NewClient[v1.GetSubscriptionRequest, v1.GetSubscriptionResponse](
+			httpClient,
+			baseURL+LLMGatewayGetSubscriptionProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("GetSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		updateSubscription: connect.NewClient[v1.UpdateSubscriptionRequest, v1.UpdateSubscriptionResponse](
+			httpClient,
+			baseURL+LLMGatewayUpdateSubscriptionProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("UpdateSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteSubscription: connect.NewClient[v1.DeleteSubscriptionRequest, v1.DeleteSubscriptionResponse](
+			httpClient,
+			baseURL+LLMGatewayDeleteSubscriptionProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("DeleteSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		listSubscriptions: connect.NewClient[v1.ListSubscriptionsRequest, v1.ListSubscriptionsResponse](
+			httpClient,
+			baseURL+LLMGatewayListSubscriptionsProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("ListSubscriptions")),
+			connect.WithClientOptions(opts...),
+		),
+		createSubscriptionAttachment: connect.NewClient[v1.CreateSubscriptionAttachmentRequest, v1.CreateSubscriptionAttachmentResponse](
+			httpClient,
+			baseURL+LLMGatewayCreateSubscriptionAttachmentProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("CreateSubscriptionAttachment")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteSubscriptionAttachment: connect.NewClient[v1.DeleteSubscriptionAttachmentRequest, v1.DeleteSubscriptionAttachmentResponse](
+			httpClient,
+			baseURL+LLMGatewayDeleteSubscriptionAttachmentProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("DeleteSubscriptionAttachment")),
+			connect.WithClientOptions(opts...),
+		),
+		listSubscriptionAttachments: connect.NewClient[v1.ListSubscriptionAttachmentsRequest, v1.ListSubscriptionAttachmentsResponse](
+			httpClient,
+			baseURL+LLMGatewayListSubscriptionAttachmentsProcedure,
+			connect.WithSchema(lLMGatewayMethods.ByName("ListSubscriptionAttachments")),
+			connect.WithClientOptions(opts...),
+		),
 		testModel: connect.NewClient[v1.TestModelRequest, v1.TestModelResponse](
 			httpClient,
 			baseURL+LLMGatewayTestModelProcedure,
@@ -163,17 +245,25 @@ func NewLLMGatewayClient(httpClient connect.HTTPClient, baseURL string, opts ...
 
 // lLMGatewayClient implements LLMGatewayClient.
 type lLMGatewayClient struct {
-	createLLMProvider *connect.Client[v1.CreateLLMProviderRequest, v1.CreateLLMProviderResponse]
-	getLLMProvider    *connect.Client[v1.GetLLMProviderRequest, v1.GetLLMProviderResponse]
-	updateLLMProvider *connect.Client[v1.UpdateLLMProviderRequest, v1.UpdateLLMProviderResponse]
-	deleteLLMProvider *connect.Client[v1.DeleteLLMProviderRequest, v1.DeleteLLMProviderResponse]
-	listLLMProviders  *connect.Client[v1.ListLLMProvidersRequest, v1.ListLLMProvidersResponse]
-	createModel       *connect.Client[v1.CreateModelRequest, v1.CreateModelResponse]
-	getModel          *connect.Client[v1.GetModelRequest, v1.GetModelResponse]
-	updateModel       *connect.Client[v1.UpdateModelRequest, v1.UpdateModelResponse]
-	deleteModel       *connect.Client[v1.DeleteModelRequest, v1.DeleteModelResponse]
-	listModels        *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
-	testModel         *connect.Client[v1.TestModelRequest, v1.TestModelResponse]
+	createLLMProvider            *connect.Client[v1.CreateLLMProviderRequest, v1.CreateLLMProviderResponse]
+	getLLMProvider               *connect.Client[v1.GetLLMProviderRequest, v1.GetLLMProviderResponse]
+	updateLLMProvider            *connect.Client[v1.UpdateLLMProviderRequest, v1.UpdateLLMProviderResponse]
+	deleteLLMProvider            *connect.Client[v1.DeleteLLMProviderRequest, v1.DeleteLLMProviderResponse]
+	listLLMProviders             *connect.Client[v1.ListLLMProvidersRequest, v1.ListLLMProvidersResponse]
+	createModel                  *connect.Client[v1.CreateModelRequest, v1.CreateModelResponse]
+	getModel                     *connect.Client[v1.GetModelRequest, v1.GetModelResponse]
+	updateModel                  *connect.Client[v1.UpdateModelRequest, v1.UpdateModelResponse]
+	deleteModel                  *connect.Client[v1.DeleteModelRequest, v1.DeleteModelResponse]
+	listModels                   *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
+	createSubscription           *connect.Client[v1.CreateSubscriptionRequest, v1.CreateSubscriptionResponse]
+	getSubscription              *connect.Client[v1.GetSubscriptionRequest, v1.GetSubscriptionResponse]
+	updateSubscription           *connect.Client[v1.UpdateSubscriptionRequest, v1.UpdateSubscriptionResponse]
+	deleteSubscription           *connect.Client[v1.DeleteSubscriptionRequest, v1.DeleteSubscriptionResponse]
+	listSubscriptions            *connect.Client[v1.ListSubscriptionsRequest, v1.ListSubscriptionsResponse]
+	createSubscriptionAttachment *connect.Client[v1.CreateSubscriptionAttachmentRequest, v1.CreateSubscriptionAttachmentResponse]
+	deleteSubscriptionAttachment *connect.Client[v1.DeleteSubscriptionAttachmentRequest, v1.DeleteSubscriptionAttachmentResponse]
+	listSubscriptionAttachments  *connect.Client[v1.ListSubscriptionAttachmentsRequest, v1.ListSubscriptionAttachmentsResponse]
+	testModel                    *connect.Client[v1.TestModelRequest, v1.TestModelResponse]
 }
 
 // CreateLLMProvider calls agynio.api.gateway.v1.LLMGateway.CreateLLMProvider.
@@ -226,6 +316,46 @@ func (c *lLMGatewayClient) ListModels(ctx context.Context, req *connect.Request[
 	return c.listModels.CallUnary(ctx, req)
 }
 
+// CreateSubscription calls agynio.api.gateway.v1.LLMGateway.CreateSubscription.
+func (c *lLMGatewayClient) CreateSubscription(ctx context.Context, req *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error) {
+	return c.createSubscription.CallUnary(ctx, req)
+}
+
+// GetSubscription calls agynio.api.gateway.v1.LLMGateway.GetSubscription.
+func (c *lLMGatewayClient) GetSubscription(ctx context.Context, req *connect.Request[v1.GetSubscriptionRequest]) (*connect.Response[v1.GetSubscriptionResponse], error) {
+	return c.getSubscription.CallUnary(ctx, req)
+}
+
+// UpdateSubscription calls agynio.api.gateway.v1.LLMGateway.UpdateSubscription.
+func (c *lLMGatewayClient) UpdateSubscription(ctx context.Context, req *connect.Request[v1.UpdateSubscriptionRequest]) (*connect.Response[v1.UpdateSubscriptionResponse], error) {
+	return c.updateSubscription.CallUnary(ctx, req)
+}
+
+// DeleteSubscription calls agynio.api.gateway.v1.LLMGateway.DeleteSubscription.
+func (c *lLMGatewayClient) DeleteSubscription(ctx context.Context, req *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error) {
+	return c.deleteSubscription.CallUnary(ctx, req)
+}
+
+// ListSubscriptions calls agynio.api.gateway.v1.LLMGateway.ListSubscriptions.
+func (c *lLMGatewayClient) ListSubscriptions(ctx context.Context, req *connect.Request[v1.ListSubscriptionsRequest]) (*connect.Response[v1.ListSubscriptionsResponse], error) {
+	return c.listSubscriptions.CallUnary(ctx, req)
+}
+
+// CreateSubscriptionAttachment calls agynio.api.gateway.v1.LLMGateway.CreateSubscriptionAttachment.
+func (c *lLMGatewayClient) CreateSubscriptionAttachment(ctx context.Context, req *connect.Request[v1.CreateSubscriptionAttachmentRequest]) (*connect.Response[v1.CreateSubscriptionAttachmentResponse], error) {
+	return c.createSubscriptionAttachment.CallUnary(ctx, req)
+}
+
+// DeleteSubscriptionAttachment calls agynio.api.gateway.v1.LLMGateway.DeleteSubscriptionAttachment.
+func (c *lLMGatewayClient) DeleteSubscriptionAttachment(ctx context.Context, req *connect.Request[v1.DeleteSubscriptionAttachmentRequest]) (*connect.Response[v1.DeleteSubscriptionAttachmentResponse], error) {
+	return c.deleteSubscriptionAttachment.CallUnary(ctx, req)
+}
+
+// ListSubscriptionAttachments calls agynio.api.gateway.v1.LLMGateway.ListSubscriptionAttachments.
+func (c *lLMGatewayClient) ListSubscriptionAttachments(ctx context.Context, req *connect.Request[v1.ListSubscriptionAttachmentsRequest]) (*connect.Response[v1.ListSubscriptionAttachmentsResponse], error) {
+	return c.listSubscriptionAttachments.CallUnary(ctx, req)
+}
+
 // TestModel calls agynio.api.gateway.v1.LLMGateway.TestModel.
 func (c *lLMGatewayClient) TestModel(ctx context.Context, req *connect.Request[v1.TestModelRequest]) (*connect.Response[v1.TestModelResponse], error) {
 	return c.testModel.CallUnary(ctx, req)
@@ -245,6 +375,16 @@ type LLMGatewayHandler interface {
 	UpdateModel(context.Context, *connect.Request[v1.UpdateModelRequest]) (*connect.Response[v1.UpdateModelResponse], error)
 	DeleteModel(context.Context, *connect.Request[v1.DeleteModelRequest]) (*connect.Response[v1.DeleteModelResponse], error)
 	ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error)
+	// --- Subscriptions ---
+	CreateSubscription(context.Context, *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error)
+	GetSubscription(context.Context, *connect.Request[v1.GetSubscriptionRequest]) (*connect.Response[v1.GetSubscriptionResponse], error)
+	UpdateSubscription(context.Context, *connect.Request[v1.UpdateSubscriptionRequest]) (*connect.Response[v1.UpdateSubscriptionResponse], error)
+	DeleteSubscription(context.Context, *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error)
+	ListSubscriptions(context.Context, *connect.Request[v1.ListSubscriptionsRequest]) (*connect.Response[v1.ListSubscriptionsResponse], error)
+	// --- Subscription attachments ---
+	CreateSubscriptionAttachment(context.Context, *connect.Request[v1.CreateSubscriptionAttachmentRequest]) (*connect.Response[v1.CreateSubscriptionAttachmentResponse], error)
+	DeleteSubscriptionAttachment(context.Context, *connect.Request[v1.DeleteSubscriptionAttachmentRequest]) (*connect.Response[v1.DeleteSubscriptionAttachmentResponse], error)
+	ListSubscriptionAttachments(context.Context, *connect.Request[v1.ListSubscriptionAttachmentsRequest]) (*connect.Response[v1.ListSubscriptionAttachmentsResponse], error)
 	// --- Test ---
 	TestModel(context.Context, *connect.Request[v1.TestModelRequest]) (*connect.Response[v1.TestModelResponse], error)
 }
@@ -316,6 +456,54 @@ func NewLLMGatewayHandler(svc LLMGatewayHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(lLMGatewayMethods.ByName("ListModels")),
 		connect.WithHandlerOptions(opts...),
 	)
+	lLMGatewayCreateSubscriptionHandler := connect.NewUnaryHandler(
+		LLMGatewayCreateSubscriptionProcedure,
+		svc.CreateSubscription,
+		connect.WithSchema(lLMGatewayMethods.ByName("CreateSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayGetSubscriptionHandler := connect.NewUnaryHandler(
+		LLMGatewayGetSubscriptionProcedure,
+		svc.GetSubscription,
+		connect.WithSchema(lLMGatewayMethods.ByName("GetSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayUpdateSubscriptionHandler := connect.NewUnaryHandler(
+		LLMGatewayUpdateSubscriptionProcedure,
+		svc.UpdateSubscription,
+		connect.WithSchema(lLMGatewayMethods.ByName("UpdateSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayDeleteSubscriptionHandler := connect.NewUnaryHandler(
+		LLMGatewayDeleteSubscriptionProcedure,
+		svc.DeleteSubscription,
+		connect.WithSchema(lLMGatewayMethods.ByName("DeleteSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayListSubscriptionsHandler := connect.NewUnaryHandler(
+		LLMGatewayListSubscriptionsProcedure,
+		svc.ListSubscriptions,
+		connect.WithSchema(lLMGatewayMethods.ByName("ListSubscriptions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayCreateSubscriptionAttachmentHandler := connect.NewUnaryHandler(
+		LLMGatewayCreateSubscriptionAttachmentProcedure,
+		svc.CreateSubscriptionAttachment,
+		connect.WithSchema(lLMGatewayMethods.ByName("CreateSubscriptionAttachment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayDeleteSubscriptionAttachmentHandler := connect.NewUnaryHandler(
+		LLMGatewayDeleteSubscriptionAttachmentProcedure,
+		svc.DeleteSubscriptionAttachment,
+		connect.WithSchema(lLMGatewayMethods.ByName("DeleteSubscriptionAttachment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	lLMGatewayListSubscriptionAttachmentsHandler := connect.NewUnaryHandler(
+		LLMGatewayListSubscriptionAttachmentsProcedure,
+		svc.ListSubscriptionAttachments,
+		connect.WithSchema(lLMGatewayMethods.ByName("ListSubscriptionAttachments")),
+		connect.WithHandlerOptions(opts...),
+	)
 	lLMGatewayTestModelHandler := connect.NewUnaryHandler(
 		LLMGatewayTestModelProcedure,
 		svc.TestModel,
@@ -344,6 +532,22 @@ func NewLLMGatewayHandler(svc LLMGatewayHandler, opts ...connect.HandlerOption) 
 			lLMGatewayDeleteModelHandler.ServeHTTP(w, r)
 		case LLMGatewayListModelsProcedure:
 			lLMGatewayListModelsHandler.ServeHTTP(w, r)
+		case LLMGatewayCreateSubscriptionProcedure:
+			lLMGatewayCreateSubscriptionHandler.ServeHTTP(w, r)
+		case LLMGatewayGetSubscriptionProcedure:
+			lLMGatewayGetSubscriptionHandler.ServeHTTP(w, r)
+		case LLMGatewayUpdateSubscriptionProcedure:
+			lLMGatewayUpdateSubscriptionHandler.ServeHTTP(w, r)
+		case LLMGatewayDeleteSubscriptionProcedure:
+			lLMGatewayDeleteSubscriptionHandler.ServeHTTP(w, r)
+		case LLMGatewayListSubscriptionsProcedure:
+			lLMGatewayListSubscriptionsHandler.ServeHTTP(w, r)
+		case LLMGatewayCreateSubscriptionAttachmentProcedure:
+			lLMGatewayCreateSubscriptionAttachmentHandler.ServeHTTP(w, r)
+		case LLMGatewayDeleteSubscriptionAttachmentProcedure:
+			lLMGatewayDeleteSubscriptionAttachmentHandler.ServeHTTP(w, r)
+		case LLMGatewayListSubscriptionAttachmentsProcedure:
+			lLMGatewayListSubscriptionAttachmentsHandler.ServeHTTP(w, r)
 		case LLMGatewayTestModelProcedure:
 			lLMGatewayTestModelHandler.ServeHTTP(w, r)
 		default:
@@ -393,6 +597,38 @@ func (UnimplementedLLMGatewayHandler) DeleteModel(context.Context, *connect.Requ
 
 func (UnimplementedLLMGatewayHandler) ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.ListModels is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) CreateSubscription(context.Context, *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.CreateSubscription is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) GetSubscription(context.Context, *connect.Request[v1.GetSubscriptionRequest]) (*connect.Response[v1.GetSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.GetSubscription is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) UpdateSubscription(context.Context, *connect.Request[v1.UpdateSubscriptionRequest]) (*connect.Response[v1.UpdateSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.UpdateSubscription is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) DeleteSubscription(context.Context, *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.DeleteSubscription is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) ListSubscriptions(context.Context, *connect.Request[v1.ListSubscriptionsRequest]) (*connect.Response[v1.ListSubscriptionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.ListSubscriptions is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) CreateSubscriptionAttachment(context.Context, *connect.Request[v1.CreateSubscriptionAttachmentRequest]) (*connect.Response[v1.CreateSubscriptionAttachmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.CreateSubscriptionAttachment is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) DeleteSubscriptionAttachment(context.Context, *connect.Request[v1.DeleteSubscriptionAttachmentRequest]) (*connect.Response[v1.DeleteSubscriptionAttachmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.DeleteSubscriptionAttachment is not implemented"))
+}
+
+func (UnimplementedLLMGatewayHandler) ListSubscriptionAttachments(context.Context, *connect.Request[v1.ListSubscriptionAttachmentsRequest]) (*connect.Response[v1.ListSubscriptionAttachmentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.LLMGateway.ListSubscriptionAttachments is not implemented"))
 }
 
 func (UnimplementedLLMGatewayHandler) TestModel(context.Context, *connect.Request[v1.TestModelRequest]) (*connect.Response[v1.TestModelResponse], error) {

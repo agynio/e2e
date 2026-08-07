@@ -75,6 +75,15 @@ const (
 	// AgentsGatewayListEnvironmentsProcedure is the fully-qualified name of the AgentsGateway's
 	// ListEnvironments RPC.
 	AgentsGatewayListEnvironmentsProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListEnvironments"
+	// AgentsGatewaySetEnvironmentRoleProcedure is the fully-qualified name of the AgentsGateway's
+	// SetEnvironmentRole RPC.
+	AgentsGatewaySetEnvironmentRoleProcedure = "/agynio.api.gateway.v1.AgentsGateway/SetEnvironmentRole"
+	// AgentsGatewayRemoveEnvironmentRoleProcedure is the fully-qualified name of the AgentsGateway's
+	// RemoveEnvironmentRole RPC.
+	AgentsGatewayRemoveEnvironmentRoleProcedure = "/agynio.api.gateway.v1.AgentsGateway/RemoveEnvironmentRole"
+	// AgentsGatewayListEnvironmentRolesProcedure is the fully-qualified name of the AgentsGateway's
+	// ListEnvironmentRoles RPC.
+	AgentsGatewayListEnvironmentRolesProcedure = "/agynio.api.gateway.v1.AgentsGateway/ListEnvironmentRoles"
 	// AgentsGatewayCreateSandboxProcedure is the fully-qualified name of the AgentsGateway's
 	// CreateSandbox RPC.
 	AgentsGatewayCreateSandboxProcedure = "/agynio.api.gateway.v1.AgentsGateway/CreateSandbox"
@@ -243,6 +252,9 @@ type AgentsGatewayClient interface {
 	UpdateEnvironment(context.Context, *connect.Request[v1.UpdateEnvironmentRequest]) (*connect.Response[v1.UpdateEnvironmentResponse], error)
 	DeleteEnvironment(context.Context, *connect.Request[v1.DeleteEnvironmentRequest]) (*connect.Response[v1.DeleteEnvironmentResponse], error)
 	ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error)
+	SetEnvironmentRole(context.Context, *connect.Request[v1.SetEnvironmentRoleRequest]) (*connect.Response[v1.SetEnvironmentRoleResponse], error)
+	RemoveEnvironmentRole(context.Context, *connect.Request[v1.RemoveEnvironmentRoleRequest]) (*connect.Response[v1.RemoveEnvironmentRoleResponse], error)
+	ListEnvironmentRoles(context.Context, *connect.Request[v1.ListEnvironmentRolesRequest]) (*connect.Response[v1.ListEnvironmentRolesResponse], error)
 	// --- Sandboxes ---
 	CreateSandbox(context.Context, *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error)
 	GetSandbox(context.Context, *connect.Request[v1.GetSandboxRequest]) (*connect.Response[v1.GetSandboxResponse], error)
@@ -268,10 +280,15 @@ type AgentsGatewayClient interface {
 	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
 	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
-	// --- Volume Attachments (no Update) ---
+	// --- Volume Attachments (superseded by a volume's own target) ---
+	//
+	// Deprecated: do not use.
 	CreateVolumeAttachment(context.Context, *connect.Request[v1.CreateVolumeAttachmentRequest]) (*connect.Response[v1.CreateVolumeAttachmentResponse], error)
+	// Deprecated: do not use.
 	GetVolumeAttachment(context.Context, *connect.Request[v1.GetVolumeAttachmentRequest]) (*connect.Response[v1.GetVolumeAttachmentResponse], error)
+	// Deprecated: do not use.
 	DeleteVolumeAttachment(context.Context, *connect.Request[v1.DeleteVolumeAttachmentRequest]) (*connect.Response[v1.DeleteVolumeAttachmentResponse], error)
+	// Deprecated: do not use.
 	ListVolumeAttachments(context.Context, *connect.Request[v1.ListVolumeAttachmentsRequest]) (*connect.Response[v1.ListVolumeAttachmentsResponse], error)
 	// --- MCPs ---
 	CreateMcp(context.Context, *connect.Request[v1.CreateMcpRequest]) (*connect.Response[v1.CreateMcpResponse], error)
@@ -414,6 +431,24 @@ func NewAgentsGatewayClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+AgentsGatewayListEnvironmentsProcedure,
 			connect.WithSchema(agentsGatewayMethods.ByName("ListEnvironments")),
+			connect.WithClientOptions(opts...),
+		),
+		setEnvironmentRole: connect.NewClient[v1.SetEnvironmentRoleRequest, v1.SetEnvironmentRoleResponse](
+			httpClient,
+			baseURL+AgentsGatewaySetEnvironmentRoleProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("SetEnvironmentRole")),
+			connect.WithClientOptions(opts...),
+		),
+		removeEnvironmentRole: connect.NewClient[v1.RemoveEnvironmentRoleRequest, v1.RemoveEnvironmentRoleResponse](
+			httpClient,
+			baseURL+AgentsGatewayRemoveEnvironmentRoleProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("RemoveEnvironmentRole")),
+			connect.WithClientOptions(opts...),
+		),
+		listEnvironmentRoles: connect.NewClient[v1.ListEnvironmentRolesRequest, v1.ListEnvironmentRolesResponse](
+			httpClient,
+			baseURL+AgentsGatewayListEnvironmentRolesProcedure,
+			connect.WithSchema(agentsGatewayMethods.ByName("ListEnvironmentRoles")),
 			connect.WithClientOptions(opts...),
 		),
 		createSandbox: connect.NewClient[v1.CreateSandboxRequest, v1.CreateSandboxResponse](
@@ -759,6 +794,9 @@ type agentsGatewayClient struct {
 	updateEnvironment               *connect.Client[v1.UpdateEnvironmentRequest, v1.UpdateEnvironmentResponse]
 	deleteEnvironment               *connect.Client[v1.DeleteEnvironmentRequest, v1.DeleteEnvironmentResponse]
 	listEnvironments                *connect.Client[v1.ListEnvironmentsRequest, v1.ListEnvironmentsResponse]
+	setEnvironmentRole              *connect.Client[v1.SetEnvironmentRoleRequest, v1.SetEnvironmentRoleResponse]
+	removeEnvironmentRole           *connect.Client[v1.RemoveEnvironmentRoleRequest, v1.RemoveEnvironmentRoleResponse]
+	listEnvironmentRoles            *connect.Client[v1.ListEnvironmentRolesRequest, v1.ListEnvironmentRolesResponse]
 	createSandbox                   *connect.Client[v1.CreateSandboxRequest, v1.CreateSandboxResponse]
 	getSandbox                      *connect.Client[v1.GetSandboxRequest, v1.GetSandboxResponse]
 	listSandboxes                   *connect.Client[v1.ListSandboxesRequest, v1.ListSandboxesResponse]
@@ -885,6 +923,21 @@ func (c *agentsGatewayClient) ListEnvironments(ctx context.Context, req *connect
 	return c.listEnvironments.CallUnary(ctx, req)
 }
 
+// SetEnvironmentRole calls agynio.api.gateway.v1.AgentsGateway.SetEnvironmentRole.
+func (c *agentsGatewayClient) SetEnvironmentRole(ctx context.Context, req *connect.Request[v1.SetEnvironmentRoleRequest]) (*connect.Response[v1.SetEnvironmentRoleResponse], error) {
+	return c.setEnvironmentRole.CallUnary(ctx, req)
+}
+
+// RemoveEnvironmentRole calls agynio.api.gateway.v1.AgentsGateway.RemoveEnvironmentRole.
+func (c *agentsGatewayClient) RemoveEnvironmentRole(ctx context.Context, req *connect.Request[v1.RemoveEnvironmentRoleRequest]) (*connect.Response[v1.RemoveEnvironmentRoleResponse], error) {
+	return c.removeEnvironmentRole.CallUnary(ctx, req)
+}
+
+// ListEnvironmentRoles calls agynio.api.gateway.v1.AgentsGateway.ListEnvironmentRoles.
+func (c *agentsGatewayClient) ListEnvironmentRoles(ctx context.Context, req *connect.Request[v1.ListEnvironmentRolesRequest]) (*connect.Response[v1.ListEnvironmentRolesResponse], error) {
+	return c.listEnvironmentRoles.CallUnary(ctx, req)
+}
+
 // CreateSandbox calls agynio.api.gateway.v1.AgentsGateway.CreateSandbox.
 func (c *agentsGatewayClient) CreateSandbox(ctx context.Context, req *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error) {
 	return c.createSandbox.CallUnary(ctx, req)
@@ -991,21 +1044,29 @@ func (c *agentsGatewayClient) ListVolumes(ctx context.Context, req *connect.Requ
 }
 
 // CreateVolumeAttachment calls agynio.api.gateway.v1.AgentsGateway.CreateVolumeAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) CreateVolumeAttachment(ctx context.Context, req *connect.Request[v1.CreateVolumeAttachmentRequest]) (*connect.Response[v1.CreateVolumeAttachmentResponse], error) {
 	return c.createVolumeAttachment.CallUnary(ctx, req)
 }
 
 // GetVolumeAttachment calls agynio.api.gateway.v1.AgentsGateway.GetVolumeAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) GetVolumeAttachment(ctx context.Context, req *connect.Request[v1.GetVolumeAttachmentRequest]) (*connect.Response[v1.GetVolumeAttachmentResponse], error) {
 	return c.getVolumeAttachment.CallUnary(ctx, req)
 }
 
 // DeleteVolumeAttachment calls agynio.api.gateway.v1.AgentsGateway.DeleteVolumeAttachment.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) DeleteVolumeAttachment(ctx context.Context, req *connect.Request[v1.DeleteVolumeAttachmentRequest]) (*connect.Response[v1.DeleteVolumeAttachmentResponse], error) {
 	return c.deleteVolumeAttachment.CallUnary(ctx, req)
 }
 
 // ListVolumeAttachments calls agynio.api.gateway.v1.AgentsGateway.ListVolumeAttachments.
+//
+// Deprecated: do not use.
 func (c *agentsGatewayClient) ListVolumeAttachments(ctx context.Context, req *connect.Request[v1.ListVolumeAttachmentsRequest]) (*connect.Response[v1.ListVolumeAttachmentsResponse], error) {
 	return c.listVolumeAttachments.CallUnary(ctx, req)
 }
@@ -1195,6 +1256,9 @@ type AgentsGatewayHandler interface {
 	UpdateEnvironment(context.Context, *connect.Request[v1.UpdateEnvironmentRequest]) (*connect.Response[v1.UpdateEnvironmentResponse], error)
 	DeleteEnvironment(context.Context, *connect.Request[v1.DeleteEnvironmentRequest]) (*connect.Response[v1.DeleteEnvironmentResponse], error)
 	ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error)
+	SetEnvironmentRole(context.Context, *connect.Request[v1.SetEnvironmentRoleRequest]) (*connect.Response[v1.SetEnvironmentRoleResponse], error)
+	RemoveEnvironmentRole(context.Context, *connect.Request[v1.RemoveEnvironmentRoleRequest]) (*connect.Response[v1.RemoveEnvironmentRoleResponse], error)
+	ListEnvironmentRoles(context.Context, *connect.Request[v1.ListEnvironmentRolesRequest]) (*connect.Response[v1.ListEnvironmentRolesResponse], error)
 	// --- Sandboxes ---
 	CreateSandbox(context.Context, *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error)
 	GetSandbox(context.Context, *connect.Request[v1.GetSandboxRequest]) (*connect.Response[v1.GetSandboxResponse], error)
@@ -1220,10 +1284,15 @@ type AgentsGatewayHandler interface {
 	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
 	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
-	// --- Volume Attachments (no Update) ---
+	// --- Volume Attachments (superseded by a volume's own target) ---
+	//
+	// Deprecated: do not use.
 	CreateVolumeAttachment(context.Context, *connect.Request[v1.CreateVolumeAttachmentRequest]) (*connect.Response[v1.CreateVolumeAttachmentResponse], error)
+	// Deprecated: do not use.
 	GetVolumeAttachment(context.Context, *connect.Request[v1.GetVolumeAttachmentRequest]) (*connect.Response[v1.GetVolumeAttachmentResponse], error)
+	// Deprecated: do not use.
 	DeleteVolumeAttachment(context.Context, *connect.Request[v1.DeleteVolumeAttachmentRequest]) (*connect.Response[v1.DeleteVolumeAttachmentResponse], error)
+	// Deprecated: do not use.
 	ListVolumeAttachments(context.Context, *connect.Request[v1.ListVolumeAttachmentsRequest]) (*connect.Response[v1.ListVolumeAttachmentsResponse], error)
 	// --- MCPs ---
 	CreateMcp(context.Context, *connect.Request[v1.CreateMcpRequest]) (*connect.Response[v1.CreateMcpResponse], error)
@@ -1362,6 +1431,24 @@ func NewAgentsGatewayHandler(svc AgentsGatewayHandler, opts ...connect.HandlerOp
 		AgentsGatewayListEnvironmentsProcedure,
 		svc.ListEnvironments,
 		connect.WithSchema(agentsGatewayMethods.ByName("ListEnvironments")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewaySetEnvironmentRoleHandler := connect.NewUnaryHandler(
+		AgentsGatewaySetEnvironmentRoleProcedure,
+		svc.SetEnvironmentRole,
+		connect.WithSchema(agentsGatewayMethods.ByName("SetEnvironmentRole")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayRemoveEnvironmentRoleHandler := connect.NewUnaryHandler(
+		AgentsGatewayRemoveEnvironmentRoleProcedure,
+		svc.RemoveEnvironmentRole,
+		connect.WithSchema(agentsGatewayMethods.ByName("RemoveEnvironmentRole")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentsGatewayListEnvironmentRolesHandler := connect.NewUnaryHandler(
+		AgentsGatewayListEnvironmentRolesProcedure,
+		svc.ListEnvironmentRoles,
+		connect.WithSchema(agentsGatewayMethods.ByName("ListEnvironmentRoles")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentsGatewayCreateSandboxHandler := connect.NewUnaryHandler(
@@ -1718,6 +1805,12 @@ func NewAgentsGatewayHandler(svc AgentsGatewayHandler, opts ...connect.HandlerOp
 			agentsGatewayDeleteEnvironmentHandler.ServeHTTP(w, r)
 		case AgentsGatewayListEnvironmentsProcedure:
 			agentsGatewayListEnvironmentsHandler.ServeHTTP(w, r)
+		case AgentsGatewaySetEnvironmentRoleProcedure:
+			agentsGatewaySetEnvironmentRoleHandler.ServeHTTP(w, r)
+		case AgentsGatewayRemoveEnvironmentRoleProcedure:
+			agentsGatewayRemoveEnvironmentRoleHandler.ServeHTTP(w, r)
+		case AgentsGatewayListEnvironmentRolesProcedure:
+			agentsGatewayListEnvironmentRolesHandler.ServeHTTP(w, r)
 		case AgentsGatewayCreateSandboxProcedure:
 			agentsGatewayCreateSandboxHandler.ServeHTTP(w, r)
 		case AgentsGatewayGetSandboxProcedure:
@@ -1889,6 +1982,18 @@ func (UnimplementedAgentsGatewayHandler) DeleteEnvironment(context.Context, *con
 
 func (UnimplementedAgentsGatewayHandler) ListEnvironments(context.Context, *connect.Request[v1.ListEnvironmentsRequest]) (*connect.Response[v1.ListEnvironmentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListEnvironments is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) SetEnvironmentRole(context.Context, *connect.Request[v1.SetEnvironmentRoleRequest]) (*connect.Response[v1.SetEnvironmentRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.SetEnvironmentRole is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) RemoveEnvironmentRole(context.Context, *connect.Request[v1.RemoveEnvironmentRoleRequest]) (*connect.Response[v1.RemoveEnvironmentRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.RemoveEnvironmentRole is not implemented"))
+}
+
+func (UnimplementedAgentsGatewayHandler) ListEnvironmentRoles(context.Context, *connect.Request[v1.ListEnvironmentRolesRequest]) (*connect.Response[v1.ListEnvironmentRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agynio.api.gateway.v1.AgentsGateway.ListEnvironmentRoles is not implemented"))
 }
 
 func (UnimplementedAgentsGatewayHandler) CreateSandbox(context.Context, *connect.Request[v1.CreateSandboxRequest]) (*connect.Response[v1.CreateSandboxResponse], error) {

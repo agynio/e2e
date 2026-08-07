@@ -25,7 +25,7 @@ var File_agynio_api_gateway_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agynio_api_gateway_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\"agynio/api/gateway/v1/agents.proto\x12\x15agynio.api.gateway.v1\x1a!agynio/api/agents/v1/agents.proto2\xf59\n" +
+	"\"agynio/api/gateway/v1/agents.proto\x12\x15agynio.api.gateway.v1\x1a!agynio/api/agents/v1/agents.proto2\x84=\n" +
 	"\rAgentsGateway\x12b\n" +
 	"\vCreateAgent\x12(.agynio.api.agents.v1.CreateAgentRequest\x1a).agynio.api.agents.v1.CreateAgentResponse\x12Y\n" +
 	"\bGetAgent\x12%.agynio.api.agents.v1.GetAgentRequest\x1a&.agynio.api.agents.v1.GetAgentResponse\x12b\n" +
@@ -41,7 +41,10 @@ const file_agynio_api_gateway_v1_agents_proto_rawDesc = "" +
 	"\x0eGetEnvironment\x12+.agynio.api.agents.v1.GetEnvironmentRequest\x1a,.agynio.api.agents.v1.GetEnvironmentResponse\x12t\n" +
 	"\x11UpdateEnvironment\x12..agynio.api.agents.v1.UpdateEnvironmentRequest\x1a/.agynio.api.agents.v1.UpdateEnvironmentResponse\x12t\n" +
 	"\x11DeleteEnvironment\x12..agynio.api.agents.v1.DeleteEnvironmentRequest\x1a/.agynio.api.agents.v1.DeleteEnvironmentResponse\x12q\n" +
-	"\x10ListEnvironments\x12-.agynio.api.agents.v1.ListEnvironmentsRequest\x1a..agynio.api.agents.v1.ListEnvironmentsResponse\x12h\n" +
+	"\x10ListEnvironments\x12-.agynio.api.agents.v1.ListEnvironmentsRequest\x1a..agynio.api.agents.v1.ListEnvironmentsResponse\x12w\n" +
+	"\x12SetEnvironmentRole\x12/.agynio.api.agents.v1.SetEnvironmentRoleRequest\x1a0.agynio.api.agents.v1.SetEnvironmentRoleResponse\x12\x80\x01\n" +
+	"\x15RemoveEnvironmentRole\x122.agynio.api.agents.v1.RemoveEnvironmentRoleRequest\x1a3.agynio.api.agents.v1.RemoveEnvironmentRoleResponse\x12}\n" +
+	"\x14ListEnvironmentRoles\x121.agynio.api.agents.v1.ListEnvironmentRolesRequest\x1a2.agynio.api.agents.v1.ListEnvironmentRolesResponse\x12h\n" +
 	"\rCreateSandbox\x12*.agynio.api.agents.v1.CreateSandboxRequest\x1a+.agynio.api.agents.v1.CreateSandboxResponse\x12_\n" +
 	"\n" +
 	"GetSandbox\x12'.agynio.api.agents.v1.GetSandboxRequest\x1a(.agynio.api.agents.v1.GetSandboxResponse\x12h\n" +
@@ -63,11 +66,11 @@ const file_agynio_api_gateway_v1_agents_proto_rawDesc = "" +
 	"\tGetVolume\x12&.agynio.api.agents.v1.GetVolumeRequest\x1a'.agynio.api.agents.v1.GetVolumeResponse\x12e\n" +
 	"\fUpdateVolume\x12).agynio.api.agents.v1.UpdateVolumeRequest\x1a*.agynio.api.agents.v1.UpdateVolumeResponse\x12e\n" +
 	"\fDeleteVolume\x12).agynio.api.agents.v1.DeleteVolumeRequest\x1a*.agynio.api.agents.v1.DeleteVolumeResponse\x12b\n" +
-	"\vListVolumes\x12(.agynio.api.agents.v1.ListVolumesRequest\x1a).agynio.api.agents.v1.ListVolumesResponse\x12\x83\x01\n" +
-	"\x16CreateVolumeAttachment\x123.agynio.api.agents.v1.CreateVolumeAttachmentRequest\x1a4.agynio.api.agents.v1.CreateVolumeAttachmentResponse\x12z\n" +
-	"\x13GetVolumeAttachment\x120.agynio.api.agents.v1.GetVolumeAttachmentRequest\x1a1.agynio.api.agents.v1.GetVolumeAttachmentResponse\x12\x83\x01\n" +
-	"\x16DeleteVolumeAttachment\x123.agynio.api.agents.v1.DeleteVolumeAttachmentRequest\x1a4.agynio.api.agents.v1.DeleteVolumeAttachmentResponse\x12\x80\x01\n" +
-	"\x15ListVolumeAttachments\x122.agynio.api.agents.v1.ListVolumeAttachmentsRequest\x1a3.agynio.api.agents.v1.ListVolumeAttachmentsResponse\x12\\\n" +
+	"\vListVolumes\x12(.agynio.api.agents.v1.ListVolumesRequest\x1a).agynio.api.agents.v1.ListVolumesResponse\x12\x88\x01\n" +
+	"\x16CreateVolumeAttachment\x123.agynio.api.agents.v1.CreateVolumeAttachmentRequest\x1a4.agynio.api.agents.v1.CreateVolumeAttachmentResponse\"\x03\x88\x02\x01\x12\x7f\n" +
+	"\x13GetVolumeAttachment\x120.agynio.api.agents.v1.GetVolumeAttachmentRequest\x1a1.agynio.api.agents.v1.GetVolumeAttachmentResponse\"\x03\x88\x02\x01\x12\x88\x01\n" +
+	"\x16DeleteVolumeAttachment\x123.agynio.api.agents.v1.DeleteVolumeAttachmentRequest\x1a4.agynio.api.agents.v1.DeleteVolumeAttachmentResponse\"\x03\x88\x02\x01\x12\x85\x01\n" +
+	"\x15ListVolumeAttachments\x122.agynio.api.agents.v1.ListVolumeAttachmentsRequest\x1a3.agynio.api.agents.v1.ListVolumeAttachmentsResponse\"\x03\x88\x02\x01\x12\\\n" +
 	"\tCreateMcp\x12&.agynio.api.agents.v1.CreateMcpRequest\x1a'.agynio.api.agents.v1.CreateMcpResponse\x12S\n" +
 	"\x06GetMcp\x12#.agynio.api.agents.v1.GetMcpRequest\x1a$.agynio.api.agents.v1.GetMcpResponse\x12\\\n" +
 	"\tUpdateMcp\x12&.agynio.api.agents.v1.UpdateMcpRequest\x1a'.agynio.api.agents.v1.UpdateMcpResponse\x12\\\n" +
@@ -118,128 +121,134 @@ var file_agynio_api_gateway_v1_agents_proto_goTypes = []any{
 	(*v1.UpdateEnvironmentRequest)(nil),                // 11: agynio.api.agents.v1.UpdateEnvironmentRequest
 	(*v1.DeleteEnvironmentRequest)(nil),                // 12: agynio.api.agents.v1.DeleteEnvironmentRequest
 	(*v1.ListEnvironmentsRequest)(nil),                 // 13: agynio.api.agents.v1.ListEnvironmentsRequest
-	(*v1.CreateSandboxRequest)(nil),                    // 14: agynio.api.agents.v1.CreateSandboxRequest
-	(*v1.GetSandboxRequest)(nil),                       // 15: agynio.api.agents.v1.GetSandboxRequest
-	(*v1.ListSandboxesRequest)(nil),                    // 16: agynio.api.agents.v1.ListSandboxesRequest
-	(*v1.StopSandboxRequest)(nil),                      // 17: agynio.api.agents.v1.StopSandboxRequest
-	(*v1.DeleteSandboxRequest)(nil),                    // 18: agynio.api.agents.v1.DeleteSandboxRequest
-	(*v1.EnsureSandboxRunningRequest)(nil),             // 19: agynio.api.agents.v1.EnsureSandboxRunningRequest
-	(*v1.CreateInstanceRequest)(nil),                   // 20: agynio.api.agents.v1.CreateInstanceRequest
-	(*v1.GetInstanceRequest)(nil),                      // 21: agynio.api.agents.v1.GetInstanceRequest
-	(*v1.ListInstancesRequest)(nil),                    // 22: agynio.api.agents.v1.ListInstancesRequest
-	(*v1.PauseInstanceRequest)(nil),                    // 23: agynio.api.agents.v1.PauseInstanceRequest
-	(*v1.ResumeInstanceRequest)(nil),                   // 24: agynio.api.agents.v1.ResumeInstanceRequest
-	(*v1.DeleteInstanceRequest)(nil),                   // 25: agynio.api.agents.v1.DeleteInstanceRequest
-	(*v1.WriteInboxItemRequest)(nil),                   // 26: agynio.api.agents.v1.WriteInboxItemRequest
-	(*v1.GetUnackedInboxItemsRequest)(nil),             // 27: agynio.api.agents.v1.GetUnackedInboxItemsRequest
-	(*v1.AckInboxItemsRequest)(nil),                    // 28: agynio.api.agents.v1.AckInboxItemsRequest
-	(*v1.GetUnackedInboxCountRequest)(nil),             // 29: agynio.api.agents.v1.GetUnackedInboxCountRequest
-	(*v1.CreateVolumeRequest)(nil),                     // 30: agynio.api.agents.v1.CreateVolumeRequest
-	(*v1.GetVolumeRequest)(nil),                        // 31: agynio.api.agents.v1.GetVolumeRequest
-	(*v1.UpdateVolumeRequest)(nil),                     // 32: agynio.api.agents.v1.UpdateVolumeRequest
-	(*v1.DeleteVolumeRequest)(nil),                     // 33: agynio.api.agents.v1.DeleteVolumeRequest
-	(*v1.ListVolumesRequest)(nil),                      // 34: agynio.api.agents.v1.ListVolumesRequest
-	(*v1.CreateVolumeAttachmentRequest)(nil),           // 35: agynio.api.agents.v1.CreateVolumeAttachmentRequest
-	(*v1.GetVolumeAttachmentRequest)(nil),              // 36: agynio.api.agents.v1.GetVolumeAttachmentRequest
-	(*v1.DeleteVolumeAttachmentRequest)(nil),           // 37: agynio.api.agents.v1.DeleteVolumeAttachmentRequest
-	(*v1.ListVolumeAttachmentsRequest)(nil),            // 38: agynio.api.agents.v1.ListVolumeAttachmentsRequest
-	(*v1.CreateMcpRequest)(nil),                        // 39: agynio.api.agents.v1.CreateMcpRequest
-	(*v1.GetMcpRequest)(nil),                           // 40: agynio.api.agents.v1.GetMcpRequest
-	(*v1.UpdateMcpRequest)(nil),                        // 41: agynio.api.agents.v1.UpdateMcpRequest
-	(*v1.DeleteMcpRequest)(nil),                        // 42: agynio.api.agents.v1.DeleteMcpRequest
-	(*v1.ListMcpsRequest)(nil),                         // 43: agynio.api.agents.v1.ListMcpsRequest
-	(*v1.CreateSkillRequest)(nil),                      // 44: agynio.api.agents.v1.CreateSkillRequest
-	(*v1.GetSkillRequest)(nil),                         // 45: agynio.api.agents.v1.GetSkillRequest
-	(*v1.UpdateSkillRequest)(nil),                      // 46: agynio.api.agents.v1.UpdateSkillRequest
-	(*v1.DeleteSkillRequest)(nil),                      // 47: agynio.api.agents.v1.DeleteSkillRequest
-	(*v1.ListSkillsRequest)(nil),                       // 48: agynio.api.agents.v1.ListSkillsRequest
-	(*v1.CreateHookRequest)(nil),                       // 49: agynio.api.agents.v1.CreateHookRequest
-	(*v1.GetHookRequest)(nil),                          // 50: agynio.api.agents.v1.GetHookRequest
-	(*v1.UpdateHookRequest)(nil),                       // 51: agynio.api.agents.v1.UpdateHookRequest
-	(*v1.DeleteHookRequest)(nil),                       // 52: agynio.api.agents.v1.DeleteHookRequest
-	(*v1.ListHooksRequest)(nil),                        // 53: agynio.api.agents.v1.ListHooksRequest
-	(*v1.CreateEnvRequest)(nil),                        // 54: agynio.api.agents.v1.CreateEnvRequest
-	(*v1.GetEnvRequest)(nil),                           // 55: agynio.api.agents.v1.GetEnvRequest
-	(*v1.UpdateEnvRequest)(nil),                        // 56: agynio.api.agents.v1.UpdateEnvRequest
-	(*v1.DeleteEnvRequest)(nil),                        // 57: agynio.api.agents.v1.DeleteEnvRequest
-	(*v1.ListEnvsRequest)(nil),                         // 58: agynio.api.agents.v1.ListEnvsRequest
-	(*v1.CreateInitScriptRequest)(nil),                 // 59: agynio.api.agents.v1.CreateInitScriptRequest
-	(*v1.GetInitScriptRequest)(nil),                    // 60: agynio.api.agents.v1.GetInitScriptRequest
-	(*v1.UpdateInitScriptRequest)(nil),                 // 61: agynio.api.agents.v1.UpdateInitScriptRequest
-	(*v1.DeleteInitScriptRequest)(nil),                 // 62: agynio.api.agents.v1.DeleteInitScriptRequest
-	(*v1.ListInitScriptsRequest)(nil),                  // 63: agynio.api.agents.v1.ListInitScriptsRequest
-	(*v1.CreateImagePullSecretAttachmentRequest)(nil),  // 64: agynio.api.agents.v1.CreateImagePullSecretAttachmentRequest
-	(*v1.GetImagePullSecretAttachmentRequest)(nil),     // 65: agynio.api.agents.v1.GetImagePullSecretAttachmentRequest
-	(*v1.DeleteImagePullSecretAttachmentRequest)(nil),  // 66: agynio.api.agents.v1.DeleteImagePullSecretAttachmentRequest
-	(*v1.ListImagePullSecretAttachmentsRequest)(nil),   // 67: agynio.api.agents.v1.ListImagePullSecretAttachmentsRequest
-	(*v1.CreateAgentResponse)(nil),                     // 68: agynio.api.agents.v1.CreateAgentResponse
-	(*v1.GetAgentResponse)(nil),                        // 69: agynio.api.agents.v1.GetAgentResponse
-	(*v1.UpdateAgentResponse)(nil),                     // 70: agynio.api.agents.v1.UpdateAgentResponse
-	(*v1.DeleteAgentResponse)(nil),                     // 71: agynio.api.agents.v1.DeleteAgentResponse
-	(*v1.ListAgentsResponse)(nil),                      // 72: agynio.api.agents.v1.ListAgentsResponse
-	(*v1.SetAgentRoleResponse)(nil),                    // 73: agynio.api.agents.v1.SetAgentRoleResponse
-	(*v1.RemoveAgentRoleResponse)(nil),                 // 74: agynio.api.agents.v1.RemoveAgentRoleResponse
-	(*v1.ListAgentRolesResponse)(nil),                  // 75: agynio.api.agents.v1.ListAgentRolesResponse
-	(*v1.ListMyAgentRolesResponse)(nil),                // 76: agynio.api.agents.v1.ListMyAgentRolesResponse
-	(*v1.CreateEnvironmentResponse)(nil),               // 77: agynio.api.agents.v1.CreateEnvironmentResponse
-	(*v1.GetEnvironmentResponse)(nil),                  // 78: agynio.api.agents.v1.GetEnvironmentResponse
-	(*v1.UpdateEnvironmentResponse)(nil),               // 79: agynio.api.agents.v1.UpdateEnvironmentResponse
-	(*v1.DeleteEnvironmentResponse)(nil),               // 80: agynio.api.agents.v1.DeleteEnvironmentResponse
-	(*v1.ListEnvironmentsResponse)(nil),                // 81: agynio.api.agents.v1.ListEnvironmentsResponse
-	(*v1.CreateSandboxResponse)(nil),                   // 82: agynio.api.agents.v1.CreateSandboxResponse
-	(*v1.GetSandboxResponse)(nil),                      // 83: agynio.api.agents.v1.GetSandboxResponse
-	(*v1.ListSandboxesResponse)(nil),                   // 84: agynio.api.agents.v1.ListSandboxesResponse
-	(*v1.StopSandboxResponse)(nil),                     // 85: agynio.api.agents.v1.StopSandboxResponse
-	(*v1.DeleteSandboxResponse)(nil),                   // 86: agynio.api.agents.v1.DeleteSandboxResponse
-	(*v1.EnsureSandboxRunningResponse)(nil),            // 87: agynio.api.agents.v1.EnsureSandboxRunningResponse
-	(*v1.CreateInstanceResponse)(nil),                  // 88: agynio.api.agents.v1.CreateInstanceResponse
-	(*v1.GetInstanceResponse)(nil),                     // 89: agynio.api.agents.v1.GetInstanceResponse
-	(*v1.ListInstancesResponse)(nil),                   // 90: agynio.api.agents.v1.ListInstancesResponse
-	(*v1.PauseInstanceResponse)(nil),                   // 91: agynio.api.agents.v1.PauseInstanceResponse
-	(*v1.ResumeInstanceResponse)(nil),                  // 92: agynio.api.agents.v1.ResumeInstanceResponse
-	(*v1.DeleteInstanceResponse)(nil),                  // 93: agynio.api.agents.v1.DeleteInstanceResponse
-	(*v1.WriteInboxItemResponse)(nil),                  // 94: agynio.api.agents.v1.WriteInboxItemResponse
-	(*v1.GetUnackedInboxItemsResponse)(nil),            // 95: agynio.api.agents.v1.GetUnackedInboxItemsResponse
-	(*v1.AckInboxItemsResponse)(nil),                   // 96: agynio.api.agents.v1.AckInboxItemsResponse
-	(*v1.GetUnackedInboxCountResponse)(nil),            // 97: agynio.api.agents.v1.GetUnackedInboxCountResponse
-	(*v1.CreateVolumeResponse)(nil),                    // 98: agynio.api.agents.v1.CreateVolumeResponse
-	(*v1.GetVolumeResponse)(nil),                       // 99: agynio.api.agents.v1.GetVolumeResponse
-	(*v1.UpdateVolumeResponse)(nil),                    // 100: agynio.api.agents.v1.UpdateVolumeResponse
-	(*v1.DeleteVolumeResponse)(nil),                    // 101: agynio.api.agents.v1.DeleteVolumeResponse
-	(*v1.ListVolumesResponse)(nil),                     // 102: agynio.api.agents.v1.ListVolumesResponse
-	(*v1.CreateVolumeAttachmentResponse)(nil),          // 103: agynio.api.agents.v1.CreateVolumeAttachmentResponse
-	(*v1.GetVolumeAttachmentResponse)(nil),             // 104: agynio.api.agents.v1.GetVolumeAttachmentResponse
-	(*v1.DeleteVolumeAttachmentResponse)(nil),          // 105: agynio.api.agents.v1.DeleteVolumeAttachmentResponse
-	(*v1.ListVolumeAttachmentsResponse)(nil),           // 106: agynio.api.agents.v1.ListVolumeAttachmentsResponse
-	(*v1.CreateMcpResponse)(nil),                       // 107: agynio.api.agents.v1.CreateMcpResponse
-	(*v1.GetMcpResponse)(nil),                          // 108: agynio.api.agents.v1.GetMcpResponse
-	(*v1.UpdateMcpResponse)(nil),                       // 109: agynio.api.agents.v1.UpdateMcpResponse
-	(*v1.DeleteMcpResponse)(nil),                       // 110: agynio.api.agents.v1.DeleteMcpResponse
-	(*v1.ListMcpsResponse)(nil),                        // 111: agynio.api.agents.v1.ListMcpsResponse
-	(*v1.CreateSkillResponse)(nil),                     // 112: agynio.api.agents.v1.CreateSkillResponse
-	(*v1.GetSkillResponse)(nil),                        // 113: agynio.api.agents.v1.GetSkillResponse
-	(*v1.UpdateSkillResponse)(nil),                     // 114: agynio.api.agents.v1.UpdateSkillResponse
-	(*v1.DeleteSkillResponse)(nil),                     // 115: agynio.api.agents.v1.DeleteSkillResponse
-	(*v1.ListSkillsResponse)(nil),                      // 116: agynio.api.agents.v1.ListSkillsResponse
-	(*v1.CreateHookResponse)(nil),                      // 117: agynio.api.agents.v1.CreateHookResponse
-	(*v1.GetHookResponse)(nil),                         // 118: agynio.api.agents.v1.GetHookResponse
-	(*v1.UpdateHookResponse)(nil),                      // 119: agynio.api.agents.v1.UpdateHookResponse
-	(*v1.DeleteHookResponse)(nil),                      // 120: agynio.api.agents.v1.DeleteHookResponse
-	(*v1.ListHooksResponse)(nil),                       // 121: agynio.api.agents.v1.ListHooksResponse
-	(*v1.CreateEnvResponse)(nil),                       // 122: agynio.api.agents.v1.CreateEnvResponse
-	(*v1.GetEnvResponse)(nil),                          // 123: agynio.api.agents.v1.GetEnvResponse
-	(*v1.UpdateEnvResponse)(nil),                       // 124: agynio.api.agents.v1.UpdateEnvResponse
-	(*v1.DeleteEnvResponse)(nil),                       // 125: agynio.api.agents.v1.DeleteEnvResponse
-	(*v1.ListEnvsResponse)(nil),                        // 126: agynio.api.agents.v1.ListEnvsResponse
-	(*v1.CreateInitScriptResponse)(nil),                // 127: agynio.api.agents.v1.CreateInitScriptResponse
-	(*v1.GetInitScriptResponse)(nil),                   // 128: agynio.api.agents.v1.GetInitScriptResponse
-	(*v1.UpdateInitScriptResponse)(nil),                // 129: agynio.api.agents.v1.UpdateInitScriptResponse
-	(*v1.DeleteInitScriptResponse)(nil),                // 130: agynio.api.agents.v1.DeleteInitScriptResponse
-	(*v1.ListInitScriptsResponse)(nil),                 // 131: agynio.api.agents.v1.ListInitScriptsResponse
-	(*v1.CreateImagePullSecretAttachmentResponse)(nil), // 132: agynio.api.agents.v1.CreateImagePullSecretAttachmentResponse
-	(*v1.GetImagePullSecretAttachmentResponse)(nil),    // 133: agynio.api.agents.v1.GetImagePullSecretAttachmentResponse
-	(*v1.DeleteImagePullSecretAttachmentResponse)(nil), // 134: agynio.api.agents.v1.DeleteImagePullSecretAttachmentResponse
-	(*v1.ListImagePullSecretAttachmentsResponse)(nil),  // 135: agynio.api.agents.v1.ListImagePullSecretAttachmentsResponse
+	(*v1.SetEnvironmentRoleRequest)(nil),               // 14: agynio.api.agents.v1.SetEnvironmentRoleRequest
+	(*v1.RemoveEnvironmentRoleRequest)(nil),            // 15: agynio.api.agents.v1.RemoveEnvironmentRoleRequest
+	(*v1.ListEnvironmentRolesRequest)(nil),             // 16: agynio.api.agents.v1.ListEnvironmentRolesRequest
+	(*v1.CreateSandboxRequest)(nil),                    // 17: agynio.api.agents.v1.CreateSandboxRequest
+	(*v1.GetSandboxRequest)(nil),                       // 18: agynio.api.agents.v1.GetSandboxRequest
+	(*v1.ListSandboxesRequest)(nil),                    // 19: agynio.api.agents.v1.ListSandboxesRequest
+	(*v1.StopSandboxRequest)(nil),                      // 20: agynio.api.agents.v1.StopSandboxRequest
+	(*v1.DeleteSandboxRequest)(nil),                    // 21: agynio.api.agents.v1.DeleteSandboxRequest
+	(*v1.EnsureSandboxRunningRequest)(nil),             // 22: agynio.api.agents.v1.EnsureSandboxRunningRequest
+	(*v1.CreateInstanceRequest)(nil),                   // 23: agynio.api.agents.v1.CreateInstanceRequest
+	(*v1.GetInstanceRequest)(nil),                      // 24: agynio.api.agents.v1.GetInstanceRequest
+	(*v1.ListInstancesRequest)(nil),                    // 25: agynio.api.agents.v1.ListInstancesRequest
+	(*v1.PauseInstanceRequest)(nil),                    // 26: agynio.api.agents.v1.PauseInstanceRequest
+	(*v1.ResumeInstanceRequest)(nil),                   // 27: agynio.api.agents.v1.ResumeInstanceRequest
+	(*v1.DeleteInstanceRequest)(nil),                   // 28: agynio.api.agents.v1.DeleteInstanceRequest
+	(*v1.WriteInboxItemRequest)(nil),                   // 29: agynio.api.agents.v1.WriteInboxItemRequest
+	(*v1.GetUnackedInboxItemsRequest)(nil),             // 30: agynio.api.agents.v1.GetUnackedInboxItemsRequest
+	(*v1.AckInboxItemsRequest)(nil),                    // 31: agynio.api.agents.v1.AckInboxItemsRequest
+	(*v1.GetUnackedInboxCountRequest)(nil),             // 32: agynio.api.agents.v1.GetUnackedInboxCountRequest
+	(*v1.CreateVolumeRequest)(nil),                     // 33: agynio.api.agents.v1.CreateVolumeRequest
+	(*v1.GetVolumeRequest)(nil),                        // 34: agynio.api.agents.v1.GetVolumeRequest
+	(*v1.UpdateVolumeRequest)(nil),                     // 35: agynio.api.agents.v1.UpdateVolumeRequest
+	(*v1.DeleteVolumeRequest)(nil),                     // 36: agynio.api.agents.v1.DeleteVolumeRequest
+	(*v1.ListVolumesRequest)(nil),                      // 37: agynio.api.agents.v1.ListVolumesRequest
+	(*v1.CreateVolumeAttachmentRequest)(nil),           // 38: agynio.api.agents.v1.CreateVolumeAttachmentRequest
+	(*v1.GetVolumeAttachmentRequest)(nil),              // 39: agynio.api.agents.v1.GetVolumeAttachmentRequest
+	(*v1.DeleteVolumeAttachmentRequest)(nil),           // 40: agynio.api.agents.v1.DeleteVolumeAttachmentRequest
+	(*v1.ListVolumeAttachmentsRequest)(nil),            // 41: agynio.api.agents.v1.ListVolumeAttachmentsRequest
+	(*v1.CreateMcpRequest)(nil),                        // 42: agynio.api.agents.v1.CreateMcpRequest
+	(*v1.GetMcpRequest)(nil),                           // 43: agynio.api.agents.v1.GetMcpRequest
+	(*v1.UpdateMcpRequest)(nil),                        // 44: agynio.api.agents.v1.UpdateMcpRequest
+	(*v1.DeleteMcpRequest)(nil),                        // 45: agynio.api.agents.v1.DeleteMcpRequest
+	(*v1.ListMcpsRequest)(nil),                         // 46: agynio.api.agents.v1.ListMcpsRequest
+	(*v1.CreateSkillRequest)(nil),                      // 47: agynio.api.agents.v1.CreateSkillRequest
+	(*v1.GetSkillRequest)(nil),                         // 48: agynio.api.agents.v1.GetSkillRequest
+	(*v1.UpdateSkillRequest)(nil),                      // 49: agynio.api.agents.v1.UpdateSkillRequest
+	(*v1.DeleteSkillRequest)(nil),                      // 50: agynio.api.agents.v1.DeleteSkillRequest
+	(*v1.ListSkillsRequest)(nil),                       // 51: agynio.api.agents.v1.ListSkillsRequest
+	(*v1.CreateHookRequest)(nil),                       // 52: agynio.api.agents.v1.CreateHookRequest
+	(*v1.GetHookRequest)(nil),                          // 53: agynio.api.agents.v1.GetHookRequest
+	(*v1.UpdateHookRequest)(nil),                       // 54: agynio.api.agents.v1.UpdateHookRequest
+	(*v1.DeleteHookRequest)(nil),                       // 55: agynio.api.agents.v1.DeleteHookRequest
+	(*v1.ListHooksRequest)(nil),                        // 56: agynio.api.agents.v1.ListHooksRequest
+	(*v1.CreateEnvRequest)(nil),                        // 57: agynio.api.agents.v1.CreateEnvRequest
+	(*v1.GetEnvRequest)(nil),                           // 58: agynio.api.agents.v1.GetEnvRequest
+	(*v1.UpdateEnvRequest)(nil),                        // 59: agynio.api.agents.v1.UpdateEnvRequest
+	(*v1.DeleteEnvRequest)(nil),                        // 60: agynio.api.agents.v1.DeleteEnvRequest
+	(*v1.ListEnvsRequest)(nil),                         // 61: agynio.api.agents.v1.ListEnvsRequest
+	(*v1.CreateInitScriptRequest)(nil),                 // 62: agynio.api.agents.v1.CreateInitScriptRequest
+	(*v1.GetInitScriptRequest)(nil),                    // 63: agynio.api.agents.v1.GetInitScriptRequest
+	(*v1.UpdateInitScriptRequest)(nil),                 // 64: agynio.api.agents.v1.UpdateInitScriptRequest
+	(*v1.DeleteInitScriptRequest)(nil),                 // 65: agynio.api.agents.v1.DeleteInitScriptRequest
+	(*v1.ListInitScriptsRequest)(nil),                  // 66: agynio.api.agents.v1.ListInitScriptsRequest
+	(*v1.CreateImagePullSecretAttachmentRequest)(nil),  // 67: agynio.api.agents.v1.CreateImagePullSecretAttachmentRequest
+	(*v1.GetImagePullSecretAttachmentRequest)(nil),     // 68: agynio.api.agents.v1.GetImagePullSecretAttachmentRequest
+	(*v1.DeleteImagePullSecretAttachmentRequest)(nil),  // 69: agynio.api.agents.v1.DeleteImagePullSecretAttachmentRequest
+	(*v1.ListImagePullSecretAttachmentsRequest)(nil),   // 70: agynio.api.agents.v1.ListImagePullSecretAttachmentsRequest
+	(*v1.CreateAgentResponse)(nil),                     // 71: agynio.api.agents.v1.CreateAgentResponse
+	(*v1.GetAgentResponse)(nil),                        // 72: agynio.api.agents.v1.GetAgentResponse
+	(*v1.UpdateAgentResponse)(nil),                     // 73: agynio.api.agents.v1.UpdateAgentResponse
+	(*v1.DeleteAgentResponse)(nil),                     // 74: agynio.api.agents.v1.DeleteAgentResponse
+	(*v1.ListAgentsResponse)(nil),                      // 75: agynio.api.agents.v1.ListAgentsResponse
+	(*v1.SetAgentRoleResponse)(nil),                    // 76: agynio.api.agents.v1.SetAgentRoleResponse
+	(*v1.RemoveAgentRoleResponse)(nil),                 // 77: agynio.api.agents.v1.RemoveAgentRoleResponse
+	(*v1.ListAgentRolesResponse)(nil),                  // 78: agynio.api.agents.v1.ListAgentRolesResponse
+	(*v1.ListMyAgentRolesResponse)(nil),                // 79: agynio.api.agents.v1.ListMyAgentRolesResponse
+	(*v1.CreateEnvironmentResponse)(nil),               // 80: agynio.api.agents.v1.CreateEnvironmentResponse
+	(*v1.GetEnvironmentResponse)(nil),                  // 81: agynio.api.agents.v1.GetEnvironmentResponse
+	(*v1.UpdateEnvironmentResponse)(nil),               // 82: agynio.api.agents.v1.UpdateEnvironmentResponse
+	(*v1.DeleteEnvironmentResponse)(nil),               // 83: agynio.api.agents.v1.DeleteEnvironmentResponse
+	(*v1.ListEnvironmentsResponse)(nil),                // 84: agynio.api.agents.v1.ListEnvironmentsResponse
+	(*v1.SetEnvironmentRoleResponse)(nil),              // 85: agynio.api.agents.v1.SetEnvironmentRoleResponse
+	(*v1.RemoveEnvironmentRoleResponse)(nil),           // 86: agynio.api.agents.v1.RemoveEnvironmentRoleResponse
+	(*v1.ListEnvironmentRolesResponse)(nil),            // 87: agynio.api.agents.v1.ListEnvironmentRolesResponse
+	(*v1.CreateSandboxResponse)(nil),                   // 88: agynio.api.agents.v1.CreateSandboxResponse
+	(*v1.GetSandboxResponse)(nil),                      // 89: agynio.api.agents.v1.GetSandboxResponse
+	(*v1.ListSandboxesResponse)(nil),                   // 90: agynio.api.agents.v1.ListSandboxesResponse
+	(*v1.StopSandboxResponse)(nil),                     // 91: agynio.api.agents.v1.StopSandboxResponse
+	(*v1.DeleteSandboxResponse)(nil),                   // 92: agynio.api.agents.v1.DeleteSandboxResponse
+	(*v1.EnsureSandboxRunningResponse)(nil),            // 93: agynio.api.agents.v1.EnsureSandboxRunningResponse
+	(*v1.CreateInstanceResponse)(nil),                  // 94: agynio.api.agents.v1.CreateInstanceResponse
+	(*v1.GetInstanceResponse)(nil),                     // 95: agynio.api.agents.v1.GetInstanceResponse
+	(*v1.ListInstancesResponse)(nil),                   // 96: agynio.api.agents.v1.ListInstancesResponse
+	(*v1.PauseInstanceResponse)(nil),                   // 97: agynio.api.agents.v1.PauseInstanceResponse
+	(*v1.ResumeInstanceResponse)(nil),                  // 98: agynio.api.agents.v1.ResumeInstanceResponse
+	(*v1.DeleteInstanceResponse)(nil),                  // 99: agynio.api.agents.v1.DeleteInstanceResponse
+	(*v1.WriteInboxItemResponse)(nil),                  // 100: agynio.api.agents.v1.WriteInboxItemResponse
+	(*v1.GetUnackedInboxItemsResponse)(nil),            // 101: agynio.api.agents.v1.GetUnackedInboxItemsResponse
+	(*v1.AckInboxItemsResponse)(nil),                   // 102: agynio.api.agents.v1.AckInboxItemsResponse
+	(*v1.GetUnackedInboxCountResponse)(nil),            // 103: agynio.api.agents.v1.GetUnackedInboxCountResponse
+	(*v1.CreateVolumeResponse)(nil),                    // 104: agynio.api.agents.v1.CreateVolumeResponse
+	(*v1.GetVolumeResponse)(nil),                       // 105: agynio.api.agents.v1.GetVolumeResponse
+	(*v1.UpdateVolumeResponse)(nil),                    // 106: agynio.api.agents.v1.UpdateVolumeResponse
+	(*v1.DeleteVolumeResponse)(nil),                    // 107: agynio.api.agents.v1.DeleteVolumeResponse
+	(*v1.ListVolumesResponse)(nil),                     // 108: agynio.api.agents.v1.ListVolumesResponse
+	(*v1.CreateVolumeAttachmentResponse)(nil),          // 109: agynio.api.agents.v1.CreateVolumeAttachmentResponse
+	(*v1.GetVolumeAttachmentResponse)(nil),             // 110: agynio.api.agents.v1.GetVolumeAttachmentResponse
+	(*v1.DeleteVolumeAttachmentResponse)(nil),          // 111: agynio.api.agents.v1.DeleteVolumeAttachmentResponse
+	(*v1.ListVolumeAttachmentsResponse)(nil),           // 112: agynio.api.agents.v1.ListVolumeAttachmentsResponse
+	(*v1.CreateMcpResponse)(nil),                       // 113: agynio.api.agents.v1.CreateMcpResponse
+	(*v1.GetMcpResponse)(nil),                          // 114: agynio.api.agents.v1.GetMcpResponse
+	(*v1.UpdateMcpResponse)(nil),                       // 115: agynio.api.agents.v1.UpdateMcpResponse
+	(*v1.DeleteMcpResponse)(nil),                       // 116: agynio.api.agents.v1.DeleteMcpResponse
+	(*v1.ListMcpsResponse)(nil),                        // 117: agynio.api.agents.v1.ListMcpsResponse
+	(*v1.CreateSkillResponse)(nil),                     // 118: agynio.api.agents.v1.CreateSkillResponse
+	(*v1.GetSkillResponse)(nil),                        // 119: agynio.api.agents.v1.GetSkillResponse
+	(*v1.UpdateSkillResponse)(nil),                     // 120: agynio.api.agents.v1.UpdateSkillResponse
+	(*v1.DeleteSkillResponse)(nil),                     // 121: agynio.api.agents.v1.DeleteSkillResponse
+	(*v1.ListSkillsResponse)(nil),                      // 122: agynio.api.agents.v1.ListSkillsResponse
+	(*v1.CreateHookResponse)(nil),                      // 123: agynio.api.agents.v1.CreateHookResponse
+	(*v1.GetHookResponse)(nil),                         // 124: agynio.api.agents.v1.GetHookResponse
+	(*v1.UpdateHookResponse)(nil),                      // 125: agynio.api.agents.v1.UpdateHookResponse
+	(*v1.DeleteHookResponse)(nil),                      // 126: agynio.api.agents.v1.DeleteHookResponse
+	(*v1.ListHooksResponse)(nil),                       // 127: agynio.api.agents.v1.ListHooksResponse
+	(*v1.CreateEnvResponse)(nil),                       // 128: agynio.api.agents.v1.CreateEnvResponse
+	(*v1.GetEnvResponse)(nil),                          // 129: agynio.api.agents.v1.GetEnvResponse
+	(*v1.UpdateEnvResponse)(nil),                       // 130: agynio.api.agents.v1.UpdateEnvResponse
+	(*v1.DeleteEnvResponse)(nil),                       // 131: agynio.api.agents.v1.DeleteEnvResponse
+	(*v1.ListEnvsResponse)(nil),                        // 132: agynio.api.agents.v1.ListEnvsResponse
+	(*v1.CreateInitScriptResponse)(nil),                // 133: agynio.api.agents.v1.CreateInitScriptResponse
+	(*v1.GetInitScriptResponse)(nil),                   // 134: agynio.api.agents.v1.GetInitScriptResponse
+	(*v1.UpdateInitScriptResponse)(nil),                // 135: agynio.api.agents.v1.UpdateInitScriptResponse
+	(*v1.DeleteInitScriptResponse)(nil),                // 136: agynio.api.agents.v1.DeleteInitScriptResponse
+	(*v1.ListInitScriptsResponse)(nil),                 // 137: agynio.api.agents.v1.ListInitScriptsResponse
+	(*v1.CreateImagePullSecretAttachmentResponse)(nil), // 138: agynio.api.agents.v1.CreateImagePullSecretAttachmentResponse
+	(*v1.GetImagePullSecretAttachmentResponse)(nil),    // 139: agynio.api.agents.v1.GetImagePullSecretAttachmentResponse
+	(*v1.DeleteImagePullSecretAttachmentResponse)(nil), // 140: agynio.api.agents.v1.DeleteImagePullSecretAttachmentResponse
+	(*v1.ListImagePullSecretAttachmentsResponse)(nil),  // 141: agynio.api.agents.v1.ListImagePullSecretAttachmentsResponse
 }
 var file_agynio_api_gateway_v1_agents_proto_depIdxs = []int32{
 	0,   // 0: agynio.api.gateway.v1.AgentsGateway.CreateAgent:input_type -> agynio.api.agents.v1.CreateAgentRequest
@@ -256,130 +265,136 @@ var file_agynio_api_gateway_v1_agents_proto_depIdxs = []int32{
 	11,  // 11: agynio.api.gateway.v1.AgentsGateway.UpdateEnvironment:input_type -> agynio.api.agents.v1.UpdateEnvironmentRequest
 	12,  // 12: agynio.api.gateway.v1.AgentsGateway.DeleteEnvironment:input_type -> agynio.api.agents.v1.DeleteEnvironmentRequest
 	13,  // 13: agynio.api.gateway.v1.AgentsGateway.ListEnvironments:input_type -> agynio.api.agents.v1.ListEnvironmentsRequest
-	14,  // 14: agynio.api.gateway.v1.AgentsGateway.CreateSandbox:input_type -> agynio.api.agents.v1.CreateSandboxRequest
-	15,  // 15: agynio.api.gateway.v1.AgentsGateway.GetSandbox:input_type -> agynio.api.agents.v1.GetSandboxRequest
-	16,  // 16: agynio.api.gateway.v1.AgentsGateway.ListSandboxes:input_type -> agynio.api.agents.v1.ListSandboxesRequest
-	17,  // 17: agynio.api.gateway.v1.AgentsGateway.StopSandbox:input_type -> agynio.api.agents.v1.StopSandboxRequest
-	18,  // 18: agynio.api.gateway.v1.AgentsGateway.DeleteSandbox:input_type -> agynio.api.agents.v1.DeleteSandboxRequest
-	19,  // 19: agynio.api.gateway.v1.AgentsGateway.EnsureSandboxRunning:input_type -> agynio.api.agents.v1.EnsureSandboxRunningRequest
-	20,  // 20: agynio.api.gateway.v1.AgentsGateway.CreateInstance:input_type -> agynio.api.agents.v1.CreateInstanceRequest
-	21,  // 21: agynio.api.gateway.v1.AgentsGateway.GetInstance:input_type -> agynio.api.agents.v1.GetInstanceRequest
-	22,  // 22: agynio.api.gateway.v1.AgentsGateway.ListInstances:input_type -> agynio.api.agents.v1.ListInstancesRequest
-	23,  // 23: agynio.api.gateway.v1.AgentsGateway.PauseInstance:input_type -> agynio.api.agents.v1.PauseInstanceRequest
-	24,  // 24: agynio.api.gateway.v1.AgentsGateway.ResumeInstance:input_type -> agynio.api.agents.v1.ResumeInstanceRequest
-	25,  // 25: agynio.api.gateway.v1.AgentsGateway.DeleteInstance:input_type -> agynio.api.agents.v1.DeleteInstanceRequest
-	26,  // 26: agynio.api.gateway.v1.AgentsGateway.WriteInboxItem:input_type -> agynio.api.agents.v1.WriteInboxItemRequest
-	27,  // 27: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxItems:input_type -> agynio.api.agents.v1.GetUnackedInboxItemsRequest
-	28,  // 28: agynio.api.gateway.v1.AgentsGateway.AckInboxItems:input_type -> agynio.api.agents.v1.AckInboxItemsRequest
-	29,  // 29: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxCount:input_type -> agynio.api.agents.v1.GetUnackedInboxCountRequest
-	30,  // 30: agynio.api.gateway.v1.AgentsGateway.CreateVolume:input_type -> agynio.api.agents.v1.CreateVolumeRequest
-	31,  // 31: agynio.api.gateway.v1.AgentsGateway.GetVolume:input_type -> agynio.api.agents.v1.GetVolumeRequest
-	32,  // 32: agynio.api.gateway.v1.AgentsGateway.UpdateVolume:input_type -> agynio.api.agents.v1.UpdateVolumeRequest
-	33,  // 33: agynio.api.gateway.v1.AgentsGateway.DeleteVolume:input_type -> agynio.api.agents.v1.DeleteVolumeRequest
-	34,  // 34: agynio.api.gateway.v1.AgentsGateway.ListVolumes:input_type -> agynio.api.agents.v1.ListVolumesRequest
-	35,  // 35: agynio.api.gateway.v1.AgentsGateway.CreateVolumeAttachment:input_type -> agynio.api.agents.v1.CreateVolumeAttachmentRequest
-	36,  // 36: agynio.api.gateway.v1.AgentsGateway.GetVolumeAttachment:input_type -> agynio.api.agents.v1.GetVolumeAttachmentRequest
-	37,  // 37: agynio.api.gateway.v1.AgentsGateway.DeleteVolumeAttachment:input_type -> agynio.api.agents.v1.DeleteVolumeAttachmentRequest
-	38,  // 38: agynio.api.gateway.v1.AgentsGateway.ListVolumeAttachments:input_type -> agynio.api.agents.v1.ListVolumeAttachmentsRequest
-	39,  // 39: agynio.api.gateway.v1.AgentsGateway.CreateMcp:input_type -> agynio.api.agents.v1.CreateMcpRequest
-	40,  // 40: agynio.api.gateway.v1.AgentsGateway.GetMcp:input_type -> agynio.api.agents.v1.GetMcpRequest
-	41,  // 41: agynio.api.gateway.v1.AgentsGateway.UpdateMcp:input_type -> agynio.api.agents.v1.UpdateMcpRequest
-	42,  // 42: agynio.api.gateway.v1.AgentsGateway.DeleteMcp:input_type -> agynio.api.agents.v1.DeleteMcpRequest
-	43,  // 43: agynio.api.gateway.v1.AgentsGateway.ListMcps:input_type -> agynio.api.agents.v1.ListMcpsRequest
-	44,  // 44: agynio.api.gateway.v1.AgentsGateway.CreateSkill:input_type -> agynio.api.agents.v1.CreateSkillRequest
-	45,  // 45: agynio.api.gateway.v1.AgentsGateway.GetSkill:input_type -> agynio.api.agents.v1.GetSkillRequest
-	46,  // 46: agynio.api.gateway.v1.AgentsGateway.UpdateSkill:input_type -> agynio.api.agents.v1.UpdateSkillRequest
-	47,  // 47: agynio.api.gateway.v1.AgentsGateway.DeleteSkill:input_type -> agynio.api.agents.v1.DeleteSkillRequest
-	48,  // 48: agynio.api.gateway.v1.AgentsGateway.ListSkills:input_type -> agynio.api.agents.v1.ListSkillsRequest
-	49,  // 49: agynio.api.gateway.v1.AgentsGateway.CreateHook:input_type -> agynio.api.agents.v1.CreateHookRequest
-	50,  // 50: agynio.api.gateway.v1.AgentsGateway.GetHook:input_type -> agynio.api.agents.v1.GetHookRequest
-	51,  // 51: agynio.api.gateway.v1.AgentsGateway.UpdateHook:input_type -> agynio.api.agents.v1.UpdateHookRequest
-	52,  // 52: agynio.api.gateway.v1.AgentsGateway.DeleteHook:input_type -> agynio.api.agents.v1.DeleteHookRequest
-	53,  // 53: agynio.api.gateway.v1.AgentsGateway.ListHooks:input_type -> agynio.api.agents.v1.ListHooksRequest
-	54,  // 54: agynio.api.gateway.v1.AgentsGateway.CreateEnv:input_type -> agynio.api.agents.v1.CreateEnvRequest
-	55,  // 55: agynio.api.gateway.v1.AgentsGateway.GetEnv:input_type -> agynio.api.agents.v1.GetEnvRequest
-	56,  // 56: agynio.api.gateway.v1.AgentsGateway.UpdateEnv:input_type -> agynio.api.agents.v1.UpdateEnvRequest
-	57,  // 57: agynio.api.gateway.v1.AgentsGateway.DeleteEnv:input_type -> agynio.api.agents.v1.DeleteEnvRequest
-	58,  // 58: agynio.api.gateway.v1.AgentsGateway.ListEnvs:input_type -> agynio.api.agents.v1.ListEnvsRequest
-	59,  // 59: agynio.api.gateway.v1.AgentsGateway.CreateInitScript:input_type -> agynio.api.agents.v1.CreateInitScriptRequest
-	60,  // 60: agynio.api.gateway.v1.AgentsGateway.GetInitScript:input_type -> agynio.api.agents.v1.GetInitScriptRequest
-	61,  // 61: agynio.api.gateway.v1.AgentsGateway.UpdateInitScript:input_type -> agynio.api.agents.v1.UpdateInitScriptRequest
-	62,  // 62: agynio.api.gateway.v1.AgentsGateway.DeleteInitScript:input_type -> agynio.api.agents.v1.DeleteInitScriptRequest
-	63,  // 63: agynio.api.gateway.v1.AgentsGateway.ListInitScripts:input_type -> agynio.api.agents.v1.ListInitScriptsRequest
-	64,  // 64: agynio.api.gateway.v1.AgentsGateway.CreateImagePullSecretAttachment:input_type -> agynio.api.agents.v1.CreateImagePullSecretAttachmentRequest
-	65,  // 65: agynio.api.gateway.v1.AgentsGateway.GetImagePullSecretAttachment:input_type -> agynio.api.agents.v1.GetImagePullSecretAttachmentRequest
-	66,  // 66: agynio.api.gateway.v1.AgentsGateway.DeleteImagePullSecretAttachment:input_type -> agynio.api.agents.v1.DeleteImagePullSecretAttachmentRequest
-	67,  // 67: agynio.api.gateway.v1.AgentsGateway.ListImagePullSecretAttachments:input_type -> agynio.api.agents.v1.ListImagePullSecretAttachmentsRequest
-	68,  // 68: agynio.api.gateway.v1.AgentsGateway.CreateAgent:output_type -> agynio.api.agents.v1.CreateAgentResponse
-	69,  // 69: agynio.api.gateway.v1.AgentsGateway.GetAgent:output_type -> agynio.api.agents.v1.GetAgentResponse
-	70,  // 70: agynio.api.gateway.v1.AgentsGateway.UpdateAgent:output_type -> agynio.api.agents.v1.UpdateAgentResponse
-	71,  // 71: agynio.api.gateway.v1.AgentsGateway.DeleteAgent:output_type -> agynio.api.agents.v1.DeleteAgentResponse
-	72,  // 72: agynio.api.gateway.v1.AgentsGateway.ListAgents:output_type -> agynio.api.agents.v1.ListAgentsResponse
-	73,  // 73: agynio.api.gateway.v1.AgentsGateway.SetAgentRole:output_type -> agynio.api.agents.v1.SetAgentRoleResponse
-	74,  // 74: agynio.api.gateway.v1.AgentsGateway.RemoveAgentRole:output_type -> agynio.api.agents.v1.RemoveAgentRoleResponse
-	75,  // 75: agynio.api.gateway.v1.AgentsGateway.ListAgentRoles:output_type -> agynio.api.agents.v1.ListAgentRolesResponse
-	76,  // 76: agynio.api.gateway.v1.AgentsGateway.ListMyAgentRoles:output_type -> agynio.api.agents.v1.ListMyAgentRolesResponse
-	77,  // 77: agynio.api.gateway.v1.AgentsGateway.CreateEnvironment:output_type -> agynio.api.agents.v1.CreateEnvironmentResponse
-	78,  // 78: agynio.api.gateway.v1.AgentsGateway.GetEnvironment:output_type -> agynio.api.agents.v1.GetEnvironmentResponse
-	79,  // 79: agynio.api.gateway.v1.AgentsGateway.UpdateEnvironment:output_type -> agynio.api.agents.v1.UpdateEnvironmentResponse
-	80,  // 80: agynio.api.gateway.v1.AgentsGateway.DeleteEnvironment:output_type -> agynio.api.agents.v1.DeleteEnvironmentResponse
-	81,  // 81: agynio.api.gateway.v1.AgentsGateway.ListEnvironments:output_type -> agynio.api.agents.v1.ListEnvironmentsResponse
-	82,  // 82: agynio.api.gateway.v1.AgentsGateway.CreateSandbox:output_type -> agynio.api.agents.v1.CreateSandboxResponse
-	83,  // 83: agynio.api.gateway.v1.AgentsGateway.GetSandbox:output_type -> agynio.api.agents.v1.GetSandboxResponse
-	84,  // 84: agynio.api.gateway.v1.AgentsGateway.ListSandboxes:output_type -> agynio.api.agents.v1.ListSandboxesResponse
-	85,  // 85: agynio.api.gateway.v1.AgentsGateway.StopSandbox:output_type -> agynio.api.agents.v1.StopSandboxResponse
-	86,  // 86: agynio.api.gateway.v1.AgentsGateway.DeleteSandbox:output_type -> agynio.api.agents.v1.DeleteSandboxResponse
-	87,  // 87: agynio.api.gateway.v1.AgentsGateway.EnsureSandboxRunning:output_type -> agynio.api.agents.v1.EnsureSandboxRunningResponse
-	88,  // 88: agynio.api.gateway.v1.AgentsGateway.CreateInstance:output_type -> agynio.api.agents.v1.CreateInstanceResponse
-	89,  // 89: agynio.api.gateway.v1.AgentsGateway.GetInstance:output_type -> agynio.api.agents.v1.GetInstanceResponse
-	90,  // 90: agynio.api.gateway.v1.AgentsGateway.ListInstances:output_type -> agynio.api.agents.v1.ListInstancesResponse
-	91,  // 91: agynio.api.gateway.v1.AgentsGateway.PauseInstance:output_type -> agynio.api.agents.v1.PauseInstanceResponse
-	92,  // 92: agynio.api.gateway.v1.AgentsGateway.ResumeInstance:output_type -> agynio.api.agents.v1.ResumeInstanceResponse
-	93,  // 93: agynio.api.gateway.v1.AgentsGateway.DeleteInstance:output_type -> agynio.api.agents.v1.DeleteInstanceResponse
-	94,  // 94: agynio.api.gateway.v1.AgentsGateway.WriteInboxItem:output_type -> agynio.api.agents.v1.WriteInboxItemResponse
-	95,  // 95: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxItems:output_type -> agynio.api.agents.v1.GetUnackedInboxItemsResponse
-	96,  // 96: agynio.api.gateway.v1.AgentsGateway.AckInboxItems:output_type -> agynio.api.agents.v1.AckInboxItemsResponse
-	97,  // 97: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxCount:output_type -> agynio.api.agents.v1.GetUnackedInboxCountResponse
-	98,  // 98: agynio.api.gateway.v1.AgentsGateway.CreateVolume:output_type -> agynio.api.agents.v1.CreateVolumeResponse
-	99,  // 99: agynio.api.gateway.v1.AgentsGateway.GetVolume:output_type -> agynio.api.agents.v1.GetVolumeResponse
-	100, // 100: agynio.api.gateway.v1.AgentsGateway.UpdateVolume:output_type -> agynio.api.agents.v1.UpdateVolumeResponse
-	101, // 101: agynio.api.gateway.v1.AgentsGateway.DeleteVolume:output_type -> agynio.api.agents.v1.DeleteVolumeResponse
-	102, // 102: agynio.api.gateway.v1.AgentsGateway.ListVolumes:output_type -> agynio.api.agents.v1.ListVolumesResponse
-	103, // 103: agynio.api.gateway.v1.AgentsGateway.CreateVolumeAttachment:output_type -> agynio.api.agents.v1.CreateVolumeAttachmentResponse
-	104, // 104: agynio.api.gateway.v1.AgentsGateway.GetVolumeAttachment:output_type -> agynio.api.agents.v1.GetVolumeAttachmentResponse
-	105, // 105: agynio.api.gateway.v1.AgentsGateway.DeleteVolumeAttachment:output_type -> agynio.api.agents.v1.DeleteVolumeAttachmentResponse
-	106, // 106: agynio.api.gateway.v1.AgentsGateway.ListVolumeAttachments:output_type -> agynio.api.agents.v1.ListVolumeAttachmentsResponse
-	107, // 107: agynio.api.gateway.v1.AgentsGateway.CreateMcp:output_type -> agynio.api.agents.v1.CreateMcpResponse
-	108, // 108: agynio.api.gateway.v1.AgentsGateway.GetMcp:output_type -> agynio.api.agents.v1.GetMcpResponse
-	109, // 109: agynio.api.gateway.v1.AgentsGateway.UpdateMcp:output_type -> agynio.api.agents.v1.UpdateMcpResponse
-	110, // 110: agynio.api.gateway.v1.AgentsGateway.DeleteMcp:output_type -> agynio.api.agents.v1.DeleteMcpResponse
-	111, // 111: agynio.api.gateway.v1.AgentsGateway.ListMcps:output_type -> agynio.api.agents.v1.ListMcpsResponse
-	112, // 112: agynio.api.gateway.v1.AgentsGateway.CreateSkill:output_type -> agynio.api.agents.v1.CreateSkillResponse
-	113, // 113: agynio.api.gateway.v1.AgentsGateway.GetSkill:output_type -> agynio.api.agents.v1.GetSkillResponse
-	114, // 114: agynio.api.gateway.v1.AgentsGateway.UpdateSkill:output_type -> agynio.api.agents.v1.UpdateSkillResponse
-	115, // 115: agynio.api.gateway.v1.AgentsGateway.DeleteSkill:output_type -> agynio.api.agents.v1.DeleteSkillResponse
-	116, // 116: agynio.api.gateway.v1.AgentsGateway.ListSkills:output_type -> agynio.api.agents.v1.ListSkillsResponse
-	117, // 117: agynio.api.gateway.v1.AgentsGateway.CreateHook:output_type -> agynio.api.agents.v1.CreateHookResponse
-	118, // 118: agynio.api.gateway.v1.AgentsGateway.GetHook:output_type -> agynio.api.agents.v1.GetHookResponse
-	119, // 119: agynio.api.gateway.v1.AgentsGateway.UpdateHook:output_type -> agynio.api.agents.v1.UpdateHookResponse
-	120, // 120: agynio.api.gateway.v1.AgentsGateway.DeleteHook:output_type -> agynio.api.agents.v1.DeleteHookResponse
-	121, // 121: agynio.api.gateway.v1.AgentsGateway.ListHooks:output_type -> agynio.api.agents.v1.ListHooksResponse
-	122, // 122: agynio.api.gateway.v1.AgentsGateway.CreateEnv:output_type -> agynio.api.agents.v1.CreateEnvResponse
-	123, // 123: agynio.api.gateway.v1.AgentsGateway.GetEnv:output_type -> agynio.api.agents.v1.GetEnvResponse
-	124, // 124: agynio.api.gateway.v1.AgentsGateway.UpdateEnv:output_type -> agynio.api.agents.v1.UpdateEnvResponse
-	125, // 125: agynio.api.gateway.v1.AgentsGateway.DeleteEnv:output_type -> agynio.api.agents.v1.DeleteEnvResponse
-	126, // 126: agynio.api.gateway.v1.AgentsGateway.ListEnvs:output_type -> agynio.api.agents.v1.ListEnvsResponse
-	127, // 127: agynio.api.gateway.v1.AgentsGateway.CreateInitScript:output_type -> agynio.api.agents.v1.CreateInitScriptResponse
-	128, // 128: agynio.api.gateway.v1.AgentsGateway.GetInitScript:output_type -> agynio.api.agents.v1.GetInitScriptResponse
-	129, // 129: agynio.api.gateway.v1.AgentsGateway.UpdateInitScript:output_type -> agynio.api.agents.v1.UpdateInitScriptResponse
-	130, // 130: agynio.api.gateway.v1.AgentsGateway.DeleteInitScript:output_type -> agynio.api.agents.v1.DeleteInitScriptResponse
-	131, // 131: agynio.api.gateway.v1.AgentsGateway.ListInitScripts:output_type -> agynio.api.agents.v1.ListInitScriptsResponse
-	132, // 132: agynio.api.gateway.v1.AgentsGateway.CreateImagePullSecretAttachment:output_type -> agynio.api.agents.v1.CreateImagePullSecretAttachmentResponse
-	133, // 133: agynio.api.gateway.v1.AgentsGateway.GetImagePullSecretAttachment:output_type -> agynio.api.agents.v1.GetImagePullSecretAttachmentResponse
-	134, // 134: agynio.api.gateway.v1.AgentsGateway.DeleteImagePullSecretAttachment:output_type -> agynio.api.agents.v1.DeleteImagePullSecretAttachmentResponse
-	135, // 135: agynio.api.gateway.v1.AgentsGateway.ListImagePullSecretAttachments:output_type -> agynio.api.agents.v1.ListImagePullSecretAttachmentsResponse
-	68,  // [68:136] is the sub-list for method output_type
-	0,   // [0:68] is the sub-list for method input_type
+	14,  // 14: agynio.api.gateway.v1.AgentsGateway.SetEnvironmentRole:input_type -> agynio.api.agents.v1.SetEnvironmentRoleRequest
+	15,  // 15: agynio.api.gateway.v1.AgentsGateway.RemoveEnvironmentRole:input_type -> agynio.api.agents.v1.RemoveEnvironmentRoleRequest
+	16,  // 16: agynio.api.gateway.v1.AgentsGateway.ListEnvironmentRoles:input_type -> agynio.api.agents.v1.ListEnvironmentRolesRequest
+	17,  // 17: agynio.api.gateway.v1.AgentsGateway.CreateSandbox:input_type -> agynio.api.agents.v1.CreateSandboxRequest
+	18,  // 18: agynio.api.gateway.v1.AgentsGateway.GetSandbox:input_type -> agynio.api.agents.v1.GetSandboxRequest
+	19,  // 19: agynio.api.gateway.v1.AgentsGateway.ListSandboxes:input_type -> agynio.api.agents.v1.ListSandboxesRequest
+	20,  // 20: agynio.api.gateway.v1.AgentsGateway.StopSandbox:input_type -> agynio.api.agents.v1.StopSandboxRequest
+	21,  // 21: agynio.api.gateway.v1.AgentsGateway.DeleteSandbox:input_type -> agynio.api.agents.v1.DeleteSandboxRequest
+	22,  // 22: agynio.api.gateway.v1.AgentsGateway.EnsureSandboxRunning:input_type -> agynio.api.agents.v1.EnsureSandboxRunningRequest
+	23,  // 23: agynio.api.gateway.v1.AgentsGateway.CreateInstance:input_type -> agynio.api.agents.v1.CreateInstanceRequest
+	24,  // 24: agynio.api.gateway.v1.AgentsGateway.GetInstance:input_type -> agynio.api.agents.v1.GetInstanceRequest
+	25,  // 25: agynio.api.gateway.v1.AgentsGateway.ListInstances:input_type -> agynio.api.agents.v1.ListInstancesRequest
+	26,  // 26: agynio.api.gateway.v1.AgentsGateway.PauseInstance:input_type -> agynio.api.agents.v1.PauseInstanceRequest
+	27,  // 27: agynio.api.gateway.v1.AgentsGateway.ResumeInstance:input_type -> agynio.api.agents.v1.ResumeInstanceRequest
+	28,  // 28: agynio.api.gateway.v1.AgentsGateway.DeleteInstance:input_type -> agynio.api.agents.v1.DeleteInstanceRequest
+	29,  // 29: agynio.api.gateway.v1.AgentsGateway.WriteInboxItem:input_type -> agynio.api.agents.v1.WriteInboxItemRequest
+	30,  // 30: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxItems:input_type -> agynio.api.agents.v1.GetUnackedInboxItemsRequest
+	31,  // 31: agynio.api.gateway.v1.AgentsGateway.AckInboxItems:input_type -> agynio.api.agents.v1.AckInboxItemsRequest
+	32,  // 32: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxCount:input_type -> agynio.api.agents.v1.GetUnackedInboxCountRequest
+	33,  // 33: agynio.api.gateway.v1.AgentsGateway.CreateVolume:input_type -> agynio.api.agents.v1.CreateVolumeRequest
+	34,  // 34: agynio.api.gateway.v1.AgentsGateway.GetVolume:input_type -> agynio.api.agents.v1.GetVolumeRequest
+	35,  // 35: agynio.api.gateway.v1.AgentsGateway.UpdateVolume:input_type -> agynio.api.agents.v1.UpdateVolumeRequest
+	36,  // 36: agynio.api.gateway.v1.AgentsGateway.DeleteVolume:input_type -> agynio.api.agents.v1.DeleteVolumeRequest
+	37,  // 37: agynio.api.gateway.v1.AgentsGateway.ListVolumes:input_type -> agynio.api.agents.v1.ListVolumesRequest
+	38,  // 38: agynio.api.gateway.v1.AgentsGateway.CreateVolumeAttachment:input_type -> agynio.api.agents.v1.CreateVolumeAttachmentRequest
+	39,  // 39: agynio.api.gateway.v1.AgentsGateway.GetVolumeAttachment:input_type -> agynio.api.agents.v1.GetVolumeAttachmentRequest
+	40,  // 40: agynio.api.gateway.v1.AgentsGateway.DeleteVolumeAttachment:input_type -> agynio.api.agents.v1.DeleteVolumeAttachmentRequest
+	41,  // 41: agynio.api.gateway.v1.AgentsGateway.ListVolumeAttachments:input_type -> agynio.api.agents.v1.ListVolumeAttachmentsRequest
+	42,  // 42: agynio.api.gateway.v1.AgentsGateway.CreateMcp:input_type -> agynio.api.agents.v1.CreateMcpRequest
+	43,  // 43: agynio.api.gateway.v1.AgentsGateway.GetMcp:input_type -> agynio.api.agents.v1.GetMcpRequest
+	44,  // 44: agynio.api.gateway.v1.AgentsGateway.UpdateMcp:input_type -> agynio.api.agents.v1.UpdateMcpRequest
+	45,  // 45: agynio.api.gateway.v1.AgentsGateway.DeleteMcp:input_type -> agynio.api.agents.v1.DeleteMcpRequest
+	46,  // 46: agynio.api.gateway.v1.AgentsGateway.ListMcps:input_type -> agynio.api.agents.v1.ListMcpsRequest
+	47,  // 47: agynio.api.gateway.v1.AgentsGateway.CreateSkill:input_type -> agynio.api.agents.v1.CreateSkillRequest
+	48,  // 48: agynio.api.gateway.v1.AgentsGateway.GetSkill:input_type -> agynio.api.agents.v1.GetSkillRequest
+	49,  // 49: agynio.api.gateway.v1.AgentsGateway.UpdateSkill:input_type -> agynio.api.agents.v1.UpdateSkillRequest
+	50,  // 50: agynio.api.gateway.v1.AgentsGateway.DeleteSkill:input_type -> agynio.api.agents.v1.DeleteSkillRequest
+	51,  // 51: agynio.api.gateway.v1.AgentsGateway.ListSkills:input_type -> agynio.api.agents.v1.ListSkillsRequest
+	52,  // 52: agynio.api.gateway.v1.AgentsGateway.CreateHook:input_type -> agynio.api.agents.v1.CreateHookRequest
+	53,  // 53: agynio.api.gateway.v1.AgentsGateway.GetHook:input_type -> agynio.api.agents.v1.GetHookRequest
+	54,  // 54: agynio.api.gateway.v1.AgentsGateway.UpdateHook:input_type -> agynio.api.agents.v1.UpdateHookRequest
+	55,  // 55: agynio.api.gateway.v1.AgentsGateway.DeleteHook:input_type -> agynio.api.agents.v1.DeleteHookRequest
+	56,  // 56: agynio.api.gateway.v1.AgentsGateway.ListHooks:input_type -> agynio.api.agents.v1.ListHooksRequest
+	57,  // 57: agynio.api.gateway.v1.AgentsGateway.CreateEnv:input_type -> agynio.api.agents.v1.CreateEnvRequest
+	58,  // 58: agynio.api.gateway.v1.AgentsGateway.GetEnv:input_type -> agynio.api.agents.v1.GetEnvRequest
+	59,  // 59: agynio.api.gateway.v1.AgentsGateway.UpdateEnv:input_type -> agynio.api.agents.v1.UpdateEnvRequest
+	60,  // 60: agynio.api.gateway.v1.AgentsGateway.DeleteEnv:input_type -> agynio.api.agents.v1.DeleteEnvRequest
+	61,  // 61: agynio.api.gateway.v1.AgentsGateway.ListEnvs:input_type -> agynio.api.agents.v1.ListEnvsRequest
+	62,  // 62: agynio.api.gateway.v1.AgentsGateway.CreateInitScript:input_type -> agynio.api.agents.v1.CreateInitScriptRequest
+	63,  // 63: agynio.api.gateway.v1.AgentsGateway.GetInitScript:input_type -> agynio.api.agents.v1.GetInitScriptRequest
+	64,  // 64: agynio.api.gateway.v1.AgentsGateway.UpdateInitScript:input_type -> agynio.api.agents.v1.UpdateInitScriptRequest
+	65,  // 65: agynio.api.gateway.v1.AgentsGateway.DeleteInitScript:input_type -> agynio.api.agents.v1.DeleteInitScriptRequest
+	66,  // 66: agynio.api.gateway.v1.AgentsGateway.ListInitScripts:input_type -> agynio.api.agents.v1.ListInitScriptsRequest
+	67,  // 67: agynio.api.gateway.v1.AgentsGateway.CreateImagePullSecretAttachment:input_type -> agynio.api.agents.v1.CreateImagePullSecretAttachmentRequest
+	68,  // 68: agynio.api.gateway.v1.AgentsGateway.GetImagePullSecretAttachment:input_type -> agynio.api.agents.v1.GetImagePullSecretAttachmentRequest
+	69,  // 69: agynio.api.gateway.v1.AgentsGateway.DeleteImagePullSecretAttachment:input_type -> agynio.api.agents.v1.DeleteImagePullSecretAttachmentRequest
+	70,  // 70: agynio.api.gateway.v1.AgentsGateway.ListImagePullSecretAttachments:input_type -> agynio.api.agents.v1.ListImagePullSecretAttachmentsRequest
+	71,  // 71: agynio.api.gateway.v1.AgentsGateway.CreateAgent:output_type -> agynio.api.agents.v1.CreateAgentResponse
+	72,  // 72: agynio.api.gateway.v1.AgentsGateway.GetAgent:output_type -> agynio.api.agents.v1.GetAgentResponse
+	73,  // 73: agynio.api.gateway.v1.AgentsGateway.UpdateAgent:output_type -> agynio.api.agents.v1.UpdateAgentResponse
+	74,  // 74: agynio.api.gateway.v1.AgentsGateway.DeleteAgent:output_type -> agynio.api.agents.v1.DeleteAgentResponse
+	75,  // 75: agynio.api.gateway.v1.AgentsGateway.ListAgents:output_type -> agynio.api.agents.v1.ListAgentsResponse
+	76,  // 76: agynio.api.gateway.v1.AgentsGateway.SetAgentRole:output_type -> agynio.api.agents.v1.SetAgentRoleResponse
+	77,  // 77: agynio.api.gateway.v1.AgentsGateway.RemoveAgentRole:output_type -> agynio.api.agents.v1.RemoveAgentRoleResponse
+	78,  // 78: agynio.api.gateway.v1.AgentsGateway.ListAgentRoles:output_type -> agynio.api.agents.v1.ListAgentRolesResponse
+	79,  // 79: agynio.api.gateway.v1.AgentsGateway.ListMyAgentRoles:output_type -> agynio.api.agents.v1.ListMyAgentRolesResponse
+	80,  // 80: agynio.api.gateway.v1.AgentsGateway.CreateEnvironment:output_type -> agynio.api.agents.v1.CreateEnvironmentResponse
+	81,  // 81: agynio.api.gateway.v1.AgentsGateway.GetEnvironment:output_type -> agynio.api.agents.v1.GetEnvironmentResponse
+	82,  // 82: agynio.api.gateway.v1.AgentsGateway.UpdateEnvironment:output_type -> agynio.api.agents.v1.UpdateEnvironmentResponse
+	83,  // 83: agynio.api.gateway.v1.AgentsGateway.DeleteEnvironment:output_type -> agynio.api.agents.v1.DeleteEnvironmentResponse
+	84,  // 84: agynio.api.gateway.v1.AgentsGateway.ListEnvironments:output_type -> agynio.api.agents.v1.ListEnvironmentsResponse
+	85,  // 85: agynio.api.gateway.v1.AgentsGateway.SetEnvironmentRole:output_type -> agynio.api.agents.v1.SetEnvironmentRoleResponse
+	86,  // 86: agynio.api.gateway.v1.AgentsGateway.RemoveEnvironmentRole:output_type -> agynio.api.agents.v1.RemoveEnvironmentRoleResponse
+	87,  // 87: agynio.api.gateway.v1.AgentsGateway.ListEnvironmentRoles:output_type -> agynio.api.agents.v1.ListEnvironmentRolesResponse
+	88,  // 88: agynio.api.gateway.v1.AgentsGateway.CreateSandbox:output_type -> agynio.api.agents.v1.CreateSandboxResponse
+	89,  // 89: agynio.api.gateway.v1.AgentsGateway.GetSandbox:output_type -> agynio.api.agents.v1.GetSandboxResponse
+	90,  // 90: agynio.api.gateway.v1.AgentsGateway.ListSandboxes:output_type -> agynio.api.agents.v1.ListSandboxesResponse
+	91,  // 91: agynio.api.gateway.v1.AgentsGateway.StopSandbox:output_type -> agynio.api.agents.v1.StopSandboxResponse
+	92,  // 92: agynio.api.gateway.v1.AgentsGateway.DeleteSandbox:output_type -> agynio.api.agents.v1.DeleteSandboxResponse
+	93,  // 93: agynio.api.gateway.v1.AgentsGateway.EnsureSandboxRunning:output_type -> agynio.api.agents.v1.EnsureSandboxRunningResponse
+	94,  // 94: agynio.api.gateway.v1.AgentsGateway.CreateInstance:output_type -> agynio.api.agents.v1.CreateInstanceResponse
+	95,  // 95: agynio.api.gateway.v1.AgentsGateway.GetInstance:output_type -> agynio.api.agents.v1.GetInstanceResponse
+	96,  // 96: agynio.api.gateway.v1.AgentsGateway.ListInstances:output_type -> agynio.api.agents.v1.ListInstancesResponse
+	97,  // 97: agynio.api.gateway.v1.AgentsGateway.PauseInstance:output_type -> agynio.api.agents.v1.PauseInstanceResponse
+	98,  // 98: agynio.api.gateway.v1.AgentsGateway.ResumeInstance:output_type -> agynio.api.agents.v1.ResumeInstanceResponse
+	99,  // 99: agynio.api.gateway.v1.AgentsGateway.DeleteInstance:output_type -> agynio.api.agents.v1.DeleteInstanceResponse
+	100, // 100: agynio.api.gateway.v1.AgentsGateway.WriteInboxItem:output_type -> agynio.api.agents.v1.WriteInboxItemResponse
+	101, // 101: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxItems:output_type -> agynio.api.agents.v1.GetUnackedInboxItemsResponse
+	102, // 102: agynio.api.gateway.v1.AgentsGateway.AckInboxItems:output_type -> agynio.api.agents.v1.AckInboxItemsResponse
+	103, // 103: agynio.api.gateway.v1.AgentsGateway.GetUnackedInboxCount:output_type -> agynio.api.agents.v1.GetUnackedInboxCountResponse
+	104, // 104: agynio.api.gateway.v1.AgentsGateway.CreateVolume:output_type -> agynio.api.agents.v1.CreateVolumeResponse
+	105, // 105: agynio.api.gateway.v1.AgentsGateway.GetVolume:output_type -> agynio.api.agents.v1.GetVolumeResponse
+	106, // 106: agynio.api.gateway.v1.AgentsGateway.UpdateVolume:output_type -> agynio.api.agents.v1.UpdateVolumeResponse
+	107, // 107: agynio.api.gateway.v1.AgentsGateway.DeleteVolume:output_type -> agynio.api.agents.v1.DeleteVolumeResponse
+	108, // 108: agynio.api.gateway.v1.AgentsGateway.ListVolumes:output_type -> agynio.api.agents.v1.ListVolumesResponse
+	109, // 109: agynio.api.gateway.v1.AgentsGateway.CreateVolumeAttachment:output_type -> agynio.api.agents.v1.CreateVolumeAttachmentResponse
+	110, // 110: agynio.api.gateway.v1.AgentsGateway.GetVolumeAttachment:output_type -> agynio.api.agents.v1.GetVolumeAttachmentResponse
+	111, // 111: agynio.api.gateway.v1.AgentsGateway.DeleteVolumeAttachment:output_type -> agynio.api.agents.v1.DeleteVolumeAttachmentResponse
+	112, // 112: agynio.api.gateway.v1.AgentsGateway.ListVolumeAttachments:output_type -> agynio.api.agents.v1.ListVolumeAttachmentsResponse
+	113, // 113: agynio.api.gateway.v1.AgentsGateway.CreateMcp:output_type -> agynio.api.agents.v1.CreateMcpResponse
+	114, // 114: agynio.api.gateway.v1.AgentsGateway.GetMcp:output_type -> agynio.api.agents.v1.GetMcpResponse
+	115, // 115: agynio.api.gateway.v1.AgentsGateway.UpdateMcp:output_type -> agynio.api.agents.v1.UpdateMcpResponse
+	116, // 116: agynio.api.gateway.v1.AgentsGateway.DeleteMcp:output_type -> agynio.api.agents.v1.DeleteMcpResponse
+	117, // 117: agynio.api.gateway.v1.AgentsGateway.ListMcps:output_type -> agynio.api.agents.v1.ListMcpsResponse
+	118, // 118: agynio.api.gateway.v1.AgentsGateway.CreateSkill:output_type -> agynio.api.agents.v1.CreateSkillResponse
+	119, // 119: agynio.api.gateway.v1.AgentsGateway.GetSkill:output_type -> agynio.api.agents.v1.GetSkillResponse
+	120, // 120: agynio.api.gateway.v1.AgentsGateway.UpdateSkill:output_type -> agynio.api.agents.v1.UpdateSkillResponse
+	121, // 121: agynio.api.gateway.v1.AgentsGateway.DeleteSkill:output_type -> agynio.api.agents.v1.DeleteSkillResponse
+	122, // 122: agynio.api.gateway.v1.AgentsGateway.ListSkills:output_type -> agynio.api.agents.v1.ListSkillsResponse
+	123, // 123: agynio.api.gateway.v1.AgentsGateway.CreateHook:output_type -> agynio.api.agents.v1.CreateHookResponse
+	124, // 124: agynio.api.gateway.v1.AgentsGateway.GetHook:output_type -> agynio.api.agents.v1.GetHookResponse
+	125, // 125: agynio.api.gateway.v1.AgentsGateway.UpdateHook:output_type -> agynio.api.agents.v1.UpdateHookResponse
+	126, // 126: agynio.api.gateway.v1.AgentsGateway.DeleteHook:output_type -> agynio.api.agents.v1.DeleteHookResponse
+	127, // 127: agynio.api.gateway.v1.AgentsGateway.ListHooks:output_type -> agynio.api.agents.v1.ListHooksResponse
+	128, // 128: agynio.api.gateway.v1.AgentsGateway.CreateEnv:output_type -> agynio.api.agents.v1.CreateEnvResponse
+	129, // 129: agynio.api.gateway.v1.AgentsGateway.GetEnv:output_type -> agynio.api.agents.v1.GetEnvResponse
+	130, // 130: agynio.api.gateway.v1.AgentsGateway.UpdateEnv:output_type -> agynio.api.agents.v1.UpdateEnvResponse
+	131, // 131: agynio.api.gateway.v1.AgentsGateway.DeleteEnv:output_type -> agynio.api.agents.v1.DeleteEnvResponse
+	132, // 132: agynio.api.gateway.v1.AgentsGateway.ListEnvs:output_type -> agynio.api.agents.v1.ListEnvsResponse
+	133, // 133: agynio.api.gateway.v1.AgentsGateway.CreateInitScript:output_type -> agynio.api.agents.v1.CreateInitScriptResponse
+	134, // 134: agynio.api.gateway.v1.AgentsGateway.GetInitScript:output_type -> agynio.api.agents.v1.GetInitScriptResponse
+	135, // 135: agynio.api.gateway.v1.AgentsGateway.UpdateInitScript:output_type -> agynio.api.agents.v1.UpdateInitScriptResponse
+	136, // 136: agynio.api.gateway.v1.AgentsGateway.DeleteInitScript:output_type -> agynio.api.agents.v1.DeleteInitScriptResponse
+	137, // 137: agynio.api.gateway.v1.AgentsGateway.ListInitScripts:output_type -> agynio.api.agents.v1.ListInitScriptsResponse
+	138, // 138: agynio.api.gateway.v1.AgentsGateway.CreateImagePullSecretAttachment:output_type -> agynio.api.agents.v1.CreateImagePullSecretAttachmentResponse
+	139, // 139: agynio.api.gateway.v1.AgentsGateway.GetImagePullSecretAttachment:output_type -> agynio.api.agents.v1.GetImagePullSecretAttachmentResponse
+	140, // 140: agynio.api.gateway.v1.AgentsGateway.DeleteImagePullSecretAttachment:output_type -> agynio.api.agents.v1.DeleteImagePullSecretAttachmentResponse
+	141, // 141: agynio.api.gateway.v1.AgentsGateway.ListImagePullSecretAttachments:output_type -> agynio.api.agents.v1.ListImagePullSecretAttachmentsResponse
+	71,  // [71:142] is the sub-list for method output_type
+	0,   // [0:71] is the sub-list for method input_type
 	0,   // [0:0] is the sub-list for extension type_name
 	0,   // [0:0] is the sub-list for extension extendee
 	0,   // [0:0] is the sub-list for field type_name
