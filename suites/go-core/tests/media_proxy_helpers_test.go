@@ -23,9 +23,6 @@ import (
 )
 
 const (
-	mockAuthTokenURL = "https://mockauth.dev/r/301ebb13-15a8-48f4-baac-e3fa25be29fc/oidc/token"
-	mockAuthClientID = "client_MU95KU3gHQf5Ir7p"
-
 	mediaProxyIdentityMetadataKey     = "x-identity-id"
 	mediaProxyIdentityTypeMetadataKey = "x-identity-type"
 )
@@ -33,6 +30,20 @@ const (
 var (
 	mediaProxyURL = envOrDefault("MEDIA_PROXY_URL", "http://media-proxy:8080")
 	gatewayURL    = envOrDefault("GATEWAY_URL", "http://gateway:8080")
+
+	// Minted from the bundled Keycloak over plain in-cluster HTTP. The token
+	// still verifies against the Media Proxy, which is configured with the
+	// browser-facing issuer: Keycloak stamps `iss` from KC_HOSTNAME rather than
+	// from the address it was called on. Going through the ingress instead would
+	// mean trusting the VM's local CA here for no gain.
+	oidcTokenURL = envOrDefault("OIDC_TOKEN_URL",
+		"http://keycloak.platform.svc.cluster.local:8080/realms/agyn/protocol/openid-connect/token")
+	oidcClientID = envOrDefault("OIDC_CLIENT_ID", "agyn-chat")
+	// The user the realm ships with. It is the cluster admin, which these tests
+	// do not rely on — they need an identity that resolves, not a particular
+	// permission level.
+	oidcUsername = envOrDefault("OIDC_USERNAME", "admin")
+	oidcPassword = envOrDefault("OIDC_PASSWORD", "admin")
 
 	accessToken      string
 	resolvedIdentity mediaProxyIdentity
@@ -115,11 +126,12 @@ func setupCredentials(ctx context.Context, _ *cleanupStack) error {
 func requestOIDCAccessToken(ctx context.Context) (string, error) {
 	form := url.Values{}
 	form.Set("grant_type", "password")
-	form.Set("username", "e2e-test-user@test.com")
+	form.Set("username", oidcUsername)
+	form.Set("password", oidcPassword)
 	form.Set("scope", "openid profile email")
-	form.Set("client_id", mockAuthClientID)
+	form.Set("client_id", oidcClientID)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, mockAuthTokenURL, strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, oidcTokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +145,7 @@ func requestOIDCAccessToken(ctx context.Context) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("mockauth token request failed: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf("oidc token request failed: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var payload struct {
@@ -145,7 +157,7 @@ func requestOIDCAccessToken(ctx context.Context) (string, error) {
 
 	token := strings.TrimSpace(payload.AccessToken)
 	if token == "" {
-		return "", fmt.Errorf("mockauth access_token missing")
+		return "", fmt.Errorf("oidc access_token missing")
 	}
 
 	return token, nil
