@@ -167,6 +167,29 @@ runs:
       shell: bash
       run: agyn local upgrade
 
+    # A helm --wait timeout reports only that something never became ready, and
+    # the runner is destroyed with the answer still on it. Naming the resource
+    # here is the difference between fixing the cause and guessing at it.
+    - name: Dump what the upgrade was waiting for
+      if: failure()
+      shell: bash
+      run: |
+        set -uo pipefail
+        kubeconfig="${HOME}/.kube/agyn-local-diagnostic.yaml"
+        mkdir -p "$(dirname "${kubeconfig}")"
+        agyn local kubeconfig --path "${kubeconfig}" || exit 0
+        export KUBECONFIG="${kubeconfig}"
+        echo "::group::pods that are not ready"
+        kubectl get pods -n platform --no-headers 2>/dev/null |
+          awk '$3 != "Completed" {split($2, ready, "/"); if (ready[1] != ready[2] || $3 != "Running") print}'
+        echo "::endgroup::"
+        echo "::group::workloads"
+        kubectl get deploy,statefulset,job -n platform 2>/dev/null
+        echo "::endgroup::"
+        echo "::group::recent events"
+        kubectl get events -n platform --sort-by=.lastTimestamp 2>/dev/null | tail -40
+        echo "::endgroup::"
+
     - name: Export the kubeconfig
       id: kubeconfig
       shell: bash
