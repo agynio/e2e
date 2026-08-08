@@ -24,7 +24,13 @@ import (
 // the allowlist it enforces, and the guard that stops the secret disappearing
 // from under it -- is derived rather than copied.
 
-const subscriptionTestToken = "e2e-subscription-token"
+const (
+	subscriptionTestToken = "e2e-subscription-token"
+
+	// An environment needs an image to be created at all. Nothing here runs a
+	// workload, so the reference only has to be well-formed.
+	environmentPlaceholderImage = "ghcr.io/agynio/devcontainer:latest"
+)
 
 type subscriptionFixture struct {
 	ownerCtx       context.Context
@@ -88,8 +94,11 @@ func createSubscriptionEnvironment(t *testing.T, ctx context.Context, client age
 		OrganizationId: organizationID,
 		Name:           "e2e-native-" + uuid.NewString(),
 		RunnerId:       uuid.NewString(),
-		Availability:   agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
-		LlmMode:        agentsv1.LLMMode_LLM_MODE_NATIVE,
+		// Deprecated inline image rather than a catalog entry: these tests never
+		// start a workload, and registering an image would test the catalog.
+		Image:        environmentPlaceholderImage,
+		Availability: agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
+		LlmMode:      agentsv1.LLMMode_LLM_MODE_NATIVE,
 		// The allowlist is the environment's, and the proxy reads it through
 		// ResolveSubscription rather than calling Agents on the request path.
 		LlmAllowedModels: []string{"claude-sonnet-4-6"},
@@ -118,8 +127,12 @@ func createSubscriptionEnvironment(t *testing.T, ctx context.Context, client age
 
 func grantSubscriptionTargetAccess(t *testing.T, ctx context.Context, client authorizationv1.AuthorizationServiceClient, identityID, organizationID, object string) {
 	t.Helper()
+	// can_edit_config is derived (owner or maintainer or owner from org), so it
+	// cannot be written. Writing the roles it derives from is what grants it:
+	// the caller owns the organization, and org ownership reaches the agent
+	// through the org tuple.
 	tuples := []*authorizationv1.TupleKey{
-		{User: "identity:" + identityID, Relation: "can_edit_config", Object: object},
+		{User: "identity:" + identityID, Relation: "owner", Object: object},
 		{User: "organization:" + organizationID, Relation: "org", Object: object},
 	}
 	if _, err := client.Write(llmProxyAdminContext(ctx), &authorizationv1.WriteRequest{Writes: tuples}); err != nil {
