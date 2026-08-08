@@ -20,17 +20,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	LLMGateway_CreateLLMProvider_FullMethodName = "/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider"
-	LLMGateway_GetLLMProvider_FullMethodName    = "/agynio.api.gateway.v1.LLMGateway/GetLLMProvider"
-	LLMGateway_UpdateLLMProvider_FullMethodName = "/agynio.api.gateway.v1.LLMGateway/UpdateLLMProvider"
-	LLMGateway_DeleteLLMProvider_FullMethodName = "/agynio.api.gateway.v1.LLMGateway/DeleteLLMProvider"
-	LLMGateway_ListLLMProviders_FullMethodName  = "/agynio.api.gateway.v1.LLMGateway/ListLLMProviders"
-	LLMGateway_CreateModel_FullMethodName       = "/agynio.api.gateway.v1.LLMGateway/CreateModel"
-	LLMGateway_GetModel_FullMethodName          = "/agynio.api.gateway.v1.LLMGateway/GetModel"
-	LLMGateway_UpdateModel_FullMethodName       = "/agynio.api.gateway.v1.LLMGateway/UpdateModel"
-	LLMGateway_DeleteModel_FullMethodName       = "/agynio.api.gateway.v1.LLMGateway/DeleteModel"
-	LLMGateway_ListModels_FullMethodName        = "/agynio.api.gateway.v1.LLMGateway/ListModels"
-	LLMGateway_TestModel_FullMethodName         = "/agynio.api.gateway.v1.LLMGateway/TestModel"
+	LLMGateway_CreateLLMProvider_FullMethodName            = "/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider"
+	LLMGateway_GetLLMProvider_FullMethodName               = "/agynio.api.gateway.v1.LLMGateway/GetLLMProvider"
+	LLMGateway_UpdateLLMProvider_FullMethodName            = "/agynio.api.gateway.v1.LLMGateway/UpdateLLMProvider"
+	LLMGateway_DeleteLLMProvider_FullMethodName            = "/agynio.api.gateway.v1.LLMGateway/DeleteLLMProvider"
+	LLMGateway_ListLLMProviders_FullMethodName             = "/agynio.api.gateway.v1.LLMGateway/ListLLMProviders"
+	LLMGateway_CreateModel_FullMethodName                  = "/agynio.api.gateway.v1.LLMGateway/CreateModel"
+	LLMGateway_GetModel_FullMethodName                     = "/agynio.api.gateway.v1.LLMGateway/GetModel"
+	LLMGateway_UpdateModel_FullMethodName                  = "/agynio.api.gateway.v1.LLMGateway/UpdateModel"
+	LLMGateway_DeleteModel_FullMethodName                  = "/agynio.api.gateway.v1.LLMGateway/DeleteModel"
+	LLMGateway_ListModels_FullMethodName                   = "/agynio.api.gateway.v1.LLMGateway/ListModels"
+	LLMGateway_CreateSubscription_FullMethodName           = "/agynio.api.gateway.v1.LLMGateway/CreateSubscription"
+	LLMGateway_GetSubscription_FullMethodName              = "/agynio.api.gateway.v1.LLMGateway/GetSubscription"
+	LLMGateway_UpdateSubscription_FullMethodName           = "/agynio.api.gateway.v1.LLMGateway/UpdateSubscription"
+	LLMGateway_DeleteSubscription_FullMethodName           = "/agynio.api.gateway.v1.LLMGateway/DeleteSubscription"
+	LLMGateway_ListSubscriptions_FullMethodName            = "/agynio.api.gateway.v1.LLMGateway/ListSubscriptions"
+	LLMGateway_CreateSubscriptionAttachment_FullMethodName = "/agynio.api.gateway.v1.LLMGateway/CreateSubscriptionAttachment"
+	LLMGateway_DeleteSubscriptionAttachment_FullMethodName = "/agynio.api.gateway.v1.LLMGateway/DeleteSubscriptionAttachment"
+	LLMGateway_ListSubscriptionAttachments_FullMethodName  = "/agynio.api.gateway.v1.LLMGateway/ListSubscriptionAttachments"
+	LLMGateway_TestModel_FullMethodName                    = "/agynio.api.gateway.v1.LLMGateway/TestModel"
 )
 
 // LLMGatewayClient is the client API for LLMGateway service.
@@ -49,6 +57,16 @@ type LLMGatewayClient interface {
 	UpdateModel(ctx context.Context, in *v1.UpdateModelRequest, opts ...grpc.CallOption) (*v1.UpdateModelResponse, error)
 	DeleteModel(ctx context.Context, in *v1.DeleteModelRequest, opts ...grpc.CallOption) (*v1.DeleteModelResponse, error)
 	ListModels(ctx context.Context, in *v1.ListModelsRequest, opts ...grpc.CallOption) (*v1.ListModelsResponse, error)
+	// --- Subscriptions ---
+	CreateSubscription(ctx context.Context, in *v1.CreateSubscriptionRequest, opts ...grpc.CallOption) (*v1.CreateSubscriptionResponse, error)
+	GetSubscription(ctx context.Context, in *v1.GetSubscriptionRequest, opts ...grpc.CallOption) (*v1.GetSubscriptionResponse, error)
+	UpdateSubscription(ctx context.Context, in *v1.UpdateSubscriptionRequest, opts ...grpc.CallOption) (*v1.UpdateSubscriptionResponse, error)
+	DeleteSubscription(ctx context.Context, in *v1.DeleteSubscriptionRequest, opts ...grpc.CallOption) (*v1.DeleteSubscriptionResponse, error)
+	ListSubscriptions(ctx context.Context, in *v1.ListSubscriptionsRequest, opts ...grpc.CallOption) (*v1.ListSubscriptionsResponse, error)
+	// --- Subscription attachments ---
+	CreateSubscriptionAttachment(ctx context.Context, in *v1.CreateSubscriptionAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateSubscriptionAttachmentResponse, error)
+	DeleteSubscriptionAttachment(ctx context.Context, in *v1.DeleteSubscriptionAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteSubscriptionAttachmentResponse, error)
+	ListSubscriptionAttachments(ctx context.Context, in *v1.ListSubscriptionAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListSubscriptionAttachmentsResponse, error)
 	// --- Test ---
 	TestModel(ctx context.Context, in *v1.TestModelRequest, opts ...grpc.CallOption) (*v1.TestModelResponse, error)
 }
@@ -161,6 +179,86 @@ func (c *lLMGatewayClient) ListModels(ctx context.Context, in *v1.ListModelsRequ
 	return out, nil
 }
 
+func (c *lLMGatewayClient) CreateSubscription(ctx context.Context, in *v1.CreateSubscriptionRequest, opts ...grpc.CallOption) (*v1.CreateSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CreateSubscriptionResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_CreateSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) GetSubscription(ctx context.Context, in *v1.GetSubscriptionRequest, opts ...grpc.CallOption) (*v1.GetSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GetSubscriptionResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_GetSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) UpdateSubscription(ctx context.Context, in *v1.UpdateSubscriptionRequest, opts ...grpc.CallOption) (*v1.UpdateSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.UpdateSubscriptionResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_UpdateSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) DeleteSubscription(ctx context.Context, in *v1.DeleteSubscriptionRequest, opts ...grpc.CallOption) (*v1.DeleteSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DeleteSubscriptionResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_DeleteSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) ListSubscriptions(ctx context.Context, in *v1.ListSubscriptionsRequest, opts ...grpc.CallOption) (*v1.ListSubscriptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListSubscriptionsResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_ListSubscriptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) CreateSubscriptionAttachment(ctx context.Context, in *v1.CreateSubscriptionAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateSubscriptionAttachmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CreateSubscriptionAttachmentResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_CreateSubscriptionAttachment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) DeleteSubscriptionAttachment(ctx context.Context, in *v1.DeleteSubscriptionAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteSubscriptionAttachmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DeleteSubscriptionAttachmentResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_DeleteSubscriptionAttachment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lLMGatewayClient) ListSubscriptionAttachments(ctx context.Context, in *v1.ListSubscriptionAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListSubscriptionAttachmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListSubscriptionAttachmentsResponse)
+	err := c.cc.Invoke(ctx, LLMGateway_ListSubscriptionAttachments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *lLMGatewayClient) TestModel(ctx context.Context, in *v1.TestModelRequest, opts ...grpc.CallOption) (*v1.TestModelResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.TestModelResponse)
@@ -187,6 +285,16 @@ type LLMGatewayServer interface {
 	UpdateModel(context.Context, *v1.UpdateModelRequest) (*v1.UpdateModelResponse, error)
 	DeleteModel(context.Context, *v1.DeleteModelRequest) (*v1.DeleteModelResponse, error)
 	ListModels(context.Context, *v1.ListModelsRequest) (*v1.ListModelsResponse, error)
+	// --- Subscriptions ---
+	CreateSubscription(context.Context, *v1.CreateSubscriptionRequest) (*v1.CreateSubscriptionResponse, error)
+	GetSubscription(context.Context, *v1.GetSubscriptionRequest) (*v1.GetSubscriptionResponse, error)
+	UpdateSubscription(context.Context, *v1.UpdateSubscriptionRequest) (*v1.UpdateSubscriptionResponse, error)
+	DeleteSubscription(context.Context, *v1.DeleteSubscriptionRequest) (*v1.DeleteSubscriptionResponse, error)
+	ListSubscriptions(context.Context, *v1.ListSubscriptionsRequest) (*v1.ListSubscriptionsResponse, error)
+	// --- Subscription attachments ---
+	CreateSubscriptionAttachment(context.Context, *v1.CreateSubscriptionAttachmentRequest) (*v1.CreateSubscriptionAttachmentResponse, error)
+	DeleteSubscriptionAttachment(context.Context, *v1.DeleteSubscriptionAttachmentRequest) (*v1.DeleteSubscriptionAttachmentResponse, error)
+	ListSubscriptionAttachments(context.Context, *v1.ListSubscriptionAttachmentsRequest) (*v1.ListSubscriptionAttachmentsResponse, error)
 	// --- Test ---
 	TestModel(context.Context, *v1.TestModelRequest) (*v1.TestModelResponse, error)
 }
@@ -227,6 +335,30 @@ func (UnimplementedLLMGatewayServer) DeleteModel(context.Context, *v1.DeleteMode
 }
 func (UnimplementedLLMGatewayServer) ListModels(context.Context, *v1.ListModelsRequest) (*v1.ListModelsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListModels not implemented")
+}
+func (UnimplementedLLMGatewayServer) CreateSubscription(context.Context, *v1.CreateSubscriptionRequest) (*v1.CreateSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSubscription not implemented")
+}
+func (UnimplementedLLMGatewayServer) GetSubscription(context.Context, *v1.GetSubscriptionRequest) (*v1.GetSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSubscription not implemented")
+}
+func (UnimplementedLLMGatewayServer) UpdateSubscription(context.Context, *v1.UpdateSubscriptionRequest) (*v1.UpdateSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSubscription not implemented")
+}
+func (UnimplementedLLMGatewayServer) DeleteSubscription(context.Context, *v1.DeleteSubscriptionRequest) (*v1.DeleteSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSubscription not implemented")
+}
+func (UnimplementedLLMGatewayServer) ListSubscriptions(context.Context, *v1.ListSubscriptionsRequest) (*v1.ListSubscriptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSubscriptions not implemented")
+}
+func (UnimplementedLLMGatewayServer) CreateSubscriptionAttachment(context.Context, *v1.CreateSubscriptionAttachmentRequest) (*v1.CreateSubscriptionAttachmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSubscriptionAttachment not implemented")
+}
+func (UnimplementedLLMGatewayServer) DeleteSubscriptionAttachment(context.Context, *v1.DeleteSubscriptionAttachmentRequest) (*v1.DeleteSubscriptionAttachmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSubscriptionAttachment not implemented")
+}
+func (UnimplementedLLMGatewayServer) ListSubscriptionAttachments(context.Context, *v1.ListSubscriptionAttachmentsRequest) (*v1.ListSubscriptionAttachmentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSubscriptionAttachments not implemented")
 }
 func (UnimplementedLLMGatewayServer) TestModel(context.Context, *v1.TestModelRequest) (*v1.TestModelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TestModel not implemented")
@@ -431,6 +563,150 @@ func _LLMGateway_ListModels_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LLMGateway_CreateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).CreateSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_CreateSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).CreateSubscription(ctx, req.(*v1.CreateSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_GetSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GetSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).GetSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_GetSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).GetSubscription(ctx, req.(*v1.GetSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_UpdateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.UpdateSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).UpdateSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_UpdateSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).UpdateSubscription(ctx, req.(*v1.UpdateSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_DeleteSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DeleteSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).DeleteSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_DeleteSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).DeleteSubscription(ctx, req.(*v1.DeleteSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_ListSubscriptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListSubscriptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).ListSubscriptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_ListSubscriptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).ListSubscriptions(ctx, req.(*v1.ListSubscriptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_CreateSubscriptionAttachment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CreateSubscriptionAttachmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).CreateSubscriptionAttachment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_CreateSubscriptionAttachment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).CreateSubscriptionAttachment(ctx, req.(*v1.CreateSubscriptionAttachmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_DeleteSubscriptionAttachment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DeleteSubscriptionAttachmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).DeleteSubscriptionAttachment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_DeleteSubscriptionAttachment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).DeleteSubscriptionAttachment(ctx, req.(*v1.DeleteSubscriptionAttachmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LLMGateway_ListSubscriptionAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListSubscriptionAttachmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LLMGatewayServer).ListSubscriptionAttachments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LLMGateway_ListSubscriptionAttachments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LLMGatewayServer).ListSubscriptionAttachments(ctx, req.(*v1.ListSubscriptionAttachmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _LLMGateway_TestModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.TestModelRequest)
 	if err := dec(in); err != nil {
@@ -495,6 +771,38 @@ var LLMGateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListModels",
 			Handler:    _LLMGateway_ListModels_Handler,
+		},
+		{
+			MethodName: "CreateSubscription",
+			Handler:    _LLMGateway_CreateSubscription_Handler,
+		},
+		{
+			MethodName: "GetSubscription",
+			Handler:    _LLMGateway_GetSubscription_Handler,
+		},
+		{
+			MethodName: "UpdateSubscription",
+			Handler:    _LLMGateway_UpdateSubscription_Handler,
+		},
+		{
+			MethodName: "DeleteSubscription",
+			Handler:    _LLMGateway_DeleteSubscription_Handler,
+		},
+		{
+			MethodName: "ListSubscriptions",
+			Handler:    _LLMGateway_ListSubscriptions_Handler,
+		},
+		{
+			MethodName: "CreateSubscriptionAttachment",
+			Handler:    _LLMGateway_CreateSubscriptionAttachment_Handler,
+		},
+		{
+			MethodName: "DeleteSubscriptionAttachment",
+			Handler:    _LLMGateway_DeleteSubscriptionAttachment_Handler,
+		},
+		{
+			MethodName: "ListSubscriptionAttachments",
+			Handler:    _LLMGateway_ListSubscriptionAttachments_Handler,
 		},
 		{
 			MethodName: "TestModel",
