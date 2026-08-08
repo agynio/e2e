@@ -34,6 +34,9 @@ const (
 	AgentsGateway_UpdateEnvironment_FullMethodName               = "/agynio.api.gateway.v1.AgentsGateway/UpdateEnvironment"
 	AgentsGateway_DeleteEnvironment_FullMethodName               = "/agynio.api.gateway.v1.AgentsGateway/DeleteEnvironment"
 	AgentsGateway_ListEnvironments_FullMethodName                = "/agynio.api.gateway.v1.AgentsGateway/ListEnvironments"
+	AgentsGateway_SetEnvironmentRole_FullMethodName              = "/agynio.api.gateway.v1.AgentsGateway/SetEnvironmentRole"
+	AgentsGateway_RemoveEnvironmentRole_FullMethodName           = "/agynio.api.gateway.v1.AgentsGateway/RemoveEnvironmentRole"
+	AgentsGateway_ListEnvironmentRoles_FullMethodName            = "/agynio.api.gateway.v1.AgentsGateway/ListEnvironmentRoles"
 	AgentsGateway_CreateSandbox_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/CreateSandbox"
 	AgentsGateway_GetSandbox_FullMethodName                      = "/agynio.api.gateway.v1.AgentsGateway/GetSandbox"
 	AgentsGateway_ListSandboxes_FullMethodName                   = "/agynio.api.gateway.v1.AgentsGateway/ListSandboxes"
@@ -110,6 +113,9 @@ type AgentsGatewayClient interface {
 	UpdateEnvironment(ctx context.Context, in *v1.UpdateEnvironmentRequest, opts ...grpc.CallOption) (*v1.UpdateEnvironmentResponse, error)
 	DeleteEnvironment(ctx context.Context, in *v1.DeleteEnvironmentRequest, opts ...grpc.CallOption) (*v1.DeleteEnvironmentResponse, error)
 	ListEnvironments(ctx context.Context, in *v1.ListEnvironmentsRequest, opts ...grpc.CallOption) (*v1.ListEnvironmentsResponse, error)
+	SetEnvironmentRole(ctx context.Context, in *v1.SetEnvironmentRoleRequest, opts ...grpc.CallOption) (*v1.SetEnvironmentRoleResponse, error)
+	RemoveEnvironmentRole(ctx context.Context, in *v1.RemoveEnvironmentRoleRequest, opts ...grpc.CallOption) (*v1.RemoveEnvironmentRoleResponse, error)
+	ListEnvironmentRoles(ctx context.Context, in *v1.ListEnvironmentRolesRequest, opts ...grpc.CallOption) (*v1.ListEnvironmentRolesResponse, error)
 	// --- Sandboxes ---
 	CreateSandbox(ctx context.Context, in *v1.CreateSandboxRequest, opts ...grpc.CallOption) (*v1.CreateSandboxResponse, error)
 	GetSandbox(ctx context.Context, in *v1.GetSandboxRequest, opts ...grpc.CallOption) (*v1.GetSandboxResponse, error)
@@ -135,10 +141,14 @@ type AgentsGatewayClient interface {
 	UpdateVolume(ctx context.Context, in *v1.UpdateVolumeRequest, opts ...grpc.CallOption) (*v1.UpdateVolumeResponse, error)
 	DeleteVolume(ctx context.Context, in *v1.DeleteVolumeRequest, opts ...grpc.CallOption) (*v1.DeleteVolumeResponse, error)
 	ListVolumes(ctx context.Context, in *v1.ListVolumesRequest, opts ...grpc.CallOption) (*v1.ListVolumesResponse, error)
-	// --- Volume Attachments (no Update) ---
+	// Deprecated: Do not use.
+	// --- Volume Attachments (superseded by a volume's own target) ---
 	CreateVolumeAttachment(ctx context.Context, in *v1.CreateVolumeAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateVolumeAttachmentResponse, error)
+	// Deprecated: Do not use.
 	GetVolumeAttachment(ctx context.Context, in *v1.GetVolumeAttachmentRequest, opts ...grpc.CallOption) (*v1.GetVolumeAttachmentResponse, error)
+	// Deprecated: Do not use.
 	DeleteVolumeAttachment(ctx context.Context, in *v1.DeleteVolumeAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteVolumeAttachmentResponse, error)
+	// Deprecated: Do not use.
 	ListVolumeAttachments(ctx context.Context, in *v1.ListVolumeAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListVolumeAttachmentsResponse, error)
 	// --- MCPs ---
 	CreateMcp(ctx context.Context, in *v1.CreateMcpRequest, opts ...grpc.CallOption) (*v1.CreateMcpResponse, error)
@@ -328,6 +338,36 @@ func (c *agentsGatewayClient) ListEnvironments(ctx context.Context, in *v1.ListE
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListEnvironmentsResponse)
 	err := c.cc.Invoke(ctx, AgentsGateway_ListEnvironments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) SetEnvironmentRole(ctx context.Context, in *v1.SetEnvironmentRoleRequest, opts ...grpc.CallOption) (*v1.SetEnvironmentRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.SetEnvironmentRoleResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_SetEnvironmentRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) RemoveEnvironmentRole(ctx context.Context, in *v1.RemoveEnvironmentRoleRequest, opts ...grpc.CallOption) (*v1.RemoveEnvironmentRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.RemoveEnvironmentRoleResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_RemoveEnvironmentRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentsGatewayClient) ListEnvironmentRoles(ctx context.Context, in *v1.ListEnvironmentRolesRequest, opts ...grpc.CallOption) (*v1.ListEnvironmentRolesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ListEnvironmentRolesResponse)
+	err := c.cc.Invoke(ctx, AgentsGateway_ListEnvironmentRoles_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -544,6 +584,7 @@ func (c *agentsGatewayClient) ListVolumes(ctx context.Context, in *v1.ListVolume
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) CreateVolumeAttachment(ctx context.Context, in *v1.CreateVolumeAttachmentRequest, opts ...grpc.CallOption) (*v1.CreateVolumeAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.CreateVolumeAttachmentResponse)
@@ -554,6 +595,7 @@ func (c *agentsGatewayClient) CreateVolumeAttachment(ctx context.Context, in *v1
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) GetVolumeAttachment(ctx context.Context, in *v1.GetVolumeAttachmentRequest, opts ...grpc.CallOption) (*v1.GetVolumeAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.GetVolumeAttachmentResponse)
@@ -564,6 +606,7 @@ func (c *agentsGatewayClient) GetVolumeAttachment(ctx context.Context, in *v1.Ge
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) DeleteVolumeAttachment(ctx context.Context, in *v1.DeleteVolumeAttachmentRequest, opts ...grpc.CallOption) (*v1.DeleteVolumeAttachmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.DeleteVolumeAttachmentResponse)
@@ -574,6 +617,7 @@ func (c *agentsGatewayClient) DeleteVolumeAttachment(ctx context.Context, in *v1
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *agentsGatewayClient) ListVolumeAttachments(ctx context.Context, in *v1.ListVolumeAttachmentsRequest, opts ...grpc.CallOption) (*v1.ListVolumeAttachmentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.ListVolumeAttachmentsResponse)
@@ -903,6 +947,9 @@ type AgentsGatewayServer interface {
 	UpdateEnvironment(context.Context, *v1.UpdateEnvironmentRequest) (*v1.UpdateEnvironmentResponse, error)
 	DeleteEnvironment(context.Context, *v1.DeleteEnvironmentRequest) (*v1.DeleteEnvironmentResponse, error)
 	ListEnvironments(context.Context, *v1.ListEnvironmentsRequest) (*v1.ListEnvironmentsResponse, error)
+	SetEnvironmentRole(context.Context, *v1.SetEnvironmentRoleRequest) (*v1.SetEnvironmentRoleResponse, error)
+	RemoveEnvironmentRole(context.Context, *v1.RemoveEnvironmentRoleRequest) (*v1.RemoveEnvironmentRoleResponse, error)
+	ListEnvironmentRoles(context.Context, *v1.ListEnvironmentRolesRequest) (*v1.ListEnvironmentRolesResponse, error)
 	// --- Sandboxes ---
 	CreateSandbox(context.Context, *v1.CreateSandboxRequest) (*v1.CreateSandboxResponse, error)
 	GetSandbox(context.Context, *v1.GetSandboxRequest) (*v1.GetSandboxResponse, error)
@@ -928,10 +975,14 @@ type AgentsGatewayServer interface {
 	UpdateVolume(context.Context, *v1.UpdateVolumeRequest) (*v1.UpdateVolumeResponse, error)
 	DeleteVolume(context.Context, *v1.DeleteVolumeRequest) (*v1.DeleteVolumeResponse, error)
 	ListVolumes(context.Context, *v1.ListVolumesRequest) (*v1.ListVolumesResponse, error)
-	// --- Volume Attachments (no Update) ---
+	// Deprecated: Do not use.
+	// --- Volume Attachments (superseded by a volume's own target) ---
 	CreateVolumeAttachment(context.Context, *v1.CreateVolumeAttachmentRequest) (*v1.CreateVolumeAttachmentResponse, error)
+	// Deprecated: Do not use.
 	GetVolumeAttachment(context.Context, *v1.GetVolumeAttachmentRequest) (*v1.GetVolumeAttachmentResponse, error)
+	// Deprecated: Do not use.
 	DeleteVolumeAttachment(context.Context, *v1.DeleteVolumeAttachmentRequest) (*v1.DeleteVolumeAttachmentResponse, error)
+	// Deprecated: Do not use.
 	ListVolumeAttachments(context.Context, *v1.ListVolumeAttachmentsRequest) (*v1.ListVolumeAttachmentsResponse, error)
 	// --- MCPs ---
 	CreateMcp(context.Context, *v1.CreateMcpRequest) (*v1.CreateMcpResponse, error)
@@ -1027,6 +1078,15 @@ func (UnimplementedAgentsGatewayServer) DeleteEnvironment(context.Context, *v1.D
 }
 func (UnimplementedAgentsGatewayServer) ListEnvironments(context.Context, *v1.ListEnvironmentsRequest) (*v1.ListEnvironmentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEnvironments not implemented")
+}
+func (UnimplementedAgentsGatewayServer) SetEnvironmentRole(context.Context, *v1.SetEnvironmentRoleRequest) (*v1.SetEnvironmentRoleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetEnvironmentRole not implemented")
+}
+func (UnimplementedAgentsGatewayServer) RemoveEnvironmentRole(context.Context, *v1.RemoveEnvironmentRoleRequest) (*v1.RemoveEnvironmentRoleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveEnvironmentRole not implemented")
+}
+func (UnimplementedAgentsGatewayServer) ListEnvironmentRoles(context.Context, *v1.ListEnvironmentRolesRequest) (*v1.ListEnvironmentRolesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEnvironmentRoles not implemented")
 }
 func (UnimplementedAgentsGatewayServer) CreateSandbox(context.Context, *v1.CreateSandboxRequest) (*v1.CreateSandboxResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSandbox not implemented")
@@ -1458,6 +1518,60 @@ func _AgentsGateway_ListEnvironments_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentsGatewayServer).ListEnvironments(ctx, req.(*v1.ListEnvironmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_SetEnvironmentRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.SetEnvironmentRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).SetEnvironmentRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_SetEnvironmentRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).SetEnvironmentRole(ctx, req.(*v1.SetEnvironmentRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_RemoveEnvironmentRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.RemoveEnvironmentRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).RemoveEnvironmentRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_RemoveEnvironmentRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).RemoveEnvironmentRole(ctx, req.(*v1.RemoveEnvironmentRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentsGateway_ListEnvironmentRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ListEnvironmentRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsGatewayServer).ListEnvironmentRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsGateway_ListEnvironmentRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsGatewayServer).ListEnvironmentRoles(ctx, req.(*v1.ListEnvironmentRolesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2496,6 +2610,18 @@ var AgentsGateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEnvironments",
 			Handler:    _AgentsGateway_ListEnvironments_Handler,
+		},
+		{
+			MethodName: "SetEnvironmentRole",
+			Handler:    _AgentsGateway_SetEnvironmentRole_Handler,
+		},
+		{
+			MethodName: "RemoveEnvironmentRole",
+			Handler:    _AgentsGateway_RemoveEnvironmentRole_Handler,
+		},
+		{
+			MethodName: "ListEnvironmentRoles",
+			Handler:    _AgentsGateway_ListEnvironmentRoles_Handler,
 		},
 		{
 			MethodName: "CreateSandbox",

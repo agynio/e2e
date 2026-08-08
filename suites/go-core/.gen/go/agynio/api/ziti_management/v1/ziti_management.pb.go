@@ -263,13 +263,19 @@ func (x *ManagedIdentity) GetCreatedAt() *timestamppb.Timestamp {
 }
 
 type CreateAgentIdentityRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	AgentId    string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	WorkloadId string                 `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The agent instance this workload serves; it is what the identity resolves to.
+	AgentId    string `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
 	// Extra role attributes such as group-<id>. Base agent attributes are added by Ziti Management.
 	AdditionalRoleAttributes []string `protobuf:"bytes,3,rep,name=additional_role_attributes,json=additionalRoleAttributes,proto3" json:"additional_role_attributes,omitempty"`
 	// Tags attached to the OpenZiti identity.
-	Tags          map[string]string `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Tags map[string]string `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// The class the instance was spawned from, and the environment it runs.
+	// Recorded on the identity so a data-plane service can answer "what is this
+	// workload configured to do" from the connection alone.
+	AgentClassId  string `protobuf:"bytes,5,opt,name=agent_class_id,json=agentClassId,proto3" json:"agent_class_id,omitempty"`
+	EnvironmentId string `protobuf:"bytes,6,opt,name=environment_id,json=environmentId,proto3" json:"environment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -330,6 +336,20 @@ func (x *CreateAgentIdentityRequest) GetTags() map[string]string {
 		return x.Tags
 	}
 	return nil
+}
+
+func (x *CreateAgentIdentityRequest) GetAgentClassId() string {
+	if x != nil {
+		return x.AgentClassId
+	}
+	return ""
+}
+
+func (x *CreateAgentIdentityRequest) GetEnvironmentId() string {
+	if x != nil {
+		return x.EnvironmentId
+	}
+	return ""
 }
 
 type CreateAgentIdentityResponse struct {
@@ -1780,10 +1800,14 @@ func (x *ResolveIdentityRequest) GetZitiIdentityId() string {
 }
 
 type ResolveIdentityResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IdentityId    string                 `protobuf:"bytes,1,opt,name=identity_id,json=identityId,proto3" json:"identity_id,omitempty"`
-	IdentityType  v1.IdentityType        `protobuf:"varint,2,opt,name=identity_type,json=identityType,proto3,enum=agynio.api.identity.v1.IdentityType" json:"identity_type,omitempty"`
-	WorkloadId    *string                `protobuf:"bytes,3,opt,name=workload_id,json=workloadId,proto3,oneof" json:"workload_id,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	IdentityId   string                 `protobuf:"bytes,1,opt,name=identity_id,json=identityId,proto3" json:"identity_id,omitempty"`
+	IdentityType v1.IdentityType        `protobuf:"varint,2,opt,name=identity_type,json=identityType,proto3,enum=agynio.api.identity.v1.IdentityType" json:"identity_type,omitempty"`
+	WorkloadId   *string                `protobuf:"bytes,3,opt,name=workload_id,json=workloadId,proto3,oneof" json:"workload_id,omitempty"`
+	// Workload identities only. agent_id is additionally absent for a sandbox,
+	// which runs an environment with no agent behind it.
+	AgentId       *string `protobuf:"bytes,4,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
+	EnvironmentId *string `protobuf:"bytes,5,opt,name=environment_id,json=environmentId,proto3,oneof" json:"environment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1835,6 +1859,20 @@ func (x *ResolveIdentityResponse) GetIdentityType() v1.IdentityType {
 func (x *ResolveIdentityResponse) GetWorkloadId() string {
 	if x != nil && x.WorkloadId != nil {
 		return *x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ResolveIdentityResponse) GetAgentId() string {
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
+	}
+	return ""
+}
+
+func (x *ResolveIdentityResponse) GetEnvironmentId() string {
+	if x != nil && x.EnvironmentId != nil {
+		return *x.EnvironmentId
 	}
 	return ""
 }
@@ -3894,13 +3932,15 @@ const file_agynio_api_ziti_management_v1_ziti_management_proto_rawDesc = "" +
 	"\ridentity_type\x18\x03 \x01(\x0e2$.agynio.api.identity.v1.IdentityTypeR\fidentityType\x12&\n" +
 	"\x0fziti_service_id\x18\x04 \x01(\tR\rzitiServiceId\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xa8\x02\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xf5\x02\n" +
 	"\x1aCreateAgentIdentityRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vworkload_id\x18\x02 \x01(\tR\n" +
 	"workloadId\x12<\n" +
 	"\x1aadditional_role_attributes\x18\x03 \x03(\tR\x18additionalRoleAttributes\x12W\n" +
-	"\x04tags\x18\x04 \x03(\v2C.agynio.api.ziti_management.v1.CreateAgentIdentityRequest.TagsEntryR\x04tags\x1a7\n" +
+	"\x04tags\x18\x04 \x03(\v2C.agynio.api.ziti_management.v1.CreateAgentIdentityRequest.TagsEntryR\x04tags\x12$\n" +
+	"\x0eagent_class_id\x18\x05 \x01(\tR\fagentClassId\x12%\n" +
+	"\x0eenvironment_id\x18\x06 \x01(\tR\renvironmentId\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"n\n" +
@@ -4018,14 +4058,18 @@ const file_agynio_api_ziti_management_v1_ziti_management_proto_rawDesc = "" +
 	"identities\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"B\n" +
 	"\x16ResolveIdentityRequest\x12(\n" +
-	"\x10ziti_identity_id\x18\x01 \x01(\tR\x0ezitiIdentityId\"\xbb\x01\n" +
+	"\x10ziti_identity_id\x18\x01 \x01(\tR\x0ezitiIdentityId\"\xa7\x02\n" +
 	"\x17ResolveIdentityResponse\x12\x1f\n" +
 	"\videntity_id\x18\x01 \x01(\tR\n" +
 	"identityId\x12I\n" +
 	"\ridentity_type\x18\x02 \x01(\x0e2$.agynio.api.identity.v1.IdentityTypeR\fidentityType\x12$\n" +
 	"\vworkload_id\x18\x03 \x01(\tH\x00R\n" +
-	"workloadId\x88\x01\x01B\x0e\n" +
-	"\f_workload_id\"n\n" +
+	"workloadId\x88\x01\x01\x12\x1e\n" +
+	"\bagent_id\x18\x04 \x01(\tH\x01R\aagentId\x88\x01\x01\x12*\n" +
+	"\x0eenvironment_id\x18\x05 \x01(\tH\x02R\renvironmentId\x88\x01\x01B\x0e\n" +
+	"\f_workload_idB\v\n" +
+	"\t_agent_idB\x11\n" +
+	"\x0f_environment_id\"n\n" +
 	"\x1dRequestServiceIdentityRequest\x12M\n" +
 	"\fservice_type\x18\x01 \x01(\x0e2*.agynio.api.ziti_management.v1.ServiceTypeR\vserviceType\"o\n" +
 	"\x1eRequestServiceIdentityResponse\x12(\n" +
