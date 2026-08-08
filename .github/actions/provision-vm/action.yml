@@ -179,10 +179,24 @@ runs:
         mkdir -p "$(dirname "${kubeconfig}")"
         agyn local kubeconfig --path "${kubeconfig}" || exit 0
         export KUBECONFIG="${kubeconfig}"
+        stalled="$(kubectl get pods -n platform --no-headers 2>/dev/null |
+          awk '$3 != "Completed" {split($2, ready, "/"); if (ready[1] != ready[2] || $3 != "Running") print $1}')"
         echo "::group::pods that are not ready"
-        kubectl get pods -n platform --no-headers 2>/dev/null |
-          awk '$3 != "Completed" {split($2, ready, "/"); if (ready[1] != ready[2] || $3 != "Running") print}'
+        echo "${stalled:-none}"
         echo "::endgroup::"
+        # The name alone only moves the question to "why". A crash loop has
+        # already discarded the run that explains it, so take the previous
+        # container's output as well as the current one.
+        for pod in ${stalled}; do
+          echo "::group::${pod} logs"
+          kubectl logs -n platform "${pod}" --all-containers --tail=60 2>&1 | tail -60
+          echo "--- previous ---"
+          kubectl logs -n platform "${pod}" --all-containers --previous --tail=60 2>&1 | tail -60
+          echo "::endgroup::"
+          echo "::group::${pod} describe"
+          kubectl describe pod -n platform "${pod}" 2>&1 | tail -40
+          echo "::endgroup::"
+        done
         echo "::group::workloads"
         kubectl get deploy,statefulset,job -n platform 2>/dev/null
         echo "::endgroup::"
