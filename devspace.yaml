@@ -54,17 +54,16 @@ commands:
     fi
     export AGYN_API_TOKEN
     export E2E_SUITES="${E2E_SUITES:-go-core}"
-    # Org and model ids are provisioned into the VM by the apps-provision Job.
+    # The system organization is declared by the release, and the declaration
+    # records the id the platform assigned on its own status.
     if [ -z "${AGYN_ORGANIZATION_ID:-}" ]; then
-      AGYN_ORGANIZATION_ID="$(kubectl -n platform get configmap agyn-local-provision \
-        -o jsonpath='{.data.organizationId}' 2>/dev/null || true)"
+      AGYN_ORGANIZATION_ID="$(kubectl -n platform get organization.platform.agyn.io system \
+        -o jsonpath='{.status.organizationId}' 2>/dev/null || true)"
     fi
     [ -n "${AGYN_ORGANIZATION_ID:-}" ] && export AGYN_ORGANIZATION_ID
-    if [ -z "${AGYN_MODEL_ID:-}" ]; then
-      AGYN_MODEL_ID="$(kubectl -n platform get configmap agyn-local-provision \
-        -o jsonpath='{.data.modelId}' 2>/dev/null || true)"
-    fi
-    [ -n "${AGYN_MODEL_ID:-}" ] && export AGYN_MODEL_ID
+    # No model id to read: a freshly installed platform has no LLM provider and
+    # no model. That is organization configuration rather than something a
+    # release ships, so the suites create their own -- see the llm fixture.
     if [ -z "${E2E_INGRESS_PORT:-}" ] && command -v agyn >/dev/null 2>&1; then
       E2E_INGRESS_PORT="$(agyn local config get port 2>/dev/null || true)"
     fi

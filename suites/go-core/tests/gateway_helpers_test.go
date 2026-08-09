@@ -77,9 +77,19 @@ func gatewayOrganizationID(t *testing.T) string {
 	return requireGatewayEnv(t, gatewayOrganizationEnvKey)
 }
 
+// gatewayModelID names the model the suites run against.
+//
+// A freshly installed platform has none: an LLM provider and a model are
+// organization configuration rather than something a release ships, so nothing
+// provisions them any more. AGYN_MODEL_ID still wins when a caller has one;
+// otherwise the suite reuses whatever the organization already holds and
+// creates one when it holds nothing.
 func gatewayModelID(t *testing.T) string {
 	t.Helper()
-	return requireGatewayEnv(t, gatewayModelEnvKey)
+	if value := strings.TrimSpace(os.Getenv(gatewayModelEnvKey)); value != "" {
+		return value
+	}
+	return ensureSuiteModel(t)
 }
 
 func gatewayAgentImage(t *testing.T) string {
