@@ -12,4 +12,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: agents-orchestrator-e2e
-    namespace: platform
+    namespace: agyn-platform
