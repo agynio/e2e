@@ -253,7 +253,7 @@ func TestAllowedModelsChangeIsVisibleToResolve(t *testing.T) {
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	secretID := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_CLAUDE)
+	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_ANTHROPIC)
 	attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, subscription.GetMeta().GetId(), fixture.environmentID)
 
 	if _, err := fixture.agents.UpdateEnvironment(fixture.ownerCtx, &agentsv1.UpdateEnvironmentRequest{
@@ -265,7 +265,7 @@ func TestAllowedModelsChangeIsVisibleToResolve(t *testing.T) {
 
 	resolved, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
 		EnvironmentId: fixture.environmentID,
-		Vendor:        llmv1.Vendor_VENDOR_CLAUDE,
+		Vendor:        llmv1.Vendor_VENDOR_ANTHROPIC,
 	})
 	if err != nil {
 		t.Fatalf("resolve after the allowlist change: %v", err)
@@ -284,7 +284,7 @@ func TestSubscriptionCannotBeDeletedWhileAttached(t *testing.T) {
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	secretID := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_CLAUDE)
+	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_ANTHROPIC)
 	attachment := attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, subscription.GetMeta().GetId(), fixture.environmentID)
 
 	_, err := fixture.llm.DeleteSubscription(fixture.ownerCtx, &llmv1.DeleteSubscriptionRequest{
@@ -321,7 +321,7 @@ func TestResolveWithoutAnAttachmentIsNotFound(t *testing.T) {
 
 	_, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
 		EnvironmentId: fixture.environmentID,
-		Vendor:        llmv1.Vendor_VENDOR_CLAUDE,
+		Vendor:        llmv1.Vendor_VENDOR_ANTHROPIC,
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("expected NotFound resolving an unattached environment, got %v", err)

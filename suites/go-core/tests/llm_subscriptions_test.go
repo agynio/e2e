@@ -224,13 +224,16 @@ func TestSubscriptionResolvesToATokenAndAnAllowlist(t *testing.T) {
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	secretID := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_CLAUDE)
+	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_ANTHROPIC)
 	attachment := attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, subscription.GetMeta().GetId(), fixture.environmentID)
 
 	// Denormalized onto the attachment so the orchestrator gets role attributes
 	// without a second call, and carrying the variable the placeholder goes in.
-	if attachment.GetVendor() != llmv1.Vendor_VENDOR_CLAUDE {
+	if attachment.GetVendor() != llmv1.Vendor_VENDOR_ANTHROPIC {
 		t.Fatalf("attachment vendor = %v", attachment.GetVendor())
+	}
+	if attachment.GetPlaceholderKind() != llmv1.PlaceholderKind_PLACEHOLDER_KIND_ENV {
+		t.Fatalf("attachment placeholder kind = %v", attachment.GetPlaceholderKind())
 	}
 	if attachment.GetPlaceholderEnv() != "CLAUDE_CODE_OAUTH_TOKEN" {
 		t.Fatalf("attachment placeholder env = %q", attachment.GetPlaceholderEnv())
@@ -238,7 +241,7 @@ func TestSubscriptionResolvesToATokenAndAnAllowlist(t *testing.T) {
 
 	resolved, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
 		EnvironmentId: fixture.environmentID,
-		Vendor:        llmv1.Vendor_VENDOR_CLAUDE,
+		Vendor:        llmv1.Vendor_VENDOR_ANTHROPIC,
 	})
 	if err != nil {
 		t.Fatalf("resolve subscription: %v", err)
@@ -270,11 +273,11 @@ func TestSubscriptionAgentScopeShadowsEnvironmentScope(t *testing.T) {
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	environmentSecret := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	environmentSub := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, environmentSecret, llmv1.Vendor_VENDOR_CLAUDE)
+	environmentSub := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, environmentSecret, llmv1.Vendor_VENDOR_ANTHROPIC)
 	attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, environmentSub.GetMeta().GetId(), fixture.environmentID)
 
 	agentSecret := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	agentSub := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, agentSecret, llmv1.Vendor_VENDOR_CLAUDE)
+	agentSub := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, agentSecret, llmv1.Vendor_VENDOR_ANTHROPIC)
 	if _, err := fixture.llm.CreateSubscriptionAttachment(fixture.ownerCtx, &llmv1.CreateSubscriptionAttachmentRequest{
 		SubscriptionId: agentSub.GetMeta().GetId(),
 		Target:         &llmv1.CreateSubscriptionAttachmentRequest_AgentId{AgentId: fixture.agentID},
@@ -284,7 +287,7 @@ func TestSubscriptionAgentScopeShadowsEnvironmentScope(t *testing.T) {
 
 	sandbox, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
 		EnvironmentId: fixture.environmentID,
-		Vendor:        llmv1.Vendor_VENDOR_CLAUDE,
+		Vendor:        llmv1.Vendor_VENDOR_ANTHROPIC,
 	})
 	if err != nil {
 		t.Fatalf("resolve for a sandbox: %v", err)
@@ -296,7 +299,7 @@ func TestSubscriptionAgentScopeShadowsEnvironmentScope(t *testing.T) {
 	agentScoped, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
 		EnvironmentId: fixture.environmentID,
 		AgentId:       fixture.agentID,
-		Vendor:        llmv1.Vendor_VENDOR_CLAUDE,
+		Vendor:        llmv1.Vendor_VENDOR_ANTHROPIC,
 	})
 	if err != nil {
 		t.Fatalf("resolve for an agent: %v", err)
@@ -314,11 +317,11 @@ func TestSubscriptionAttachmentIsUniquePerVendorAndTarget(t *testing.T) {
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	firstSecret := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	first := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, firstSecret, llmv1.Vendor_VENDOR_CLAUDE)
+	first := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, firstSecret, llmv1.Vendor_VENDOR_ANTHROPIC)
 	attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, first.GetMeta().GetId(), fixture.environmentID)
 
 	secondSecret := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	second := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secondSecret, llmv1.Vendor_VENDOR_CLAUDE)
+	second := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secondSecret, llmv1.Vendor_VENDOR_ANTHROPIC)
 	_, err := fixture.llm.CreateSubscriptionAttachment(fixture.ownerCtx, &llmv1.CreateSubscriptionAttachmentRequest{
 		SubscriptionId: second.GetMeta().GetId(),
 		Target:         &llmv1.CreateSubscriptionAttachmentRequest_EnvironmentId{EnvironmentId: fixture.environmentID},
@@ -336,7 +339,7 @@ func TestSecretReferencedByASubscriptionCannotBeDeleted(t *testing.T) {
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	secretID := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_CLAUDE)
+	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_ANTHROPIC)
 
 	_, err := fixture.secrets.DeleteSecret(fixture.ownerCtx, &secretsv1.DeleteSecretRequest{Id: secretID})
 	if status.Code(err) != codes.FailedPrecondition {
@@ -357,21 +360,67 @@ func TestSecretReferencedByASubscriptionCannotBeDeleted(t *testing.T) {
 	}
 }
 
-// Codex has no stable public endpoint to bind to yet. Refusing the subscription
-// at creation is the honest answer; accepting one that can never resolve is not.
-func TestCodexSubscriptionIsRefusedUntilItsBindingShips(t *testing.T) {
+// OpenAI resolves like any other vendor, and reports a file placeholder --
+// Codex reads its subscription credential from ~/.codex/auth.json, which is
+// agynd's to write rather than the orchestrator's.
+func TestOpenAISubscriptionResolvesWithAFilePlaceholder(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 	fixture := setupSubscriptionFixture(t, ctx)
 
 	secretID := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
-	_, err := fixture.llm.CreateSubscription(fixture.ownerCtx, &llmv1.CreateSubscriptionRequest{
-		OrganizationId: fixture.organizationID,
-		Name:           "e2e-codex-" + uuid.NewString(),
-		Vendor:         llmv1.Vendor_VENDOR_CODEX,
-		SecretId:       secretID,
+	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_OPENAI)
+	attachment := attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, subscription.GetMeta().GetId(), fixture.environmentID)
+
+	if attachment.GetPlaceholderKind() != llmv1.PlaceholderKind_PLACEHOLDER_KIND_FILE {
+		t.Fatalf("attachment placeholder kind = %v, want file", attachment.GetPlaceholderKind())
+	}
+	if attachment.GetPlaceholderPath() != ".codex/auth.json" {
+		t.Fatalf("placeholder path = %q", attachment.GetPlaceholderPath())
+	}
+	if attachment.GetPlaceholderContents() == "" {
+		t.Fatal("a file placeholder with no contents leaves agynd nothing to write")
+	}
+	if attachment.GetPlaceholderEnv() != "" {
+		t.Fatalf("a file placeholder also named a variable: %q", attachment.GetPlaceholderEnv())
+	}
+
+	resolved, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
+		EnvironmentId: fixture.environmentID,
+		Vendor:        llmv1.Vendor_VENDOR_OPENAI,
 	})
-	if status.Code(err) != codes.Unimplemented {
-		t.Fatalf("expected Unimplemented for a codex subscription, got %v", err)
+	if err != nil {
+		t.Fatalf("resolve openai subscription: %v", err)
+	}
+	// Where a subscription-mode Codex CLI calls, not api.openai.com -- that is
+	// the API-key host, and pairing it with a subscription credential is what
+	// made the earlier binding incoherent.
+	if resolved.GetUpstreamEndpoint() != "https://chatgpt.com/backend-api/codex" {
+		t.Fatalf("resolved upstream = %q", resolved.GetUpstreamEndpoint())
+	}
+}
+
+// Both vendors attach to one environment: uniqueness is per (vendor, target),
+// not per target.
+func TestBothVendorsAttachToOneEnvironment(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+	fixture := setupSubscriptionFixture(t, ctx)
+
+	for _, vendor := range []llmv1.Vendor{llmv1.Vendor_VENDOR_ANTHROPIC, llmv1.Vendor_VENDOR_OPENAI} {
+		secretID := createSubscriptionSecret(t, fixture.ownerCtx, fixture.secrets, fixture.identityID, fixture.organizationID)
+		subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, vendor)
+		attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, subscription.GetMeta().GetId(), fixture.environmentID)
+
+		resolved, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
+			EnvironmentId: fixture.environmentID,
+			Vendor:        vendor,
+		})
+		if err != nil {
+			t.Fatalf("resolve %v: %v", vendor, err)
+		}
+		if resolved.GetSubscriptionId() != subscription.GetMeta().GetId() {
+			t.Fatalf("%v resolved to the wrong subscription", vendor)
+		}
 	}
 }
