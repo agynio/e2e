@@ -106,7 +106,7 @@ func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
 	if addEntry.Port != exposePort {
 		t.Fatalf("expose add port mismatch: got %d want %d", addEntry.Port, exposePort)
 	}
-	expectedURL := fmt.Sprintf("http://exposed-%s.ziti:%d", addEntry.ID, exposePort)
+	expectedURL := fmt.Sprintf("http://exposed-%s.agyn:%d", addEntry.ID, exposePort)
 	if addEntry.URL != expectedURL {
 		t.Fatalf("expose add url mismatch: got %q want %q", addEntry.URL, expectedURL)
 	}
@@ -574,9 +574,9 @@ func exposeServiceName(t *testing.T, exposeURL string) string {
 	if host == "" {
 		t.Fatal("expose url host missing")
 	}
-	serviceName := strings.TrimSuffix(host, ".ziti")
+	serviceName := strings.TrimSuffix(host, ".agyn")
 	if serviceName == host {
-		t.Fatalf("expected expose url host to end with .ziti, got %q", host)
+		t.Fatalf("expected expose url host to end with .agyn, got %q", host)
 	}
 	serviceName = strings.TrimSpace(serviceName)
 	if serviceName == "" {
@@ -660,7 +660,7 @@ func logExposureDetails(t *testing.T, exposure exposeEntry, serviceName, dialURL
 		diagnosticValue(exposure.Status),
 	)
 	t.Logf(
-		"diagnostics: exposure ziti service_id=%s bind_policy_id=%s dial_policy_id=%s expected_service_name=%s expected_intercept_host=%s.ziti expected_host_forward=127.0.0.1:%d",
+		"diagnostics: exposure ziti service_id=%s bind_policy_id=%s dial_policy_id=%s expected_service_name=%s expected_intercept_host=%s.agyn expected_host_forward=127.0.0.1:%d",
 		diagnosticValue(exposure.OpenZitiServiceID),
 		diagnosticValue(exposure.OpenZitiBindPolicyID),
 		diagnosticValue(exposure.OpenZitiDialPolicyID),
