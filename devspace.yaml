@@ -57,7 +57,7 @@ commands:
     # The system organization is declared by the release, and the declaration
     # records the id the platform assigned on its own status.
     if [ -z "${AGYN_ORGANIZATION_ID:-}" ]; then
-      AGYN_ORGANIZATION_ID="$(kubectl -n platform get organization.platform.agyn.io system \
+      AGYN_ORGANIZATION_ID="$(kubectl -n agyn-platform get organization.platform.agyn.io system \
         -o jsonpath='{.status.organizationId}' 2>/dev/null || true)"
     fi
     [ -n "${AGYN_ORGANIZATION_ID:-}" ] && export AGYN_ORGANIZATION_ID
