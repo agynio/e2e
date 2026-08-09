@@ -37,7 +37,7 @@ var (
 	// from the address it was called on. Going through the ingress instead would
 	// mean trusting the VM's local CA here for no gain.
 	oidcTokenURL = envOrDefault("OIDC_TOKEN_URL",
-		"http://keycloak.platform.svc.cluster.local:8080/realms/agyn/protocol/openid-connect/token")
+		"http://keycloak.keycloak.svc.cluster.local:8080/realms/agyn/protocol/openid-connect/token")
 	oidcClientID = envOrDefault("OIDC_CLIENT_ID", "agyn-chat")
 	// The user the realm ships with. It is the cluster admin, which these tests
 	// do not rely on — they need an identity that resolves, not a particular

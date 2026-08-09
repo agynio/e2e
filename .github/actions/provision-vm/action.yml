@@ -179,7 +179,7 @@ runs:
         mkdir -p "$(dirname "${kubeconfig}")"
         agyn local kubeconfig --path "${kubeconfig}" || exit 0
         export KUBECONFIG="${kubeconfig}"
-        stalled="$(kubectl get pods -n platform --no-headers 2>/dev/null |
+        stalled="$(kubectl get pods -n agyn-platform --no-headers 2>/dev/null |
           awk '$3 != "Completed" {split($2, ready, "/"); if (ready[1] != ready[2] || $3 != "Running") print $1}')"
         echo "::group::pods that are not ready"
         echo "${stalled:-none}"
@@ -189,19 +189,19 @@ runs:
         # container's output as well as the current one.
         for pod in ${stalled}; do
           echo "::group::${pod} logs"
-          kubectl logs -n platform "${pod}" --all-containers --tail=60 2>&1 | tail -60
+          kubectl logs -n agyn-platform "${pod}" --all-containers --tail=60 2>&1 | tail -60
           echo "--- previous ---"
-          kubectl logs -n platform "${pod}" --all-containers --previous --tail=60 2>&1 | tail -60
+          kubectl logs -n agyn-platform "${pod}" --all-containers --previous --tail=60 2>&1 | tail -60
           echo "::endgroup::"
           echo "::group::${pod} describe"
-          kubectl describe pod -n platform "${pod}" 2>&1 | tail -40
+          kubectl describe pod -n agyn-platform "${pod}" 2>&1 | tail -40
           echo "::endgroup::"
         done
         echo "::group::workloads"
-        kubectl get deploy,statefulset,job -n platform 2>/dev/null
+        kubectl get deploy,statefulset,job -n agyn-platform 2>/dev/null
         echo "::endgroup::"
         echo "::group::recent events"
-        kubectl get events -n platform --sort-by=.lastTimestamp 2>/dev/null | tail -40
+        kubectl get events -n agyn-platform --sort-by=.lastTimestamp 2>/dev/null | tail -40
         echo "::endgroup::"
 
     - name: Export the kubeconfig
@@ -251,26 +251,26 @@ runs:
         echo "::add-mask::${token}"
         echo "AGYN_API_TOKEN=${token}" >> "$GITHUB_ENV"
 
-        # Provisioned into the VM by the apps-provision Job.
+        # The system organization is declared by the release; the declaration
+        # records the id the platform assigned once the controller reconciles it.
         for i in $(seq 1 60); do
-          organization_id="$(kubectl -n platform get configmap agyn-local-provision \
-            -o jsonpath='{.data.organizationId}' 2>/dev/null || true)"
+          organization_id="$(kubectl -n agyn-platform get organization.platform.agyn.io system \
+            -o jsonpath='{.status.organizationId}' 2>/dev/null || true)"
           [ -n "${organization_id}" ] && break
           sleep 5
         done
         if [ -z "${organization_id}" ]; then
-          echo "::error::agyn-local-provision configmap never appeared; the apps-provision Job did not complete"
-          kubectl -n platform get jobs,pods || true
+          echo "::error::the system organization was never provisioned"
+          kubectl -n agyn-platform get organizations,clusteradmins,images,runners,apps -o wide || true
+          kubectl -n agyn-platform get pods || true
           exit 1
         fi
-        model_id="$(kubectl -n platform get configmap agyn-local-provision \
-          -o jsonpath='{.data.modelId}' 2>/dev/null || true)"
         echo "AGYN_ORGANIZATION_ID=${organization_id}" >> "$GITHUB_ENV"
-        [ -n "${model_id}" ] && echo "AGYN_MODEL_ID=${model_id}" >> "$GITHUB_ENV"
 
+        # No model id: a freshly installed platform has no LLM provider and no
+        # model. The suites create their own.
         echo "base url: ${base_url}"
         echo "organization: ${organization_id}"
-        echo "model: ${model_id:-<none>}"
 
     - name: Verify the platform answers
       shell: bash
