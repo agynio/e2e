@@ -359,7 +359,7 @@ runs:
         fi
         include_smoke=$(echo "$include_smoke" | tr '[:upper:]' '[:lower:]')
 
-        namespace="${DEVSPACE_NAMESPACE:-platform}"
+        namespace="${DEVSPACE_NAMESPACE:-agyn-platform}"
         cd "$GITHUB_WORKSPACE/e2e"
 
         export DEVSPACE_NAMESPACE="$namespace"
@@ -397,7 +397,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        namespace="${DEVSPACE_NAMESPACE:-platform}"
+        namespace="${DEVSPACE_NAMESPACE:-agyn-platform}"
         diagnostics_dir="$GITHUB_WORKSPACE/e2e/.diagnostics"
         mkdir -p "$diagnostics_dir/logs"
         kubectl get pods -n "$namespace" -o wide > "$diagnostics_dir/pods-all.txt" || true

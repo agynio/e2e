@@ -249,7 +249,7 @@ func networkPolicyAllowsDNS(policy *networkingv1.NetworkPolicy) bool {
 }
 
 func platformNamespace() string {
-	return envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "platform"))
+	return envOrDefault("E2E_NAMESPACE", envOrDefault("DEVSPACE_NAMESPACE", "agyn-platform"))
 }
 
 func egressKubeClientset(t *testing.T) *kubernetes.Clientset {

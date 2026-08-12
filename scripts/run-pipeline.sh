@@ -9,7 +9,7 @@ artifacts_dir="$repo_root/.artifacts/junit"
 diagnostics_root="$repo_root/.diagnostics/suites"
 
 tags="${TAGS:-}"
-namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
+namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-agyn-platform}}"
 suites_filter="${E2E_SUITES:-}"
 e2e_domain="${E2E_DOMAIN:-${DOMAIN:-agyn.dev}}"
 e2e_ingress_port="${E2E_INGRESS_PORT:-${INGRESS_PORT:-${PORT:-2496}}}"

@@ -3,7 +3,7 @@ version: v2beta1
 vars:
   E2E_NAMESPACE:
     source: env
-    default: platform
+    default: agyn-platform
 
 commands:
   # Run suites against the local bundle VM (`agyn local start`) with zero
