@@ -360,10 +360,10 @@ func TestSecretReferencedByASubscriptionCannotBeDeleted(t *testing.T) {
 	}
 }
 
-// OpenAI resolves like any other vendor, and reports a file placeholder --
-// Codex reads its subscription credential from ~/.codex/auth.json, which is
-// agynd's to write rather than the orchestrator's.
-func TestOpenAISubscriptionResolvesWithAFilePlaceholder(t *testing.T) {
+// OpenAI resolves like any other vendor, and declares nothing about the file
+// its CLI reads -- ~/.codex/auth.json is a Codex convention, so agynd writes it
+// and neither this service nor the orchestrator carries its shape.
+func TestOpenAISubscriptionResolvesToTheVendorOrigin(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 	fixture := setupSubscriptionFixture(t, ctx)
@@ -372,17 +372,12 @@ func TestOpenAISubscriptionResolvesWithAFilePlaceholder(t *testing.T) {
 	subscription := createSubscription(t, fixture.ownerCtx, fixture.llm, fixture.identityID, fixture.organizationID, secretID, llmv1.Vendor_VENDOR_OPENAI)
 	attachment := attachSubscriptionToEnvironment(t, fixture.ownerCtx, fixture.llm, subscription.GetMeta().GetId(), fixture.environmentID)
 
-	if attachment.GetPlaceholderKind() != llmv1.PlaceholderKind_PLACEHOLDER_KIND_FILE {
-		t.Fatalf("attachment placeholder kind = %v, want file", attachment.GetPlaceholderKind())
-	}
-	if attachment.GetPlaceholderPath() != ".codex/auth.json" {
-		t.Fatalf("placeholder path = %q", attachment.GetPlaceholderPath())
-	}
-	if attachment.GetPlaceholderContents() == "" {
-		t.Fatal("a file placeholder with no contents leaves agynd nothing to write")
+	if attachment.GetPlaceholderPath() != "" || attachment.GetPlaceholderContents() != "" {
+		t.Fatalf("attachment still declares a file: path=%q contents=%q",
+			attachment.GetPlaceholderPath(), attachment.GetPlaceholderContents())
 	}
 	if attachment.GetPlaceholderEnv() != "" {
-		t.Fatalf("a file placeholder also named a variable: %q", attachment.GetPlaceholderEnv())
+		t.Fatalf("codex reads no variable, but one was named: %q", attachment.GetPlaceholderEnv())
 	}
 
 	resolved, err := fixture.llm.ResolveSubscription(fixture.ownerCtx, &llmv1.ResolveSubscriptionRequest{
@@ -392,10 +387,12 @@ func TestOpenAISubscriptionResolvesWithAFilePlaceholder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve openai subscription: %v", err)
 	}
-	// Where a subscription-mode Codex CLI calls, not api.openai.com -- that is
-	// the API-key host, and pairing it with a subscription credential is what
-	// made the earlier binding incoherent.
-	if resolved.GetUpstreamEndpoint() != "https://chatgpt.com/backend-api/codex" {
+	// chatgpt.com is where a subscription-mode Codex CLI calls, not
+	// api.openai.com -- that is the API-key host. The origin only: the proxy
+	// appends the caller's own path, and the CLI already addresses
+	// /backend-api/codex/responses, so a prefix here forwards it twice and the
+	// vendor answers 404.
+	if resolved.GetUpstreamEndpoint() != "https://chatgpt.com" {
 		t.Fatalf("resolved upstream = %q", resolved.GetUpstreamEndpoint())
 	}
 }

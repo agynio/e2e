@@ -185,10 +185,6 @@ type McpWire = {
   agentId?: string;
 };
 
-  event?: string;
-  agentId?: string;
-};
-
 type ModelWire = {
   meta?: { id?: string };
   id?: string;
@@ -918,9 +914,6 @@ export async function createSecret(
   }
   return secretId;
 }
-
-,
-): Promise<string> {
 
 export async function createEgressRule(
   page: Page,
