@@ -143,7 +143,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	}
 
 	removedAt := workloadRemovedAt(t, failedLatest)
-	updateCtx, updateCancel := context.WithTimeout(ctx, 30*time.Second)
+	updateCtx, updateCancel := context.WithTimeout(threadsCtx, 30*time.Second)
 	defer updateCancel()
 	validInitImage := codexInitImage
 	if _, err := agentsClient.UpdateAgent(updateCtx, &agentsv1.UpdateAgentRequest{Id: agentID, InitImage: &validInitImage}); err != nil {
