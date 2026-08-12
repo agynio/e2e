@@ -276,14 +276,30 @@ runs:
         echo "base url: ${base_url}"
         echo "organization: ${organization_id}"
 
+    # 404 is the healthy answer here: the Gateway serves RPC paths and routes
+    # nothing at the root. 503 is the mesh holding a route with no ready
+    # endpoint behind it, which is what the platform looks like for a while
+    # after Helm calls the rollout done -- and this step passed on it, because
+    # it only rejected an empty status. The next thing to run is the seeding,
+    # against the same Gateway, and that reported the 503 as unparseable JSON.
     - name: Verify the platform answers
       shell: bash
       run: |
         set -euo pipefail
-        status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 \
-          "https://gateway.agyn.dev:${{ inputs.port }}" || true)"
-        if [ -z "${status}" ] || [ "${status}" = "000" ]; then
-          echo "::error::the Gateway is not reachable from the runner"
-          exit 1
-        fi
-        echo "gateway responded ${status}"
+        deadline=$((SECONDS + 300))
+        while :; do
+          status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 \
+            "https://gateway.agyn.dev:${{ inputs.port }}" || true)"
+          case "${status}" in
+          "" | 000 | 5??) ;;
+          *)
+            echo "gateway responded ${status}"
+            exit 0
+            ;;
+          esac
+          if [ "${SECONDS}" -ge "${deadline}" ]; then
+            echo "::error::the Gateway never served a request (last status ${status:-none})"
+            exit 1
+          fi
+          sleep 5
+        done
