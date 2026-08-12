@@ -8,7 +8,15 @@ runs:
       run: |
         set -euo pipefail
         version="v6.3.20"
-        curl -fsSL --retry 3 --retry-delay 5 -o /tmp/devspace \
+        # Three retries over fifteen seconds is not enough for this download.
+        # Two runs in a row died here, one on four 503s from the release CDN and
+        # one on "Connection died, tried 5 times" -- and the second of those is a
+        # transport error, which --retry does not cover without
+        # --retry-all-errors. Every job in every repo installs DevSpace before it
+        # can do anything, so a minute of patience here is cheaper than the rerun
+        # it replaces.
+        curl -fsSL --retry 8 --retry-delay 5 --retry-all-errors \
+          --retry-max-time 180 --connect-timeout 20 -o /tmp/devspace \
           "https://github.com/loft-sh/devspace/releases/download/${version}/devspace-linux-amd64"
         sudo install -c -m 0755 /tmp/devspace /usr/local/bin/devspace
         devspace version
