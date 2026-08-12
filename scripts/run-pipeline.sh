@@ -378,6 +378,13 @@ ${service_account_line}
   containers:
     - name: runner
       image: ${image}
+      # The same ConfigMap the apps read, so a suite addresses them at the URLs
+      # the release publishes rather than at one composed from a domain and a
+      # port. Optional: a suite that touches no app runs without it.
+      envFrom:
+        - configMapRef:
+            name: agyn-platform-app-urls
+            optional: true
       command:
         - sleep
         - infinity
