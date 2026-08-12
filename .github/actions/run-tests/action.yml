@@ -145,6 +145,12 @@ runs:
           fi
         fi
 
+        # The seeding below runs on the runner, not in a pod, so it needs a URL
+        # the runner can reach. AGYN_BASE_URL, when a caller sets it at all,
+        # names the in-cluster address the suites use, which resolves to nothing
+        # here -- so the provisioner exports the host-side one separately.
+        seed_base_url="${AGYN_BASE_URL:-${E2E_GATEWAY_URL:-}}"
+
         if [ -z "${AGYN_AGENT_IMAGE:-}" ]; then
           AGYN_AGENT_IMAGE="ghcr.io/agynio/agent-runtime:v1.0.0"
           echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
@@ -172,6 +178,10 @@ runs:
         echo "init images: codex=$codex_init_image agn=$agn_init_image claude=$claude_init_image"
 
         if [ -z "${AGYN_MODEL_ID:-}" ]; then
+          if [ -z "${seed_base_url}" ]; then
+            echo "no gateway URL to seed a model against; run a provisioning action before this one, or pass AGYN_MODEL_ID." >&2
+            exit 1
+          fi
           list_models_payload=$(cat <<EOF
         {"organizationId":"${AGYN_ORGANIZATION_ID}","llmProviderId":"","pageSize":200,"pageToken":""}
         EOF
@@ -181,7 +191,7 @@ runs:
             -H 'Connect-Protocol-Version: 1' \
             -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
             -d "$list_models_payload" \
-            "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListModels" \
+            "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/ListModels" \
             | python3 -c "$(cat <<'PY'
         import json
         import sys
@@ -215,7 +225,7 @@ runs:
               -H 'Connect-Protocol-Version: 1' \
               -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
               -d "$providers_payload" \
-              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/ListLLMProviders" \
+              "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/ListLLMProviders" \
               | python3 -c "$(cat <<'PY'
         import json
         import sys
@@ -250,7 +260,7 @@ runs:
                 -H 'Connect-Protocol-Version: 1' \
                 -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
                 -d "$create_provider_payload" \
-                "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider" \
+                "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider" \
                 | python3 -c "$(cat <<'PY'
         import json
         import sys
@@ -291,7 +301,7 @@ runs:
               -H 'Connect-Protocol-Version: 1' \
               -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
               -d "$create_model_payload" \
-              "${AGYN_BASE_URL}/agynio.api.gateway.v1.LLMGateway/CreateModel" \
+              "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/CreateModel" \
               | python3 -c "$(cat <<'PY'
         import json
         import sys

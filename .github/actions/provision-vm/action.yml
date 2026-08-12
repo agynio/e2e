@@ -240,6 +240,10 @@ runs:
         base_url="https://gateway.agyn.dev:${port}"
         echo "base-url=${base_url}" >> "$GITHUB_OUTPUT"
         echo "E2E_INGRESS_PORT=${port}" >> "$GITHUB_ENV"
+        # The same URL under a name that says whose side it is on. Steps that
+        # run on the runner -- seeding an LLM provider and model before the
+        # suites start -- have no other address to reach the Gateway at.
+        echo "E2E_GATEWAY_URL=${base_url}" >> "$GITHUB_ENV"
 
         # Generated per install by `agyn local start`, so there is no well-known
         # value to fall back on.
