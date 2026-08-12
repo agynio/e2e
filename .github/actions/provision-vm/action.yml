@@ -215,7 +215,7 @@ runs:
         # k3s' kubeconfig names no namespace, so every tool that follows the
         # context lands in "default" — devspace deploys a service from source
         # into the wrong namespace and then waits for a pod that is not there.
-        KUBECONFIG="${kubeconfig}" kubectl config set-context --current --namespace=platform >/dev/null
+        KUBECONFIG="${kubeconfig}" kubectl config set-context --current --namespace=agyn-platform >/dev/null
         echo "kubeconfig=${kubeconfig}" >> "$GITHUB_OUTPUT"
         echo "KUBECONFIG=${kubeconfig}" >> "$GITHUB_ENV"
         KUBECONFIG="${kubeconfig}" kubectl get nodes
