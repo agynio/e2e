@@ -58,3 +58,5 @@ jobs:
           tag: svc_agn_cli
           include_smoke: false
           agn-binary: agn
+          # This repo's own suites, not main's.
+          e2e-ref: ${{ github.sha }}
