@@ -5,7 +5,11 @@ required_env:
 select: |
   suite_tags=("svc_chat_app" "svc_gateway" "svc_agents_orchestrator" "svc_organizations" "svc_files" "svc_media_proxy" "svc_tracing_app")
 
+  # Selected when nothing is asked for, the way the sibling playwright suites
+  # are. Opting out left it the one suite a run of everything never reached,
+  # and two of its specs carry no tag to ask for it by.
   if [ -z "${TAGS:-}" ]; then
+    echo "playwright-chat-app"
     exit 0
   fi
 

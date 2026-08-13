@@ -10,11 +10,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # One VM per group rather than one for all of them: a boot is ten minutes and
+  # the suites together are far longer than a single job should hold. Split by
+  # what a failure would mean, so a red job names the thing that broke.
+  #
+  # go-terraform and go-agn-cli are deliberately absent. Both need a binary
+  # built somewhere else -- the provider from terraform-provider-agyn, the CLI
+  # from an agn-cli release -- and run from the workflows that have it. Without
+  # it they reach for a public registry that does not serve these providers.
   e2e:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Every console spec. No tag at all, because a tag becomes a --grep
+          # and console-api.spec.ts carries none -- filtering silently drops it.
+          - name: console
+            suites: playwright
+            tag: ""
+          # The two app frontends, both for the same reason: gateway-api and
+          # chat-api carry no tag either.
+          - name: apps
+            suites: playwright-chat-app playwright-tracing-app
+            tag: ""
+          # go-core reads the other way round: with no tag it runs smoke alone,
+          # so its services are named. They are the suite's own list.
+          - name: services
+            suites: go-core
+            tag: svc_agents_orchestrator,svc_runners,svc_metering,svc_k8s_runner,svc_organizations,svc_files,svc_gateway,svc_egress,svc_egress_gateway,svc_media_proxy,svc_llm,svc_llm_proxy,svc_images,smoke
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,13 +50,12 @@ jobs:
       - name: Provision cluster
         uses: ./.github/actions/provision-vm
 
-      - name: Run platform usage E2E test
+      - name: Run suites
         uses: ./.github/actions/run-tests
         env:
-          E2E_SUITES: playwright
-          E2E_PLAYWRIGHT_TEST_ARGS: test/e2e/organization-platform-usage.spec.ts
+          E2E_SUITES: ${{ matrix.suites }}
         with:
-          tag: svc_metering
+          tag: ${{ matrix.tag }}
           include_smoke: false
           # This repo's own suites, not main's. The action checks the suite
           # files out of agynio/e2e, and defaulting that to main means a pull
