@@ -626,23 +626,33 @@ export async function sendThreadMessage(
   return messageId;
 }
 
+// Minting an identity is the cluster admin's, and the services say so:
+// "cluster admin required". A spec that needs a second person in an
+// organization is not testing that -- it is setting up -- so this goes through
+// the bootstrap token while the spec itself stays signed in as whoever it is
+// about. Same shape as ensureClusterAdmin.
 export async function createUser(
   page: Page,
   opts: { email: string; nickname: string },
 ): Promise<string> {
   const now = Date.now();
   const oidcSubject = `e2e-${opts.email}-${now}`;
-  const response = await postConnect<CreateUserResponseWire>(page, USERS_GATEWAY_PATH, 'CreateUser', {
-    oidcSubject,
-    name: opts.email,
-    nickname: opts.nickname,
-    clusterRole: 'CLUSTER_ROLE_UNSPECIFIED',
-  });
+  const response = await postConnectAsClusterAdmin<CreateUserResponseWire>(
+    page,
+    USERS_GATEWAY_PATH,
+    'CreateUser',
+    {
+      oidcSubject,
+      name: opts.email,
+      nickname: opts.nickname,
+      clusterRole: 'CLUSTER_ROLE_UNSPECIFIED',
+    },
+  );
   const identityId = response.user?.meta?.id;
   if (!identityId) {
     throw new Error('CreateUser response missing identity id.');
   }
-  await postConnect<UpdateUserResponseWire>(page, USERS_GATEWAY_PATH, 'UpdateUser', {
+  await postConnectAsClusterAdmin<UpdateUserResponseWire>(page, USERS_GATEWAY_PATH, 'UpdateUser', {
     identityId,
     email: opts.email,
     nickname: opts.nickname,
