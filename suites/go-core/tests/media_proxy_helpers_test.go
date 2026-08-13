@@ -31,18 +31,23 @@ var (
 	mediaProxyURL = envOrDefault("MEDIA_PROXY_URL", "http://media-proxy:8080")
 	gatewayURL    = envOrDefault("GATEWAY_URL", "http://gateway:8080")
 
-	// Minted from the bundled Keycloak over plain in-cluster HTTP. The token
-	// still verifies against the Media Proxy, which is configured with the
-	// browser-facing issuer: Keycloak stamps `iss` from KC_HOSTNAME rather than
-	// from the address it was called on. Going through the ingress instead would
-	// mean trusting the VM's local CA here for no gain.
+	// Minted from the bundled Dex over plain in-cluster HTTP, the provider that
+	// replaced Keycloak -- whose address this named until the platform stopped
+	// running it, and the whole suite failed its setup rather than a test. The
+	// grant needs oauth2.passwordConnector, which the chart sets to `local`.
+	//
+	// The token still verifies against the Media Proxy, which is configured with
+	// the browser-facing issuer: Dex stamps `iss` from its configured issuer
+	// rather than from the address it was called on. Going through the ingress
+	// instead would mean trusting the VM's local CA here for no gain.
 	oidcTokenURL = envOrDefault("OIDC_TOKEN_URL",
-		"http://keycloak.keycloak.svc.cluster.local:8080/realms/agyn/protocol/openid-connect/token")
+		"http://dex.agyn-platform.svc.cluster.local:5556/token")
 	oidcClientID = envOrDefault("OIDC_CLIENT_ID", "agyn-chat")
-	// The user the realm ships with. It is the cluster admin, which these tests
-	// do not rely on — they need an identity that resolves, not a particular
-	// permission level.
-	oidcUsername = envOrDefault("OIDC_USERNAME", "admin")
+	// The address, not the username: Dex looks a static user up by its email
+	// field and has no second identifier. It is the cluster admin, which these
+	// tests do not rely on — they need an identity that resolves, not a
+	// particular permission level.
+	oidcUsername = envOrDefault("OIDC_USERNAME", "admin@agyn.dev")
 	oidcPassword = envOrDefault("OIDC_PASSWORD", "admin")
 
 	accessToken      string
