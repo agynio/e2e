@@ -22,7 +22,7 @@ func testAccEnv(t *testing.T) accEnv {
 
 	return accEnv{
 		BaseURL:    requireEnv(t, "AGYN_BASE_URL"),
-		ModelID:    requireEnv(t, "AGYN_MODEL_ID"),
+		ModelID:    requireModelID(t),
 		AgentImage: requireEnv(t, "AGYN_AGENT_IMAGE"),
 	}
 }
