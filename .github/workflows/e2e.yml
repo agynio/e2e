@@ -30,3 +30,7 @@ jobs:
         with:
           tag: svc_metering
           include_smoke: false
+          # This repo's own suites, not main's. The action checks the suite
+          # files out of agynio/e2e, and defaulting that to main means a pull
+          # request here runs every suite change except its own.
+          e2e-ref: ${{ github.event.pull_request.head.sha || github.sha }}

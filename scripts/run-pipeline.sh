@@ -9,7 +9,7 @@ artifacts_dir="$repo_root/.artifacts/junit"
 diagnostics_root="$repo_root/.diagnostics/suites"
 
 tags="${TAGS:-}"
-namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-platform}}"
+namespace="${E2E_NAMESPACE:-${DEVSPACE_NAMESPACE:-agyn-platform}}"
 suites_filter="${E2E_SUITES:-}"
 e2e_domain="${E2E_DOMAIN:-${DOMAIN:-agyn.dev}}"
 e2e_ingress_port="${E2E_INGRESS_PORT:-${INGRESS_PORT:-${PORT:-2496}}}"
@@ -378,6 +378,13 @@ ${service_account_line}
   containers:
     - name: runner
       image: ${image}
+      # The same ConfigMap the apps read, so a suite addresses them at the URLs
+      # the release publishes rather than at one composed from a domain and a
+      # port. Optional: a suite that touches no app runs without it.
+      envFrom:
+        - configMapRef:
+            name: agyn-platform-app-urls
+            optional: true
       command:
         - sleep
         - infinity

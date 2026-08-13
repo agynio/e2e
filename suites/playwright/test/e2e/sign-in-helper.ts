@@ -5,6 +5,20 @@ import { readOidcSession } from './oidc-helpers';
 
 const defaultEmail = 'e2e-tester@agyn.test';
 
+// Dex's own password form, which the bundle VM serves. It is not the mockauth
+// form the rest of this helper drives: an h2 rather than an h1, a password
+// field, and no testids to hang a locator on -- so it is matched on the ids
+// Dex's template gives them.
+const dexPasswordField = 'input#password';
+const dexLoginField = 'input#login';
+const dexSubmitButton = 'button#submit-login';
+
+// The address and password the platform charts ship for the bundled admin, and
+// what an install nobody has changed still has. A different environment names
+// its own.
+const defaultDexEmail = 'admin@agyn.dev';
+const defaultDexPassword = 'admin';
+
 type SignInOptions = {
   onLoginPage?: (page: Page) => Promise<void>;
   force?: boolean;
@@ -72,7 +86,23 @@ async function waitForLoginForm(page: Page, timeoutMs: number): Promise<boolean>
     waitForLocator(loginHeading, timeoutMs),
     waitForLocator(emailInput, timeoutMs),
     waitForLocator(usernameInput, timeoutMs),
+    waitForLocator(page.locator(dexPasswordField), timeoutMs),
   ]);
+}
+
+// Dex asks for a password; mockauth takes an address and continues. Told apart
+// by the password field rather than by the heading, which is the difference
+// that decides what has to be typed.
+async function fillDexLoginForm(page: Page, email: string): Promise<void> {
+  // mockauth accepts any address and invents the account behind it. Dex only
+  // knows the accounts the chart declares, so this suite's generic default is
+  // not one it can sign in as -- an address nobody asked for becomes the
+  // bundled admin, which is the account provisioning.clusterAdmins names.
+  const address = email === defaultEmail ? defaultDexEmail : email;
+  const password = process.env.E2E_OIDC_PASSWORD ?? defaultDexPassword;
+  await page.locator(dexLoginField).fill(address);
+  await page.locator(dexPasswordField).fill(password);
+  await page.locator(dexSubmitButton).click();
 }
 
 async function fillLoginForm(
@@ -82,6 +112,11 @@ async function fillLoginForm(
 ): Promise<void> {
   if (onLoginPage) {
     await onLoginPage(page);
+  }
+
+  if (await isLocatorVisible(page.locator(dexPasswordField), 2000)) {
+    await fillDexLoginForm(page, expectedEmail);
+    return;
   }
 
   const strategyTabs = page.getByTestId('login-strategy-tabs');
