@@ -660,11 +660,17 @@ export async function createUser(
   return identityId;
 }
 
+// The user directory is the cluster admin's -- the services answer an ordinary
+// member with "cluster admin required". Nothing asserts on it; it is how
+// inviteMember finds the identity behind an address, so it is setup and goes
+// through the bootstrap token like createUser above.
 export async function listUsers(page: Page): Promise<UserWire[]> {
-  const response = await postConnect<ListUsersResponseWire>(page, USERS_GATEWAY_PATH, 'ListUsers', {
-    pageSize: 200,
-    pageToken: '',
-  });
+  const response = await postConnectAsClusterAdmin<ListUsersResponseWire>(
+    page,
+    USERS_GATEWAY_PATH,
+    'ListUsers',
+    { pageSize: 200, pageToken: '' },
+  );
   return response.users ?? [];
 }
 
@@ -1227,7 +1233,10 @@ export async function registerRunner(
   if (opts.organizationId) {
     payload.organizationId = opts.organizationId;
   }
-  const response = await postConnect<RegisterRunnerResponseWire>(
+  // Registering a runner is the admin's. The specs that call this assert on
+  // what the console then lists, so the registration is setup rather than the
+  // thing under test.
+  const response = await postConnectAsClusterAdmin<RegisterRunnerResponseWire>(
     page,
     RUNNERS_GATEWAY_PATH,
     'RegisterRunner',
