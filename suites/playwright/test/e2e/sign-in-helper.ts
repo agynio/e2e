@@ -13,11 +13,20 @@ const dexPasswordField = 'input#password';
 const dexLoginField = 'input#login';
 const dexSubmitButton = 'button#submit-login';
 
-// The address and password the platform charts ship for the bundled admin, and
-// what an install nobody has changed still has. A different environment names
-// its own.
-const defaultDexEmail = 'admin@agyn.dev';
-const defaultDexPassword = 'admin';
+// The two accounts the platform charts ship, and what an install nobody has
+// changed still has. A different environment names its own through
+// E2E_OIDC_EMAIL and E2E_OIDC_PASSWORD.
+//
+// The ordinary member is the default because it is what a test should be:
+// authorization is enforced in the services, and a suite signed in as cluster
+// admin cannot tell a rule that holds from one that was never asked. Reach for
+// the admin only for the features that are the admin's.
+const dexPasswords: Record<string, string> = {
+  'user@agyn.dev': 'user',
+  'admin@agyn.dev': 'admin',
+};
+const defaultDexEmail = 'user@agyn.dev';
+export const clusterAdminEmail = 'admin@agyn.dev';
 
 type SignInOptions = {
   onLoginPage?: (page: Page) => Promise<void>;
@@ -97,9 +106,18 @@ async function fillDexLoginForm(page: Page, email: string): Promise<void> {
   // mockauth accepts any address and invents the account behind it. Dex only
   // knows the accounts the chart declares, so this suite's generic default is
   // not one it can sign in as -- an address nobody asked for becomes the
-  // bundled admin, which is the account provisioning.clusterAdmins names.
+  // bundled member.
   const address = email === defaultEmail ? defaultDexEmail : email;
-  const password = process.env.E2E_OIDC_PASSWORD ?? defaultDexPassword;
+  // Follows the address rather than being one default: the two bundled accounts
+  // have different passwords, and a spec that asks for the admin has to get the
+  // admin's.
+  const password = process.env.E2E_OIDC_PASSWORD ?? dexPasswords[address] ?? '';
+  if (!password) {
+    throw new Error(
+      `no password for ${address}: the bundled accounts are ${Object.keys(dexPasswords).join(' and ')}; ` +
+        'set E2E_OIDC_PASSWORD for any other',
+    );
+  }
   await page.locator(dexLoginField).fill(address);
   await page.locator(dexPasswordField).fill(password);
   await page.locator(dexSubmitButton).click();
@@ -163,7 +181,10 @@ export async function completeOidcLogin(page: Page, options: BrowserLoginOptions
 export async function signInViaOidc(page: Page, email?: string, options: SignInOptions = {}): Promise<boolean> {
   const expectedEmail = email ?? process.env.E2E_OIDC_EMAIL ?? defaultEmail;
   const forceLogin = options.force ?? false;
-  const ensureAdmin = options.ensureAdmin ?? true;
+  // Off by default. It does not pick an account, it promotes whoever signed in
+  // using the bootstrap token, so leaving it on made every spec a cluster admin
+  // and no spec has ever exercised the authorization the services enforce.
+  const ensureAdmin = options.ensureAdmin ?? false;
 
   await page.goto('/');
   if (forceLogin) {
@@ -210,4 +231,11 @@ export async function signInViaOidc(page: Page, email?: string, options: SignInO
   }
 
   return initialState === 'login';
+}
+
+// The bundled cluster admin, for the features that are the admin's. Named
+// rather than assembled at each call site so a spec says which account it needs
+// and nothing else has to know the address or the password.
+export async function signInAsClusterAdmin(page: Page): Promise<boolean> {
+  return signInViaOidc(page, clusterAdminEmail, { ensureAdmin: true });
 }
