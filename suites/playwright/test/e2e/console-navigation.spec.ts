@@ -117,7 +117,11 @@ async function openNavigationTarget(page: Page, target: NavigationTarget, crashS
 }
 
 test.describe('console navigation', { tag: ['@svc_console', '@svc_gateway', '@smoke'] }, () => {
-  test('opens every platform sidebar section without browser crashes', async ({ page }) => {
+  // The platform sidebar is the cluster admin's: an overview of every
+  // organization, the user directory, cluster runners, the app catalog. An
+  // ordinary member has no route to any of it, so this one signs in as the
+  // admin while the organization sections below stay on the member.
+  test('opens every platform sidebar section without browser crashes', async ({ adminPage: page }) => {
     const crashSignals = collectCrashSignals(page);
 
     await setClusterContext(page);
