@@ -32,8 +32,9 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -72,8 +73,9 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -110,8 +112,9 @@ func TestThreadMessageReachesTheInstanceInbox(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -209,8 +212,9 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -283,8 +287,9 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -326,8 +331,9 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
