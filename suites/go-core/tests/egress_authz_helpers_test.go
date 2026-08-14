@@ -4,12 +4,10 @@ package tests
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"testing"
 
 	authorizationv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/authorization/v1"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -51,7 +49,10 @@ func ensureClusterAdmin(t *testing.T, ctx context.Context, authzClient authoriza
 				ensureClusterAdminErr = err
 				return
 			}
-			if statusErr.Code() == codes.InvalidArgument && strings.Contains(statusErr.Message(), "already exists") {
+			// AlreadyExists as well as InvalidArgument: authorization answers a
+			// duplicate tuple with the former now, and this went on treating it as
+			// a failure.
+			if isAlreadyWritten(statusErr) {
 				return
 			}
 			ensureClusterAdminErr = err
