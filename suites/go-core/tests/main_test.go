@@ -15,6 +15,7 @@ import (
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
+	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
@@ -102,16 +103,19 @@ func newUserID() string {
 	return uuid.New().String()
 }
 
-// suiteUserIdentity resolves a real user to put in a thread.
+// suiteUserIdentity resolves a person for the suite to act as, and puts them in
+// the organization the tests work in.
 //
-// A thread's participants are people, agents, apps and runners -- threads
-// accepts exactly those and refuses the rest. fetchGatewayIdentity answers with
-// whoever holds the API token, and in CI that is the bootstrap token, whose
-// identity is IDENTITY_TYPE_PLATFORM: the platform is not a participant in a
-// conversation, and threads said so on twenty-nine tests at once with
-// "unsupported identity type 8".
+// CreateThread appends the initiator to the participants, and threads accepts a
+// person, an agent, an app or a runner there and refuses the rest. A caller
+// identified by the bootstrap token is IDENTITY_TYPE_PLATFORM, so it cannot open
+// a thread at all -- "unsupported identity type 8", on every test that starts
+// one. The platform is not in the conversation, which is the right answer.
 //
-// The caller stays whoever it was. This is only about who is in the thread.
+// The membership is the other half: a subject the platform has not seen belongs
+// to no organization, and the services turn that into "identity lacks owner on
+// organization" the moment it tries to create an agent. Granted as the platform,
+// which is what the bootstrap token is for.
 func suiteUserIdentity(t *testing.T, ctx context.Context) string {
 	t.Helper()
 	callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -125,11 +129,30 @@ func suiteUserIdentity(t *testing.T, ctx context.Context) string {
 		Email:       fmt.Sprintf("%s@test.local", subject),
 	})
 	if err != nil {
-		t.Fatalf("resolve a user to put in the thread: %v", err)
+		t.Fatalf("resolve a user for the suite: %v", err)
 	}
 	identityID := strings.TrimSpace(resp.GetUser().GetMeta().GetId())
 	if identityID == "" {
-		t.Fatalf("resolve a user to put in the thread: no identity id")
+		t.Fatalf("resolve a user for the suite: no identity id")
+	}
+
+	organizationID := gatewayOrganizationID(t)
+	orgs := organizationsv1.NewOrganizationsServiceClient(dialGRPC(t, orgsAddr))
+	membership, err := orgs.CreateMembership(callCtx, &organizationsv1.CreateMembershipRequest{
+		OrganizationId: organizationID,
+		IdentityId:     identityID,
+		Role:           organizationsv1.MembershipRole_MEMBERSHIP_ROLE_OWNER,
+	})
+	if err != nil {
+		t.Fatalf("put the suite user in organization %s: %v", organizationID, err)
+	}
+	// An invitation is not a membership until it is taken up.
+	if id := strings.TrimSpace(membership.GetMembership().GetId()); id != "" {
+		if _, err := orgs.AcceptMembership(callCtx, &organizationsv1.AcceptMembershipRequest{
+			MembershipId: id,
+		}); err != nil {
+			t.Fatalf("accept the suite user's membership: %v", err)
+		}
 	}
 	return identityID
 }
