@@ -34,6 +34,7 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 
 	gatewayToken := gatewayAPIToken(t)
 	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -49,7 +50,7 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	threadID := thread.GetId()
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
 
@@ -74,6 +75,7 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 
 	gatewayToken := gatewayAPIToken(t)
 	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -89,7 +91,7 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
 
 	instance := waitForInstance(t, threadsCtx, agentsClient, agentID, orgID)
@@ -112,6 +114,7 @@ func TestThreadMessageReachesTheInstanceInbox(t *testing.T) {
 
 	gatewayToken := gatewayAPIToken(t)
 	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -121,7 +124,7 @@ func TestThreadMessageReachesTheInstanceInbox(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	threadID := thread.GetId()
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
 
@@ -211,6 +214,7 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 
 	gatewayToken := gatewayAPIToken(t)
 	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -227,7 +231,7 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
 
 	instance := waitForInstance(t, threadsCtx, agentsClient, agentID, orgID)
@@ -285,6 +289,7 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 
 	gatewayToken := gatewayAPIToken(t)
 	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -294,7 +299,7 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
 
 	instance := waitForInstance(t, threadsCtx, agentsClient, agentID, orgID)
@@ -328,6 +333,7 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 
 	gatewayToken := gatewayAPIToken(t)
 	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -345,7 +351,7 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID})
 	threadID := thread.GetId()
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadID) })
 

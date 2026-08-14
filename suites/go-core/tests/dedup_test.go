@@ -29,6 +29,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	gatewayToken := gatewayAPIToken(t)
 	gatewayIdentity := fetchGatewayIdentity(t, gatewayToken)
 	identityID := gatewayIdentity.IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -52,7 +53,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	}
 	t.Cleanup(func() { deleteAgentEnv(t, threadsCtx, agentsClient, agentEnvID) })
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	threadID = thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")

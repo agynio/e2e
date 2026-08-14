@@ -47,6 +47,7 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
@@ -63,7 +64,7 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")

@@ -17,6 +17,7 @@ import (
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
+	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,6 +100,38 @@ func pollUntil(ctx context.Context, interval time.Duration, check func(ctx conte
 // newUserID returns a random UUID to use as a fake user participant.
 func newUserID() string {
 	return uuid.New().String()
+}
+
+// suiteUserIdentity resolves a real user to put in a thread.
+//
+// A thread's participants are people, agents, apps and runners -- threads
+// accepts exactly those and refuses the rest. fetchGatewayIdentity answers with
+// whoever holds the API token, and in CI that is the bootstrap token, whose
+// identity is IDENTITY_TYPE_PLATFORM: the platform is not a participant in a
+// conversation, and threads said so on twenty-nine tests at once with
+// "unsupported identity type 8".
+//
+// The caller stays whoever it was. This is only about who is in the thread.
+func suiteUserIdentity(t *testing.T, ctx context.Context) string {
+	t.Helper()
+	callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	subject := fmt.Sprintf("e2e-participant-%s", uuid.NewString())
+	client := usersv1.NewUsersServiceClient(dialGRPC(t, usersAddr))
+	resp, err := client.ResolveOrCreateUser(callCtx, &usersv1.ResolveOrCreateUserRequest{
+		OidcSubject: subject,
+		Name:        fmt.Sprintf("E2E Participant %s", subject),
+		Email:       fmt.Sprintf("%s@test.local", subject),
+	})
+	if err != nil {
+		t.Fatalf("resolve a user to put in the thread: %v", err)
+	}
+	identityID := strings.TrimSpace(resp.GetUser().GetMeta().GetId())
+	if identityID == "" {
+		t.Fatalf("resolve a user to put in the thread: no identity id")
+	}
+	return identityID
 }
 
 func createLLMProvider(t *testing.T, ctx context.Context, token string, endpoint, orgID string) *llmv1.LLMProvider {

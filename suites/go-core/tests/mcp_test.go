@@ -37,6 +37,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
@@ -85,7 +86,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		deleteMCP(t, threadsCtx, agentsClient, memoryMcpID)
 	})
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")

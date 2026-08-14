@@ -194,6 +194,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
+	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
@@ -212,7 +213,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "HOME", "/tmp")
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "AGYN_GATEWAY_URL", "http://gateway:8080")
 
-	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")
