@@ -121,9 +121,14 @@ func suiteUserIdentity(t *testing.T, ctx context.Context) string {
 	callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
+	// The services read the caller from x-identity-id, and this context has
+	// nobody in it yet -- the user being resolved is the point. So the calls that
+	// set them up are made as the platform, which is who is doing the setting up.
+	platformCtx := withIdentity(callCtx, fetchGatewayIdentity(t, gatewayAPIToken(t)).IdentityID)
+
 	subject := fmt.Sprintf("e2e-participant-%s", uuid.NewString())
 	client := usersv1.NewUsersServiceClient(dialGRPC(t, usersAddr))
-	resp, err := client.ResolveOrCreateUser(callCtx, &usersv1.ResolveOrCreateUserRequest{
+	resp, err := client.ResolveOrCreateUser(platformCtx, &usersv1.ResolveOrCreateUserRequest{
 		OidcSubject: subject,
 		Name:        fmt.Sprintf("E2E Participant %s", subject),
 		Email:       fmt.Sprintf("%s@test.local", subject),
@@ -138,7 +143,7 @@ func suiteUserIdentity(t *testing.T, ctx context.Context) string {
 
 	organizationID := gatewayOrganizationID(t)
 	orgs := organizationsv1.NewOrganizationsServiceClient(dialGRPC(t, orgsAddr))
-	membership, err := orgs.CreateMembership(callCtx, &organizationsv1.CreateMembershipRequest{
+	membership, err := orgs.CreateMembership(platformCtx, &organizationsv1.CreateMembershipRequest{
 		OrganizationId: organizationID,
 		IdentityId:     identityID,
 		Role:           organizationsv1.MembershipRole_MEMBERSHIP_ROLE_OWNER,
@@ -146,9 +151,10 @@ func suiteUserIdentity(t *testing.T, ctx context.Context) string {
 	if err != nil {
 		t.Fatalf("put the suite user in organization %s: %v", organizationID, err)
 	}
-	// An invitation is not a membership until it is taken up.
+	// An invitation is not a membership until it is taken up, and it is the
+	// invitee who takes it up.
 	if id := strings.TrimSpace(membership.GetMembership().GetId()); id != "" {
-		if _, err := orgs.AcceptMembership(callCtx, &organizationsv1.AcceptMembershipRequest{
+		if _, err := orgs.AcceptMembership(withIdentity(callCtx, identityID), &organizationsv1.AcceptMembershipRequest{
 			MembershipId: id,
 		}); err != nil {
 			t.Fatalf("accept the suite user's membership: %v", err)
