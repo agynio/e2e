@@ -393,6 +393,13 @@ func TestAnEnvironmentRejectsAnImageOfTheWrongType(t *testing.T) {
 
 func createEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.CreateEnvironmentRequest) *agentsv1.Environment {
 	t.Helper()
+	// An environment has to say who can reach it, and the callers here do not
+	// care -- they are about images and sandboxes. Left unset it is UNSPECIFIED,
+	// which agents refuses with "availability: must be internal or private", so
+	// the narrower of the two stands in.
+	if request.GetAvailability() == agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_UNSPECIFIED {
+		request.Availability = agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_PRIVATE
+	}
 	created, err := client.CreateEnvironment(ctx, request)
 	if err != nil {
 		t.Fatalf("CreateEnvironment: %v", err)

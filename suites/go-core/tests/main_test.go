@@ -151,11 +151,14 @@ func suiteUserIdentity(t *testing.T, ctx context.Context) string {
 	if err != nil {
 		t.Fatalf("put the suite user in organization %s: %v", organizationID, err)
 	}
-	// An invitation is not a membership until it is taken up, and it is the
-	// invitee who takes it up.
-	if id := strings.TrimSpace(membership.GetMembership().GetId()); id != "" {
+	// Only if there is something to accept. A membership the platform grants is
+	// active already -- nobody invited anybody -- and accepting one of those is
+	// refused with "membership is not pending". An invitation is taken up by the
+	// invitee, so that is who takes it up when there is one.
+	created := membership.GetMembership()
+	if created.GetStatus() == organizationsv1.MembershipStatus_MEMBERSHIP_STATUS_PENDING {
 		if _, err := orgs.AcceptMembership(withIdentity(callCtx, identityID), &organizationsv1.AcceptMembershipRequest{
-			MembershipId: id,
+			MembershipId: strings.TrimSpace(created.GetId()),
 		}); err != nil {
 			t.Fatalf("accept the suite user's membership: %v", err)
 		}
