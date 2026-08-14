@@ -28,7 +28,6 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
-	participantID := suiteUserIdentity(t, ctx)
 	identityCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
@@ -45,7 +44,7 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 	})
 	createAgentEnv(t, identityCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
-	thread := createThread(t, identityCtx, threadsClient, orgID, []string{participantID, agentID})
+	thread := createThread(t, identityCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
 	if threadID == "" {
 		t.Fatal("create thread: missing id")

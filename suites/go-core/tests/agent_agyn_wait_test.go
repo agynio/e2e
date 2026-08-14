@@ -33,7 +33,6 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
-	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := setup.Context
 	orgID := setup.OrganizationID
 
@@ -61,7 +60,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 		deleteAgent(t, threadsCtx, agentsClient, agentAID)
 	})
 
-	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentAID})
+	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
 	threadAID := threadA.GetId()
 	if threadAID == "" {
 		t.Fatal("create agent A thread: missing id")

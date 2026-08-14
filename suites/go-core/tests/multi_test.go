@@ -28,7 +28,6 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
-	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
@@ -52,8 +51,8 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 	createAgentEnv(t, threadsCtx, agentsClient, agentAID, "LLM_API_TOKEN", token)
 	createAgentEnv(t, threadsCtx, agentsClient, agentBID, "LLM_API_TOKEN", token)
 
-	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentAID})
-	threadB := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentBID})
+	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
+	threadB := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentBID})
 	threadAID := threadA.GetId()
 	threadBID := threadB.GetId()
 	if threadAID == "" || threadBID == "" {
@@ -155,7 +154,6 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
-	participantID := suiteUserIdentity(t, ctx)
 	threadsCtx := setup.Context
 	orgID := setup.OrganizationID
 	token := setup.Token
@@ -172,8 +170,8 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
-	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
-	threadB := createThread(t, threadsCtx, threadsClient, orgID, []string{participantID, agentID})
+	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
+	threadB := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadAID := threadA.GetId()
 	threadBID := threadB.GetId()
 	if threadAID == "" || threadBID == "" {
