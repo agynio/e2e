@@ -60,7 +60,7 @@ func TestAgentsServiceRefusals(t *testing.T) {
 	// An unknown agent is NotFound, not FailedPrecondition: CreateMcp resolves
 	// the organization through the agent before it writes anything.
 	_, err = client.CreateMcp(ctx, &agentsv1.CreateMcpRequest{
-		AgentId: uuid.NewString(), Name: "e2e-refusal", Command: "mcp",
+		AgentId: uuid.NewString(), Name: "e2e_refusal", Command: "mcp",
 	})
 	requireCode(t, err, codes.NotFound, "CreateMcp naming an unknown agent")
 
@@ -71,7 +71,7 @@ func TestAgentsServiceRefusals(t *testing.T) {
 	_, err = client.UpdateAgent(ctx, &agentsv1.UpdateAgentRequest{Id: agentID, InitImage: proto.String("")})
 	requireCode(t, err, codes.InvalidArgument, "UpdateAgent clearing init_image")
 
-	mcp := createMCP(t, ctx, client, agentID, "e2e-refusal", "node:22-slim", "mcp")
+	mcp := createMCP(t, ctx, client, agentID, "e2e_refusal", "node:22-slim", "mcp")
 	mcpID := mcp.GetMeta().GetId()
 	t.Cleanup(func() { deleteMCP(t, ctx, client, mcpID) })
 
@@ -152,7 +152,7 @@ func TestSubResourcesTargetAnMcp(t *testing.T) {
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
 
-	mcp := createMCP(t, ctx, client, agentID, "e2e-mcp-target", "node:22-slim", "mcp")
+	mcp := createMCP(t, ctx, client, agentID, "e2e_mcp_target", "node:22-slim", "mcp")
 	mcpID := mcp.GetMeta().GetId()
 	t.Cleanup(func() { deleteMCP(t, ctx, client, mcpID) })
 
