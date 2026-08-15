@@ -88,9 +88,13 @@ func TestOrganizationSandboxIdleBounds(t *testing.T) {
 // silently reduced timeout is a number the engineer never sees and plans around
 // wrongly.
 //
-// The ceiling is settled before the sandbox row is written, so these cases need
-// no environment: an over-ceiling request is refused while naming the ceiling,
-// and a request within it gets far enough to fail on the environment instead.
+// This runs in the bootstrap organization, and for the reason its sibling does:
+// a sandbox needs an environment and a fresh organization owns none. The
+// request used to name an absent environment on the grounds that the ceiling is
+// settled first, which stopped being true -- the caller is authorized against
+// the environment before the bound is read, so the probe came back
+// PermissionDenied and the refusal under test never happened. The ceiling is
+// perturbed and restored, so the window is narrow and this suite is sequential.
 func TestCreateSandboxHonoursTheOrganizationCeiling(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	t.Cleanup(cancel)
@@ -98,41 +102,41 @@ func TestCreateSandboxHonoursTheOrganizationCeiling(t *testing.T) {
 	organizations := organizationsv1.NewOrganizationsServiceClient(dialGRPC(t, orgsAddr))
 	agents := agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr))
 
-	// A person the platform knows, not a UUID. Authorization resolves the
-	// caller's identity before it reaches the rule under test, so a fabricated
-	// one is refused with PermissionDenied and the assertion never sees the
-	// InvalidArgument it is about.
-	ownerID := suiteUserIdentity(t, ctx)
-	ownerCtx := withIdentity(ctx, ownerID)
-	organizationID := newOrganization(ctx, t, organizations, ownerID)
+	organizationID := gatewayOrganizationID(t)
+	ownerCtx := withIdentity(ctx, fetchGatewayIdentity(t, gatewayAPIToken(t)).IdentityID)
 
-	_, err := organizations.UpdateOrganization(ownerCtx, &organizationsv1.UpdateOrganizationRequest{
+	environmentID := firstEnvironment(t, agents, ownerCtx, organizationID)
+	if environmentID == "" {
+		t.Skip("the bootstrap organization declares no environment to start a sandbox in")
+	}
+
+	before, err := organizations.GetOrganization(ctx, &organizationsv1.GetOrganizationRequest{Id: organizationID})
+	require.NoError(t, err)
+	originalCeiling := before.GetOrganization().GetSandboxMaxIdleTimeout()
+	t.Cleanup(func() {
+		_, _ = organizations.UpdateOrganization(ownerCtx, &organizationsv1.UpdateOrganizationRequest{
+			Id:                    organizationID,
+			SandboxMaxIdleTimeout: proto.String(originalCeiling),
+		})
+	})
+
+	_, err = organizations.UpdateOrganization(ownerCtx, &organizationsv1.UpdateOrganizationRequest{
 		Id:                    organizationID,
 		SandboxMaxIdleTimeout: proto.String("2h"),
 	})
 	require.NoError(t, err)
 
-	request := func(idleTimeout string) error {
-		_, err := agents.CreateSandbox(ownerCtx, &agentsv1.CreateSandboxRequest{
-			OrganizationId: organizationID,
-			// Well-formed and absent: reaching the environment at all proves
-			// the request survived the ceiling.
-			EnvironmentId: uuid.NewString(),
-			IdleTimeout:   proto.String(idleTimeout),
-		})
-		return err
-	}
-
-	err = request("6h")
+	err = requestSandbox(ctx, agents, ownerCtx, organizationID, environmentID, "6h")
 	require.Equal(t, codes.InvalidArgument, status.Code(err))
 	require.Contains(t, err.Error(), "2h", "the refusal must name the ceiling it exceeded")
 
-	// At the ceiling exactly, the request passes the bound and stops on the
-	// environment that does not exist.
-	err = request("2h")
-	require.Error(t, err)
-	require.NotContains(t, err.Error(), "sandbox_max_idle_timeout",
-		"a request at the ceiling must pass the bound")
+	// At the ceiling exactly, the bound is passed. Whatever happens next is not
+	// this test's business, so long as it is not the bound refusing it.
+	err = requestSandbox(ctx, agents, ownerCtx, organizationID, environmentID, "2h")
+	if err != nil {
+		require.NotContains(t, err.Error(), "sandbox_max_idle_timeout",
+			"a request at the ceiling must pass the bound")
+	}
 
 	// Raising the ceiling makes the same request acceptable, which is what
 	// shows the value is read from the organization rather than compiled in.
@@ -142,10 +146,11 @@ func TestCreateSandboxHonoursTheOrganizationCeiling(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = request("6h")
-	require.Error(t, err)
-	require.NotContains(t, err.Error(), "sandbox_max_idle_timeout",
-		"raising the ceiling must admit a request it previously refused")
+	err = requestSandbox(ctx, agents, ownerCtx, organizationID, environmentID, "6h")
+	if err != nil {
+		require.NotContains(t, err.Error(), "sandbox_max_idle_timeout",
+			"raising the ceiling must admit a request it previously refused")
+	}
 }
 
 // Bounds are snapshotted at creation. Lowering them afterwards is what an
@@ -221,4 +226,13 @@ func firstEnvironment(t *testing.T, client agentsv1.AgentsServiceClient, ownerCt
 		return ""
 	}
 	return listed.GetEnvironments()[0].GetMeta().GetId()
+}
+
+func requestSandbox(ctx context.Context, agents agentsv1.AgentsServiceClient, ownerCtx context.Context, organizationID, environmentID, idleTimeout string) error {
+	_, err := agents.CreateSandbox(ownerCtx, &agentsv1.CreateSandboxRequest{
+		OrganizationId: organizationID,
+		EnvironmentId:  environmentID,
+		IdleTimeout:    proto.String(idleTimeout),
+	})
+	return err
 }
