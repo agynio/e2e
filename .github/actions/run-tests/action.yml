@@ -277,7 +277,11 @@ runs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.service != '' && format('e2e-artifacts-{0}', inputs.service) || 'e2e-artifacts' }}
+        # Distinct per caller. Only `service` used to vary it, so a workflow
+        # selecting by `tag` -- several jobs of one workflow, which is how this
+        # repo runs its own suites -- had every job upload under the same name
+        # and keep one set of results between them.
+        name: e2e-artifacts-${{ inputs.service != '' && inputs.service || github.job }}-${{ strategy.job-index || '0' }}
         path: |
           e2e/.artifacts/
           e2e/.diagnostics/

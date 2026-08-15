@@ -2,8 +2,12 @@ import type { Browser, Page } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
 import { signInViaOidc } from './sign-in-helper';
 
-const USER_A_EMAIL = 'e2e-user-a@agyn.test';
-const USER_B_EMAIL = 'e2e-user-b@agyn.test';
+// Two people, and the platform ships exactly two accounts. mockauth invents an
+// account for any address it is given; Dex knows only the ones the chart
+// declares, so a pair of made-up addresses signs nobody in. Overridable for an
+// environment with real accounts of its own.
+const USER_A_EMAIL = process.env.E2E_USER_A_EMAIL ?? 'user@agyn.dev';
+const USER_B_EMAIL = process.env.E2E_USER_B_EMAIL ?? 'admin@agyn.dev';
 
 type MultiUserFixtures = {
   userAPage: Page;
