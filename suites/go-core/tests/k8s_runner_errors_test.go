@@ -67,7 +67,10 @@ func TestErrors(t *testing.T) {
 		ctx, cancel := testContext(t)
 		t.Cleanup(cancel)
 
+		// Removing a volume that is not there is not an error: the runner
+		// answers a missing PVC with success, deliberately, so the call is
+		// idempotent. Asserting NotFound asserted a contract it does not offer.
 		_, err := client.RemoveVolume(ctx, &runnerv1.RemoveVolumeRequest{VolumeName: "missing-volume"})
-		requireGRPCCode(t, err, codes.NotFound)
+		require.NoError(t, err)
 	})
 }
