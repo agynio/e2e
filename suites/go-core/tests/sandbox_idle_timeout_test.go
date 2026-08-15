@@ -37,7 +37,11 @@ func TestOrganizationSandboxIdleBounds(t *testing.T) {
 	t.Cleanup(cancel)
 
 	client := organizationsv1.NewOrganizationsServiceClient(dialGRPC(t, orgsAddr))
-	ownerID := uuid.NewString()
+	// A person the platform knows, not a UUID. Authorization resolves the
+	// caller's identity before it reaches the rule under test, so a fabricated
+	// one is refused with PermissionDenied and the assertion never sees the
+	// InvalidArgument it is about.
+	ownerID := suiteUserIdentity(t, ctx)
 	ownerCtx := withIdentity(ctx, ownerID)
 	organizationID := newOrganization(ctx, t, client, ownerID)
 
@@ -94,7 +98,11 @@ func TestCreateSandboxHonoursTheOrganizationCeiling(t *testing.T) {
 	organizations := organizationsv1.NewOrganizationsServiceClient(dialGRPC(t, orgsAddr))
 	agents := agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr))
 
-	ownerID := uuid.NewString()
+	// A person the platform knows, not a UUID. Authorization resolves the
+	// caller's identity before it reaches the rule under test, so a fabricated
+	// one is refused with PermissionDenied and the assertion never sees the
+	// InvalidArgument it is about.
+	ownerID := suiteUserIdentity(t, ctx)
 	ownerCtx := withIdentity(ctx, ownerID)
 	organizationID := newOrganization(ctx, t, organizations, ownerID)
 
