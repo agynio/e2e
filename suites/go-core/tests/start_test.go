@@ -73,7 +73,24 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 		workloadID = ids[0]
 		return nil
 	}); err != nil {
-		t.Fatalf("wait for workload: %v", err)
+		// Say what the platform thinks it should be running. The orchestrator
+		// starts a workload for an ACTIVE instance with something unacked in its
+		// inbox, so an empty desired set is either no instance or no message --
+		// and which one it is decides where to look next.
+		instances := "unavailable"
+		if listed, listErr := agentsClient.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			PageSize: 50,
+		}); listErr == nil {
+			seen := []string{}
+			for _, instance := range listed.GetInstances() {
+				seen = append(seen, fmt.Sprintf("%s state=%s agent=%s",
+					instance.GetMeta().GetId(), instance.GetState(), instance.GetAgentId()))
+			}
+			instances = fmt.Sprintf("%v", seen)
+		} else {
+			instances = listErr.Error()
+		}
+		t.Fatalf("wait for workload: %v; agent=%s thread=%s instances=%s", err, agentID, threadID, instances)
 	}
 
 	t.Cleanup(func() { cleanupWorkload(t, ctx, runnerClient, workloadID) })
