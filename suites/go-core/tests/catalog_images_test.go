@@ -299,12 +299,12 @@ func TestAWorkspaceOnlyWorkloadGetsOnlyThePlatformInitContainers(t *testing.T) {
 
 	// The sandbox case: the platform's own CLI is there, and no agent CLI is.
 	binaries := sharedBinaries(t, ctx, pod)
-	for _, want := range []string{"/agynd", "cli/agyn"} {
+	for _, want := range []string{"bin/agynd", "bin/agyn"} {
 		if !binaries[want] {
 			t.Fatalf("%s missing from a workspace-only workload; volume holds %v", want, binaries)
 		}
 	}
-	for _, cli := range []string{"/codex", "/claude", "/agn"} {
+	for _, cli := range []string{"bin/codex", "bin/claude", "bin/agn"} {
 		if binaries[cli] {
 			t.Fatalf("%s is present without the environment naming an agent runtime", cli)
 		}

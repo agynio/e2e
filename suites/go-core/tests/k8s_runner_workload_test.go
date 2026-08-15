@@ -3,13 +3,11 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 )
@@ -165,29 +163,21 @@ func TestWorkloadLifecycle(t *testing.T) {
 		require.NoError(t, err)
 		waitGone(t, ctx, client, workloadID)
 
-		// RemoveWorkload deletes the PVCs it annotated, so by here the volume
-		// should be gone and removing it again should say so. A short poll
-		// covers the PVC still terminating.
-		var lastErr error
-		for deadline := time.Now().Add(30 * time.Second); ; {
-			_, lastErr = client.RemoveVolume(ctx, &runnerv1.RemoveVolumeRequest{VolumeName: volumeName})
-			if status.Code(lastErr) == codes.NotFound || time.Now().After(deadline) {
-				break
+		// RemoveWorkload deletes the PVCs it annotated, so the volume should be
+		// gone. Asked of the listing, not of RemoveVolume: that answers nil for
+		// a volume it does not have -- it left the runner holding [] and still
+		// returned success -- so it cannot tell absence from a second removal.
+		require.NoError(t, pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+			listing, err := client.ListVolumes(ctx, &runnerv1.ListVolumesRequest{})
+			if err != nil {
+				return err
 			}
-			time.Sleep(pollInterval)
-		}
-		if status.Code(lastErr) != codes.NotFound {
-			// Say what the runner still holds. The volume is named, so it should
-			// appear here while it exists -- and if it does not, the listing is
-			// keyed by something other than the name, which is worth seeing
-			// rather than guessing at.
-			listing, listErr := client.ListVolumes(ctx, &runnerv1.ListVolumesRequest{})
-			keys := []string{}
 			for _, volume := range listing.GetVolumes() {
-				keys = append(keys, fmt.Sprintf("%s/%s", volume.GetInstanceId(), volume.GetVolumeKey()))
+				if volume.GetVolumeKey() == volumeName {
+					return fmt.Errorf("RemoveWorkload(RemoveVolumes) left %s behind", volumeName)
+				}
 			}
-			t.Fatalf("RemoveWorkload(RemoveVolumes) left %s behind: RemoveVolume returned %v; runner holds %v (list err %v)",
-				volumeName, lastErr, keys, listErr)
-		}
+			return nil
+		}))
 	})
 }
