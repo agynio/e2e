@@ -1233,10 +1233,11 @@ export async function registerRunner(
   if (opts.organizationId) {
     payload.organizationId = opts.organizationId;
   }
-  // Registering a runner is the admin's. The specs that call this assert on
-  // what the console then lists, so the registration is setup rather than the
-  // thing under test.
-  const response = await postConnectAsClusterAdmin<RegisterRunnerResponseWire>(
+  // As the signed-in session, not the bootstrap token: registering a runner is
+  // the cluster admin's, and the platform identity the token carries is refused
+  // it outright -- "permission denied". A spec that needs one signs in as the
+  // admin, which is what adminPage is for.
+  const response = await postConnect<RegisterRunnerResponseWire>(
     page,
     RUNNERS_GATEWAY_PATH,
     'RegisterRunner',
