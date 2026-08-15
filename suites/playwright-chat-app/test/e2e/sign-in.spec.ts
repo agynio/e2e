@@ -2,15 +2,17 @@ import { argosScreenshot } from '@argos-ci/playwright';
 import { test, expect } from '@playwright/test';
 import { signInViaOidc } from './sign-in-helper';
 
-const defaultEmail = 'e2e-tester@agyn.test';
-const expectedEmail = process.env.E2E_OIDC_EMAIL ?? defaultEmail;
+// The account the platform ships, unless the environment names another. An
+// address invented here is one Dex has never heard of.
+const expectedEmail = process.env.E2E_OIDC_EMAIL ?? 'user@agyn.dev';
 
 test.describe('sign-in', { tag: ['@svc_chat_app', '@svc_gateway'] }, () => {
   test('signs in via oidc redirect flow', async ({ page }) => {
     test.setTimeout(60_000);
     await signInViaOidc(page, expectedEmail, {
       onLoginPage: async (loginPage) => {
-        const loginHeading = loginPage.getByRole('heading', { level: 1 });
+        // Any level: mockauth's heading is an h1, Dex's an h2.
+        const loginHeading = loginPage.getByRole('heading', { name: /Log in to/i }).first();
         await expect(loginHeading).toContainText('Log in to');
       },
     });
