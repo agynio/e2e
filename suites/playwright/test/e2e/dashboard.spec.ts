@@ -2,7 +2,7 @@ import { argosScreenshot } from '@argos-ci/playwright';
 import { test, expect } from './fixtures';
 
 test.describe('dashboard', { tag: ['@svc_console', '@smoke'] }, () => {
-  test('dashboard shows stats cards', async ({ page }) => {
+  test('dashboard shows stats cards', async ({ adminPage: page }) => {
     const usersLoaded = page.waitForResponse(
       (resp) => resp.url().includes('ListUsers') && resp.status() === 200,
       { timeout: 15000 },

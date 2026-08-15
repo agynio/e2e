@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 import { getMe } from './console-api';
 
 test.describe('users', { tag: ['@svc_console'] }, () => {
-  test('lists users', async ({ page }) => {
+  test('lists users', async ({ adminPage: page }) => {
     const me = await getMe(page);
     const userLabel = me.user?.name || me.user?.meta?.id;
     if (!userLabel) {
@@ -16,7 +16,7 @@ test.describe('users', { tag: ['@svc_console'] }, () => {
     await argosScreenshot(page, 'users-list');
   });
 
-  test('shows user detail', async ({ page }) => {
+  test('shows user detail', async ({ adminPage: page }) => {
     const me = await getMe(page);
     const identityId = me.user?.meta?.id;
     if (!identityId) {
