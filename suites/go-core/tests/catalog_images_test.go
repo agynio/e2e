@@ -218,7 +218,7 @@ func TestAWorkloadGetsThreeInitContainers(t *testing.T) {
 	// What the init containers were for: the platform's binaries and one agent
 	// CLI, all in the shared volume the main container sees.
 	binaries := sharedBinaries(t, ctx, pod)
-	for _, want := range []string{"/agynd", "cli/agyn", "/codex", "/config.json"} {
+	for _, want := range []string{"bin/agynd", "bin/agyn", "bin/codex", "/config.json"} {
 		if !binaries[want] {
 			t.Fatalf("%s missing from the shared volume; it holds %v", want, binaries)
 		}
@@ -238,10 +238,12 @@ func sharedBinaries(t *testing.T, ctx context.Context, pod *corev1.Pod) map[stri
 			t.Fatalf("get pod: %v", err)
 		}
 		if current.Status.Phase == corev1.PodRunning {
-			// The three images write disjoint paths, so the listing is one level
-			// deep: agynd and the agent CLI at the root, the agyn CLI under cli/.
+			// Both levels of the volume: the binaries the three images write into
+			// bin/, and the config beside it. The agyn CLI used to sit under
+			// bin/cli/ and is at bin/ now, which this went on expecting -- and
+			// config.json is not in bin at all, so listing only that never saw it.
 			stdout, err := catalogExec(t, ctx, namespace, pod.Name, current.Spec.Containers[0].Name,
-				[]string{"sh", "-c", "cd /agyn/bin && ls . cli 2>/dev/null | sed 's|^|/|'; ls cli 2>/dev/null | sed 's|^|cli/|'"})
+				[]string{"sh", "-c", "ls -1 /agyn/bin 2>/dev/null | sed 's|^|bin/|'; ls -1 /agyn 2>/dev/null | sed 's|^|/|'"})
 			if err != nil {
 				t.Fatalf("ls /agyn/bin: %v", err)
 			}
