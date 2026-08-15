@@ -51,6 +51,31 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 	}
 	t.Cleanup(func() { archiveThread(t, identityCtx, threadsClient, threadID) })
 
+	// The thread creates the agent's instance, and the instance is what has an
+	// inbox. Sending before it exists leaves the message with nowhere to land:
+	// the orchestrator then sees an ACTIVE instance with nothing unacked and
+	// wants no workload, which is exactly what it reported -- desired=0 against
+	// an instance this test could see.
+	instanceCtx, instanceCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer instanceCancel()
+	if err := pollUntil(instanceCtx, pollInterval, func(ctx context.Context) error {
+		listed, err := agentsClient.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			OrganizationId: orgID,
+			AgentId:        &agentID,
+			PageSize:       10,
+			StateIn:        []agentsv1.AgentInstanceState{agentsv1.AgentInstanceState_AGENT_INSTANCE_STATE_ACTIVE},
+		})
+		if err != nil {
+			return err
+		}
+		if len(listed.GetInstances()) == 0 {
+			return fmt.Errorf("no active instance for agent %s yet", agentID)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("wait for the agent's instance: %v", err)
+	}
+
 	_ = sendMessage(t, identityCtx, threadsClient, threadID, identityID, "e2e test message")
 
 	labels := map[string]string{
