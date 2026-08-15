@@ -84,8 +84,12 @@ test.describe('organization-egress-rules', { tag: ['@svc_console'] }, () => {
     await expect(page.getByText('Each header requires a name and literal value or selected secret.')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('egress-rules-create-cancel').click();
 
+    // The attachments live behind a tab on the agent page, and the console
+    // gives that panel no testids of its own -- neither the heading nor the row
+    // this used to look for exists anywhere in it. The tab is the handle it
+    // does offer, and the rule's name is what the panel is there to show.
     await page.goto(`/organizations/${organizationId}/agents/${agentId}`);
-    await expect(page.getByTestId('agent-egress-rule-attachments-heading')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('agent-egress-rule-attachment-row').filter({ hasText: ruleName })).toBeVisible({ timeout: 15000 });
+    await page.getByTestId('agent-detail-egress-rules-tab').click();
+    await expect(page.getByText(ruleName)).toBeVisible({ timeout: 15000 });
   });
 });
