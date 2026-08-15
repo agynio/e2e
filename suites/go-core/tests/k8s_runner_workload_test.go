@@ -3,6 +3,9 @@
 package tests
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -161,6 +164,24 @@ func TestWorkloadLifecycle(t *testing.T) {
 		})
 		require.NoError(t, err)
 		waitGone(t, ctx, client, workloadID)
+
+		// The workload is gone before its volumes are -- the removal is
+		// asynchronous, and asserting the moment waitGone returns caught the
+		// window where the volume was still there. Polled on a read, not on
+		// RemoveVolume: calling that in a loop would delete the volume itself
+		// and pass whether or not RemoveVolumes ever did anything.
+		require.NoError(t, pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+			resp, err := client.ListVolumes(ctx, &runnerv1.ListVolumesRequest{})
+			if err != nil {
+				return err
+			}
+			for _, volume := range resp.GetVolumes() {
+				if strings.Contains(volume.GetVolumeKey(), volumeName) {
+					return fmt.Errorf("volume %s is still there", volumeName)
+				}
+			}
+			return nil
+		}))
 
 		_, err = client.RemoveVolume(ctx, &runnerv1.RemoveVolumeRequest{VolumeName: volumeName})
 		requireGRPCCode(t, err, codes.NotFound)
