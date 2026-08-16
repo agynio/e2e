@@ -68,11 +68,11 @@ test.describe('organization-images', { tag: ['@svc_console'] }, () => {
 
     await page.getByTestId('organization-environments-create-name').fill(`e2e-env-${now}`);
 
-    await page.getByTestId('organization-environments-create-workspace-image-trigger').click();
+    await page.getByTestId('organization-environments-create-workspace-image').click();
     await page.getByRole('option', { name: new RegExp(name) }).click();
 
     // The newest version is preselected, so the common case needs no choice.
-    const version = page.getByTestId('organization-environments-create-workspace-version-trigger');
+    const version = page.getByTestId('organization-environments-create-workspace-version');
     await expect(version).toBeVisible();
     await expect(version).not.toHaveText(/Select a version/);
 

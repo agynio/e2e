@@ -7,9 +7,13 @@ import {
   buildCreateAgentRequestJson,
 } from './chat-api';
 
+// Named rather than derived: buildCreateAgentPayload invents a nickname when
+// none is given, with a random suffix, so a payload built from options without
+// one can never equal those options.
 const createAgentOptions = {
   organizationId: 'organization-id',
   name: 'agent-name',
+  nickname: 'agent-nickname',
   role: 'assistant',
   model: 'model-id',
   description: 'description',
