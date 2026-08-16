@@ -30,7 +30,7 @@ const organizationTargets: NavigationTarget[] = [
   { navTestId: 'nav-organization-apps', title: 'Apps', pathPattern: /\/organizations\/[^/]+\/apps$/ },
   { navTestId: 'nav-organization-images', title: 'Images', pathPattern: /\/organizations\/[^/]+\/images$/ },
   { navTestId: 'nav-organization-environments', title: 'Environments', pathPattern: /\/organizations\/[^/]+\/environments$/ },
-  { navTestId: 'nav-organization-volumes', title: 'Volumes', pathPattern: /\/organizations\/[^/]+\/volumes$/ },
+  { navTestId: 'nav-organization-storage', title: 'Provisioned Storage', pathPattern: /\/organizations\/[^/]+\/storage$/ },
   { navTestId: 'nav-organization-runners', title: 'Runners', pathPattern: /\/organizations\/[^/]+\/runners$/ },
   { navTestId: 'nav-organization-private-networks', title: 'Private Networks', pathPattern: /\/organizations\/[^/]+\/private-networks$/ },
   { navTestId: 'nav-organization-private-resources', title: 'Private Resources', pathPattern: /\/organizations\/[^/]+\/private-resources$/ },
