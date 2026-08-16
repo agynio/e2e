@@ -68,7 +68,13 @@ test.describe('organization-images', { tag: ['@svc_console'] }, () => {
 
     await page.getByTestId('organization-environments-create-name').fill(`e2e-env-${now}`);
 
-    await page.getByTestId('organization-environments-create-workspace-image').click();
+    // A combobox, not a menu: the testid is on a text field and the options are
+    // what the typing matches. Clicking alone leaves the list unfiltered and,
+    // in an organization with a catalog behind it, not showing this image at
+    // all.
+    const workspaceImage = page.getByTestId('organization-environments-create-workspace-image');
+    await workspaceImage.click();
+    await workspaceImage.fill(name);
     await page.getByRole('option', { name: new RegExp(name) }).click();
 
     // The newest version is preselected, so the common case needs no choice.
