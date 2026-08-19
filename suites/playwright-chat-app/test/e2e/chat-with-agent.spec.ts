@@ -20,7 +20,6 @@ test.describe('chat-with-agent', {
     test.setTimeout(180_000);
     const { organizationId, participantId } = await setupTestAgent(page, {
       endpoint: llmEndpoint,
-      initImage: process.env.E2E_AGENT_INIT_IMAGE,
       remoteName: testLlmRemoteName,
     });
     const identityId = await resolveIdentityId(page);

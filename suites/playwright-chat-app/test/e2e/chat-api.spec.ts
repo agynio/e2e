@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { fromBinary } from '@bufbuild/protobuf';
-import { AgentAvailability, CreateAgentRequestSchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import {
+  AgentAvailability,
+  AgentFinalMessage,
+  CreateAgentRequestSchema,
+} from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import {
   buildCreateAgentPayload,
   buildCreateAgentRequestBytes,
@@ -19,7 +23,7 @@ const createAgentOptions = {
   description: 'description',
   configuration: '{}',
   image: 'alpine:3.21',
-  initImage: 'ghcr.io/agynio/agent-init-codex:0.13.41',
+  environmentId: '00000000-0000-0000-0000-000000000001',
 };
 
 test.describe('chat api helpers', () => {
@@ -29,6 +33,7 @@ test.describe('chat api helpers', () => {
     expect(JSON.parse(JSON.stringify(payload))).toEqual({
       ...createAgentOptions,
       availability: AgentAvailability.INTERNAL,
+      finalMessage: AgentFinalMessage.DEFAULT_THREAD,
     });
   });
 
@@ -38,6 +43,7 @@ test.describe('chat api helpers', () => {
     expect(JSON.parse(JSON.stringify(payload))).toEqual({
       ...createAgentOptions,
       availability: 'AGENT_AVAILABILITY_INTERNAL',
+      finalMessage: 'AGENT_FINAL_MESSAGE_DEFAULT_THREAD',
     });
   });
 

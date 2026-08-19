@@ -3,26 +3,32 @@ import { randomUUID } from 'node:crypto';
 import { create, fromBinary, toBinary, toJson } from '@bufbuild/protobuf';
 import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
-import { AgentAvailability, CreateAgentRequestSchema, CreateAgentResponseSchema } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import {
+  AgentAvailability,
+  AgentFinalMessage,
+  CreateAgentRequestSchema,
+  CreateAgentResponseSchema,
+} from '../../src/gen/agynio/api/agents/v1/agents_pb';
 
 const CHAT_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ChatGateway';
 const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
 const LLM_GATEWAY_PATH = '/api/agynio.api.gateway.v1.LLMGateway';
 const ORGS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.OrganizationsGateway';
 const USERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.UsersGateway';
+const IMAGES_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ImagesGateway';
+const RUNNERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.RunnersGateway';
 
-// Reads the first of `names` that is set. There is deliberately no default:
-// the caller resolves init images to the newest published release, and a
-// hardcoded fallback would silently pin the suite to a stale one.
-export function requireEnv(...names: string[]): string {
-  for (const name of names) {
-    const value = process.env[name]?.trim();
-    if (value) return value;
-  }
-  throw new Error(`${names.join(' or ')} is required`);
-}
+// The agent runtimes the release publishes to the image catalog. An agent takes
+// its CLI from its environment's agent runtime image, and the environment names
+// a catalog record -- so the suite names the runtime and reads the newest
+// release the platform has discovered for it, rather than being handed a
+// registry reference that goes stale on its own.
+export const CODEX_RUNTIME = 'codex';
+export const AGN_RUNTIME = 'agn';
+export const CLAUDE_RUNTIME = 'claude';
 
-export const DEFAULT_TEST_INIT_IMAGE = requireEnv('E2E_AGENT_INIT_IMAGE', 'CODEX_INIT_IMAGE');
+// The workload's main container. Something the agyn binary can run in; nothing
+// about the image is under test.
 export const DEFAULT_TEST_AGENT_IMAGE = 'alpine:3.21';
 
 const CONNECT_JSON_HEADERS = {
@@ -49,19 +55,9 @@ const DEBUG_CREATE_AGENT_PAYLOAD = process.env.E2E_DEBUG_CREATE_AGENT_PAYLOAD ==
 const REDACTED_VALUE = '<redacted>';
 const SENSITIVE_KEY_PATTERN = /token|secret|password|authorization|credential/i;
 
-export function resolveCodexInitImage(override?: string): string {
-  if (override !== undefined) {
-    const trimmed = override.trim();
-    if (!trimmed) {
-      throw new Error('initImage is required to create chat agents.');
-    }
-    return trimmed;
-  }
-  const value = process.env.CODEX_INIT_IMAGE?.trim();
-  if (value) {
-    return value;
-  }
-  return DEFAULT_TEST_INIT_IMAGE;
+export function resolveRuntime(override?: string): string {
+  const trimmed = override?.trim();
+  return trimmed || CODEX_RUNTIME;
 }
 
 type CreateChatResponseWire = {
@@ -428,6 +424,101 @@ export async function createModel(
   return response.model.meta.id;
 }
 
+type CatalogRuntime = { imageId: string; tag: string };
+
+type ImageWire = { meta?: { id?: string }; name?: string };
+type ListImagesResponseWire = { images?: ImageWire[] };
+type ListVersionsResponseWire = { versions?: Array<{ tag?: string }> };
+type ListRunnersResponseWire = { runners?: Array<{ meta?: { id?: string } }> };
+type CreateEnvironmentResponseWire = { environment?: { meta?: { id?: string } } };
+
+// The highest x.y.z among the discovered tags. A repository also carries
+// floating tags -- latest, 0, 0.5 -- and a sha-<commit> per build, none of which
+// name a release; pinning the suite to one of those is how a run silently moves
+// under itself.
+function newestReleaseTag(tags: string[]): string {
+  const releases = tags
+    .map((tag) => ({ tag, parts: /^(\d+)\.(\d+)\.(\d+)$/.exec(tag) }))
+    .filter((entry) => entry.parts !== null)
+    .map((entry) => ({ tag: entry.tag, parts: entry.parts!.slice(1, 4).map(Number) }));
+  releases.sort((a, b) => a.parts[0] - b.parts[0] || a.parts[1] - b.parts[1] || a.parts[2] - b.parts[2]);
+  return releases.length ? releases[releases.length - 1].tag : '';
+}
+
+// The agent runtime a release publishes, and the newest release tag discovery
+// has seen for it. Public records, so a freshly created organization sees them.
+async function platformAgentRuntime(
+  page: Page,
+  organizationId: string,
+  name: string,
+): Promise<CatalogRuntime> {
+  const listed = await postConnect<ListImagesResponseWire>(page, IMAGES_GATEWAY_PATH, 'ListImages', {
+    organizationId,
+    type: 'IMAGE_TYPE_AGENT_RUNTIME',
+    pageSize: 100,
+  });
+  const images = listed.images ?? [];
+  const image = images.find((candidate) => candidate.name === name);
+  const imageId = image?.meta?.id;
+  if (!imageId) {
+    throw new Error(
+      `No agent runtime image named "${name}" in the catalog; found ${images.map((i) => i.name).join(', ')}`,
+    );
+  }
+  const versions = await postConnect<ListVersionsResponseWire>(page, IMAGES_GATEWAY_PATH, 'ListVersions', {
+    imageId,
+    pageSize: 200,
+  });
+  const tag = newestReleaseTag((versions.versions ?? []).map((version) => version.tag ?? ''));
+  if (!tag) {
+    throw new Error(`No released tag discovered for agent runtime "${name}"`);
+  }
+  return { imageId, tag };
+}
+
+// The runner an environment is placed on. Unfiltered: the platform's runner
+// belongs to no organization, and a freshly created one owns none of its own.
+async function firstRunnerId(page: Page): Promise<string> {
+  const listed = await postConnect<ListRunnersResponseWire>(page, RUNNERS_GATEWAY_PATH, 'ListRunners', {
+    pageSize: 100,
+  });
+  const runnerId = (listed.runners ?? []).map((runner) => runner.meta?.id).find((id) => !!id);
+  if (!runnerId) {
+    throw new Error('No runner is enrolled with the platform.');
+  }
+  return runnerId;
+}
+
+// The environment an agent runs in. An agent takes its CLI from the agent
+// runtime image this names; without one the Orchestrator refuses to assemble a
+// workload, so the agent is created, goes ACTIVE, and never starts.
+export async function createTestEnvironment(
+  page: Page,
+  organizationId: string,
+  runtime: string,
+): Promise<string> {
+  const { imageId, tag } = await platformAgentRuntime(page, organizationId, runtime);
+  const response = await postConnect<CreateEnvironmentResponseWire>(
+    page,
+    AGENTS_GATEWAY_PATH,
+    'CreateEnvironment',
+    {
+      organizationId,
+      name: `e2e-env-${randomUUID().slice(0, 8)}`,
+      runnerId: await firstRunnerId(page),
+      image: DEFAULT_TEST_AGENT_IMAGE,
+      agentRuntimeImageId: imageId,
+      agentRuntimeImageTag: tag,
+      availability: 'ENVIRONMENT_AVAILABILITY_PRIVATE',
+    },
+  );
+  const environmentId = response.environment?.meta?.id;
+  if (!environmentId) {
+    throw new Error('CreateEnvironment response missing environment id.');
+  }
+  return environmentId;
+}
+
 type CreateAgentOptions = {
   organizationId: string;
   name: string;
@@ -436,7 +527,7 @@ type CreateAgentOptions = {
   description: string;
   configuration: string;
   image: string;
-  initImage: string;
+  environmentId: string;
   nickname?: string;
   availability?: AgentAvailability;
 };
@@ -455,11 +546,12 @@ export function nicknameFor(name: string): string {
 type CreateAgentPayload = Omit<CreateAgentOptions, 'availability' | 'nickname'> & {
   nickname: string;
   availability: AgentAvailability.INTERNAL | AgentAvailability.PRIVATE;
+  finalMessage: AgentFinalMessage.DEFAULT_THREAD;
 };
 
 type SetupTestAgentOptions = {
   endpoint: string;
-  initImage?: string;
+  runtime?: string;
   protocol?: string;
   remoteName?: string;
   token?: string;
@@ -490,12 +582,10 @@ async function waitForAgent(page: Page, organizationId: string, agentId: string)
 }
 
 export async function createAgent(page: Page, opts: CreateAgentOptions): Promise<string> {
-  const { initImage, ...rest } = opts;
-  const trimmedInitImage = initImage.trim();
-  if (!trimmedInitImage) {
-    throw new Error('initImage is required to create chat agents.');
+  if (!opts.environmentId.trim()) {
+    throw new Error('environmentId is required to create chat agents.');
   }
-  const payload = buildCreateAgentPayload({ ...rest, initImage: trimmedInitImage });
+  const payload = buildCreateAgentPayload(opts);
   const request = create(CreateAgentRequestSchema, payload);
   if (DEBUG_CREATE_AGENT_PAYLOAD) {
     const requestBody = Buffer.from(buildCreateAgentRequestBytes(payload));
@@ -527,7 +617,16 @@ export function buildCreateAgentPayload(opts: CreateAgentOptions): CreateAgentPa
   if (availability !== AgentAvailability.INTERNAL && availability !== AgentAvailability.PRIVATE) {
     throw new Error(`Unsupported agent availability: ${availability}`);
   }
-  return { ...rest, nickname: resolvedNickname, availability };
+  // The class default is DISCARD -- for agents that post explicitly and would
+  // otherwise say everything twice. Under it the CLI produces the reply, the
+  // turn completes, and the platform drops the text, which reads from the
+  // outside exactly like an agent that never answered.
+  return {
+    ...rest,
+    nickname: resolvedNickname,
+    availability,
+    finalMessage: AgentFinalMessage.DEFAULT_THREAD,
+  };
 }
 
 export function buildCreateAgentRequestJson(opts: CreateAgentOptions): unknown {
@@ -568,7 +667,7 @@ export async function setupTestAgent(
 ): Promise<{ organizationId: string; agentId: string; agentName: string; participantId: string }> {
   const now = Date.now();
   const organizationId = await createOrganization(page, `e2e-org-llm-${now}`);
-  const initImage = resolveCodexInitImage(opts.initImage);
+  const environmentId = await createTestEnvironment(page, organizationId, resolveRuntime(opts.runtime));
 
   const { modelId } = await createTestModel(page, {
     organizationId,
@@ -589,7 +688,7 @@ export async function setupTestAgent(
     description: 'E2E test agent using TestLLM simple-hello',
     configuration: '{}',
     image: DEFAULT_TEST_AGENT_IMAGE,
-    initImage,
+    environmentId,
   });
   const participantId = agentId;
 

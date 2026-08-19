@@ -105,10 +105,7 @@ func TestCreateSandboxHonoursTheOrganizationCeiling(t *testing.T) {
 	organizationID := gatewayOrganizationID(t)
 	ownerCtx := withIdentity(ctx, fetchGatewayIdentity(t, gatewayAPIToken(t)).IdentityID)
 
-	environmentID := firstEnvironment(t, agents, ownerCtx, organizationID)
-	if environmentID == "" {
-		t.Skip("the bootstrap organization declares no environment to start a sandbox in")
-	}
+	environmentID := suiteEnvironment(t, ownerCtx, agents, organizationID, codexRuntime)
 
 	before, err := organizations.GetOrganization(ctx, &organizationsv1.GetOrganizationRequest{Id: organizationID})
 	require.NoError(t, err)
@@ -157,10 +154,12 @@ func TestCreateSandboxHonoursTheOrganizationCeiling(t *testing.T) {
 // organization does when it changes its mind, and it must not reach back into
 // sandboxes already running on the old numbers.
 //
-// This runs in the bootstrap organization because a sandbox needs an
-// environment and a fresh organization owns none. The organization's settings
-// are perturbed and restored, so the window is narrow and this suite is
-// sequential.
+// This runs in the bootstrap organization because the ceiling under test is one
+// of its settings. The environment is the suite's own: taking whichever the
+// organization listed first meant taking one another test had created and this
+// caller has no grant on, and the probe then came back PermissionDenied instead
+// of the refusal under test. The settings are perturbed and restored, so the
+// window is narrow and this suite is sequential.
 func TestSandboxBoundsAreNotReReadAfterCreation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	t.Cleanup(cancel)
@@ -171,10 +170,7 @@ func TestSandboxBoundsAreNotReReadAfterCreation(t *testing.T) {
 	organizationID := gatewayOrganizationID(t)
 	ownerCtx := withIdentity(ctx, fetchGatewayIdentity(t, gatewayAPIToken(t)).IdentityID)
 
-	environmentID := firstEnvironment(t, agents, ownerCtx, organizationID)
-	if environmentID == "" {
-		t.Skip("the bootstrap organization declares no environment to start a sandbox in")
-	}
+	environmentID := suiteEnvironment(t, ownerCtx, agents, organizationID, codexRuntime)
 
 	before, err := organizations.GetOrganization(ctx, &organizationsv1.GetOrganizationRequest{Id: organizationID})
 	require.NoError(t, err)
@@ -214,18 +210,6 @@ func TestSandboxBoundsAreNotReReadAfterCreation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, recorded, fetched.GetSandbox().GetIdleTimeout(),
 		"lowering the organization's settings must leave a live sandbox on the value it started with")
-}
-
-func firstEnvironment(t *testing.T, client agentsv1.AgentsServiceClient, ownerCtx context.Context, organizationID string) string {
-	t.Helper()
-	listed, err := client.ListEnvironments(ownerCtx, &agentsv1.ListEnvironmentsRequest{
-		OrganizationId: organizationID,
-		PageSize:       1,
-	})
-	if err != nil || len(listed.GetEnvironments()) == 0 {
-		return ""
-	}
-	return listed.GetEnvironments()[0].GetMeta().GetId()
 }
 
 func requestSandbox(ctx context.Context, agents agentsv1.AgentsServiceClient, ownerCtx context.Context, organizationID, environmentID, idleTimeout string) error {

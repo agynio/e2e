@@ -43,7 +43,6 @@ test.describe('organization-egress-rules', { tag: ['@svc_console'] }, () => {
       name: `e2e-egress-agent-${now}`,
       role: 'assistant',
       image: 'ghcr.io/agyn/agent:latest',
-      initImage: 'ghcr.io/agyn/agent-init:latest',
     });
     await createEgressRuleAttachment(page, { ruleId, agentId });
 

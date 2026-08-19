@@ -10,6 +10,7 @@ import {
   createMcpEnv,
   createModel,
   createOrganization,
+  createTestEnvironment,
   createThread,
   getIdentityId,
   getTraceSummary,
@@ -35,10 +36,13 @@ const TEST_LLM_TOKEN = 'test-token';
 const TEST_LLM_MODEL = 'mcp-tools-test';
 const AGENT_IMAGE = 'alpine:3.21';
 const MCP_IMAGE = 'node:22-slim';
-const INIT_IMAGE_ENV_VARS: Record<TraceSdk, string> = {
-  agn: 'AGN_INIT_IMAGE',
-  codex: 'CODEX_INIT_IMAGE',
-  claude: 'CLAUDE_INIT_IMAGE',
+// The agent runtimes the release publishes to the image catalog, by name. An
+// environment names a catalog record, and the platform discovers its tags, so
+// there is nothing for a caller to resolve and hand in.
+const AGENT_RUNTIMES: Record<TraceSdk, string> = {
+  agn: 'agn',
+  codex: 'codex',
+  claude: 'claude',
 };
 const TRACE_DISCOVER_TIMEOUT_MS = 2 * 60_000;
 const TRACE_SUMMARY_TIMEOUT_MS = 2 * 60_000;
@@ -83,18 +87,6 @@ export type FullChainRun = {
 type FullChainRunOptions = {
   sdk?: TraceSdk;
 };
-
-// Init images come from the environment, which the caller resolves to the
-// newest published release. There is deliberately no default: a hardcoded one
-// pins the suite to a stale image the moment the env goes missing.
-function resolveInitImage(sdk: TraceSdk): string {
-  const envVar = INIT_IMAGE_ENV_VARS[sdk];
-  const value = process.env[envVar]?.trim();
-  if (!value) {
-    throw new Error(`${envVar} is required`);
-  }
-  return value;
-}
 
 function resolveLlmEndpoint(sdk: TraceSdk): string {
   return TEST_LLM_ENDPOINTS[sdk];
@@ -301,7 +293,6 @@ async function waitForTraceIdByMessageId(page: Page, params: {
     }
     await page.waitForTimeout(TRACE_POLL_INTERVAL_MS);
   }
-  const envVar = INIT_IMAGE_ENV_VARS[params.sdk];
   const snapshotDescription = lastSnapshot
     ? ` Last ListSpans snapshot: total=${lastSnapshot.totalSpans}, names=${formatSnapshotValues(lastSnapshot.spanNames)}, ` +
       `traceIds=${formatSnapshotValues(lastSnapshot.traceIds)}, messageTextMatches=${lastSnapshot.messageTextMatches}, ` +
@@ -309,7 +300,7 @@ async function waitForTraceIdByMessageId(page: Page, params: {
     : ' Last ListSpans snapshot: no response received.';
   throw new Error(
     `ListSpans(filter: { messageId: ${params.messageId} }) returned no trace id after ${TRACE_DISCOVER_TIMEOUT_MS / 1000}s. ` +
-      `Check message-id correlation and ensure the ${params.sdk} agent init image is up to date (override via ${envVar}).` +
+      `Check message-id correlation and ensure the ${params.sdk} agent runtime image in the catalog is up to date.` +
       snapshotDescription,
   );
 }
@@ -368,12 +359,14 @@ export async function createFullChainRun(page: Page, options: FullChainRunOption
     remoteName: TEST_LLM_MODEL,
   });
 
+  const environmentId = await createTestEnvironment(page, organizationId, AGENT_RUNTIMES[sdk]);
+
   const agentId = await createAgent(page, {
     organizationId,
     name: `e2e-agent-${randomUUID()}`,
     model: modelId,
     image: AGENT_IMAGE,
-    initImage: resolveInitImage(sdk),
+    environmentId,
   });
 
   await createAgentEnv(page, {
