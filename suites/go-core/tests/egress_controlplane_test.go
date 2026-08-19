@@ -130,9 +130,12 @@ func setupEgressFixture(t *testing.T, ctx context.Context) egressFixture {
 func ensureEgressAgentAuthorization(t *testing.T, ctx context.Context, client authorizationv1.AuthorizationServiceClient, identityID, organizationID, agentID string) {
 	t.Helper()
 	ensureClusterAdmin(t, ctx, client)
+	// can_edit_config and can_read_config are derived -- maintainer or owner or
+	// owner from org -- so neither can be written: "type 'identity' is not an
+	// allowed type restriction". Writing the role they derive from is what
+	// grants them, which is what grantSubscriptionTargetAccess already does.
 	tuples := []*authorizationv1.TupleKey{
-		{User: authorizationIdentityPrefix + identityID, Relation: "can_edit_config", Object: "agent:" + agentID},
-		{User: authorizationIdentityPrefix + identityID, Relation: "can_read_config", Object: "agent:" + agentID},
+		{User: authorizationIdentityPrefix + identityID, Relation: "owner", Object: "agent:" + agentID},
 		{User: authorizationOrganizationPrefix + organizationID, Relation: "org", Object: "agent:" + agentID},
 	}
 	adminCtx := adminContext(ctx)

@@ -30,7 +30,7 @@ const organizationTargets: NavigationTarget[] = [
   { navTestId: 'nav-organization-apps', title: 'Apps', pathPattern: /\/organizations\/[^/]+\/apps$/ },
   { navTestId: 'nav-organization-images', title: 'Images', pathPattern: /\/organizations\/[^/]+\/images$/ },
   { navTestId: 'nav-organization-environments', title: 'Environments', pathPattern: /\/organizations\/[^/]+\/environments$/ },
-  { navTestId: 'nav-organization-volumes', title: 'Volumes', pathPattern: /\/organizations\/[^/]+\/volumes$/ },
+  { navTestId: 'nav-organization-storage', title: 'Provisioned Storage', pathPattern: /\/organizations\/[^/]+\/storage$/ },
   { navTestId: 'nav-organization-runners', title: 'Runners', pathPattern: /\/organizations\/[^/]+\/runners$/ },
   { navTestId: 'nav-organization-private-networks', title: 'Private Networks', pathPattern: /\/organizations\/[^/]+\/private-networks$/ },
   { navTestId: 'nav-organization-private-resources', title: 'Private Resources', pathPattern: /\/organizations\/[^/]+\/private-resources$/ },
@@ -117,7 +117,11 @@ async function openNavigationTarget(page: Page, target: NavigationTarget, crashS
 }
 
 test.describe('console navigation', { tag: ['@svc_console', '@svc_gateway', '@smoke'] }, () => {
-  test('opens every platform sidebar section without browser crashes', async ({ page }) => {
+  // The platform sidebar is the cluster admin's: an overview of every
+  // organization, the user directory, cluster runners, the app catalog. An
+  // ordinary member has no route to any of it, so this one signs in as the
+  // admin while the organization sections below stay on the member.
+  test('opens every platform sidebar section without browser crashes', async ({ adminPage: page }) => {
     const crashSignals = collectCrashSignals(page);
 
     await setClusterContext(page);

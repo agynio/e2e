@@ -19,7 +19,6 @@ test.describe('agents', { tag: ['@svc_console'] }, () => {
       description: 'E2E agent for visual snapshots',
       configuration: JSON.stringify({ greeting: 'hello' }),
       image: 'ghcr.io/agyn/agent:latest',
-      initImage: 'ghcr.io/agyn/agent-init:latest',
     });
 
     await page.goto(`/organizations/${organizationId}/agents/${agentId}`);

@@ -10,11 +10,84 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # One VM per group rather than one for all of them: a boot is ten minutes and
+  # the suites together are far longer than a single job should hold. Split by
+  # what a failure would mean, so a red job names the thing that broke.
+  #
+  # go-terraform and go-agn-cli are deliberately absent. Both need a binary
+  # built somewhere else -- the provider from terraform-provider-agyn, the CLI
+  # from an agn-cli release -- and run from the workflows that have it. Without
+  # it they reach for a public registry that does not serve these providers.
   e2e:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Every console spec. No tag at all, because a tag becomes a --grep
+          # and console-api.spec.ts carries none -- filtering silently drops it.
+          - name: console
+            suites: playwright
+            tag: ""
+            smoke: "false"
+          # The two app frontends, both for the same reason: gateway-api and
+          # chat-api carry no tag either.
+          - name: apps
+            suites: playwright-chat-app playwright-tracing-app
+            tag: ""
+            smoke: "false"
+          # go-core one service at a time, which is how it is written: its
+          # helper files deliberately repeat each other behind mutually
+          # exclusive service tags, so asking for several at once redeclares
+          # them -- two TestMains, four workload constants, fourteen names in
+          # all -- and the package stops building.
+          #
+          # smoke rides along, because the suite assumes it: main_test.go is
+          # built for nine service tags and calls helpers that only a
+          # smoke-tagged file defines, so svc_k8s_runner alone does not compile.
+          # svc_egress_gateway is the exception -- it repeats the k8s-runner
+          # workload constants, which smoke also carries -- so it runs alone.
+          # Every combination below was compiled before it was written down.
+          - name: services (orchestrator)
+            suites: go-core
+            tag: svc_agents_orchestrator
+            smoke: "true"
+          - name: services (runners)
+            suites: go-core
+            tag: svc_runners
+            smoke: "true"
+          - name: services (k8s-runner)
+            suites: go-core
+            tag: svc_k8s_runner
+            smoke: "true"
+          - name: services (gateway)
+            suites: go-core
+            tag: svc_gateway
+            smoke: "true"
+          - name: services (organizations, metering, files)
+            suites: go-core
+            tag: svc_organizations,svc_metering,svc_files
+            smoke: "true"
+          - name: services (llm, llm-proxy, images)
+            suites: go-core
+            tag: svc_llm,svc_llm_proxy,svc_images
+            smoke: "true"
+          - name: services (egress)
+            suites: go-core
+            tag: svc_egress
+            smoke: "true"
+          - name: services (egress-gateway)
+            suites: go-core
+            tag: svc_egress_gateway
+            smoke: "false"
+          - name: services (media-proxy)
+            suites: go-core
+            tag: svc_media_proxy
+            smoke: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,14 +95,13 @@ jobs:
       - name: Provision cluster
         uses: ./.github/actions/provision-vm
 
-      - name: Run platform usage E2E test
+      - name: Run suites
         uses: ./.github/actions/run-tests
         env:
-          E2E_SUITES: playwright
-          E2E_PLAYWRIGHT_TEST_ARGS: test/e2e/organization-platform-usage.spec.ts
+          E2E_SUITES: ${{ matrix.suites }}
         with:
-          tag: svc_metering
-          include_smoke: false
+          tag: ${{ matrix.tag }}
+          include_smoke: ${{ matrix.smoke }}
           # This repo's own suites, not main's. The action checks the suite
           # files out of agynio/e2e, and defaulting that to main means a pull
           # request here runs every suite change except its own.

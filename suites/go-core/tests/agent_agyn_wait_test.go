@@ -40,24 +40,24 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	agentBModelID := createWorkflowGatewayModel(t, setup, testLLMEndpointAgn, llmv1.Protocol_PROTOCOL_RESPONSES, "agyn-wait-agent-b-reply")
 
 	agentBNickname := "e2e-agyn-wait-b-fixed"
-	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModelID, orgID, agnInitImage)
+	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModelID, orgID, agnRuntime)
 	agentBID := agentB.GetMeta().GetId()
 	if agentBID == "" {
 		t.Fatal("create agent B: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentBID)
-		deleteAgent(t, threadsCtx, agentsClient, agentBID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentBID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentBID)
 	})
 
-	agentA := createAgent(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModelID, orgID, agnInitImage)
+	agentA := createAgent(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModelID, orgID, agnRuntime)
 	agentAID := agentA.GetMeta().GetId()
 	if agentAID == "" {
 		t.Fatal("create agent A: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentAID)
-		deleteAgent(t, threadsCtx, agentsClient, agentAID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentAID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentAID)
 	})
 
 	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})
@@ -95,7 +95,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
 	defer pollCancel()
-	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, threadAID, agentAID, labels, sentMessageTime, agynWaitAgentAResponse)
+	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadAID, agentAID, labels, sentMessageTime, agynWaitAgentAResponse)
 	if err != nil {
 		logAgynWaitDiagnostics(t, threadsCtx, threadsClient, orgID, threadAID, agentAID, agentBID)
 		t.Fatalf("wait for agent A agyn --wait response: %v", err)
@@ -110,7 +110,10 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 		t.Fatalf("find agent A to agent B thread: %v", err)
 	}
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadB.GetId()) })
-	if !messagesContainSenderBody(messagesB, agentBID, agynWaitAgentBResponse) {
+	// Agent B answers as its instance, not as the class.
+	sendersB := newAgentSenderSet(t, orgID, agentBID)
+	sendersB.refresh(threadsCtx)
+	if !messagesContainSenderBody(messagesB, sendersB, agynWaitAgentBResponse) {
 		t.Fatalf("agent B reply %q not found in thread %s; messages=%s", agynWaitAgentBResponse, threadB.GetId(), describeThreadMessages(messagesB))
 	}
 }
@@ -180,9 +183,9 @@ func messagesContainBodySubstring(messages []*threadsv1.Message, substring strin
 	return false
 }
 
-func messagesContainSenderBody(messages []*threadsv1.Message, senderID, body string) bool {
+func messagesContainSenderBody(messages []*threadsv1.Message, senders *agentSenderSet, body string) bool {
 	for _, msg := range messages {
-		if msg.GetSenderId() == senderID && msg.GetBody() == body {
+		if senders.contains(msg.GetSenderId()) && msg.GetBody() == body {
 			return true
 		}
 	}

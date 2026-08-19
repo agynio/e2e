@@ -23,9 +23,12 @@ test.describe('organizations', { tag: ['@svc_console'] }, () => {
     await expect(page.getByTestId('organization-overview-card')).toHaveCount(7);
 
     // The organization_id the Terraform provider needs, without reading the URL.
-    await expect(page.getByTestId('organization-overview-identity')).toContainText(orgName);
-    await expect(page.getByTestId('organization-overview-id')).toHaveText(orgId);
-    await expect(page.getByTestId('organization-overview-id-copy')).toBeVisible();
+    // The same wait as the assertions above. These three sit in one block that
+    // renders together, and giving the last of them the 5s default made it the
+    // only one that could lose a race the others had already won.
+    await expect(page.getByTestId('organization-overview-identity')).toContainText(orgName, { timeout: 15000 });
+    await expect(page.getByTestId('organization-overview-id')).toHaveText(orgId, { timeout: 15000 });
+    await expect(page.getByTestId('organization-overview-id-copy')).toBeVisible({ timeout: 15000 });
 
     await argosScreenshot(page, 'organization-detail-overview');
   });

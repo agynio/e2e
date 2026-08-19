@@ -3,10 +3,11 @@
 package tests
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 )
@@ -162,7 +163,21 @@ func TestWorkloadLifecycle(t *testing.T) {
 		require.NoError(t, err)
 		waitGone(t, ctx, client, workloadID)
 
-		_, err = client.RemoveVolume(ctx, &runnerv1.RemoveVolumeRequest{VolumeName: volumeName})
-		requireGRPCCode(t, err, codes.NotFound)
+		// RemoveWorkload deletes the PVCs it annotated, so the volume should be
+		// gone. Asked of the listing, not of RemoveVolume: that answers nil for
+		// a volume it does not have -- it left the runner holding [] and still
+		// returned success -- so it cannot tell absence from a second removal.
+		require.NoError(t, pollUntil(ctx, pollInterval, func(ctx context.Context) error {
+			listing, err := client.ListVolumes(ctx, &runnerv1.ListVolumesRequest{})
+			if err != nil {
+				return err
+			}
+			for _, volume := range listing.GetVolumes() {
+				if volume.GetVolumeKey() == volumeName {
+					return fmt.Errorf("RemoveWorkload(RemoveVolumes) left %s behind", volumeName)
+				}
+			}
+			return nil
+		}))
 	})
 }

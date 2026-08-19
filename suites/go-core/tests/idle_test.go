@@ -44,15 +44,15 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointCodex, llmv1.Protocol_PROTOCOL_RESPONSES, "simple-hello")
 
 	idleTimeout := "15s"
-	agent := createAgentWithIdleTimeout(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-idle-%s", uuid.NewString()), modelID, orgID, codexInitImage, idleTimeout)
+	agent := createAgentWithIdleTimeout(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-idle-%s", uuid.NewString()), modelID, orgID, codexRuntime, idleTimeout)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	agentThreadsCtx := withAgentIdentity(ctx, agentID)
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	agentInfoResp, err := agentsClient.GetAgent(ctx, &agentsv1.GetAgentRequest{Id: agentID})
 	if err != nil {
@@ -115,7 +115,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 
 	responseCtx, responseCancel := context.WithTimeout(threadsCtx, agentResponseTimeout)
 	defer responseCancel()
-	if _, err := pollForAgentResponse(t, responseCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, ""); err != nil {
+	if _, err := pollForAgentResponse(t, responseCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, ""); err != nil {
 		t.Fatalf("wait for agent response: %v", err)
 	}
 

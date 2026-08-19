@@ -91,37 +91,6 @@ runs:
       run: |
         set -euo pipefail
 
-        # Newest published release of a ghcr.io/agynio image, by semver.
-        # tags/list is paginated and unordered, so every page is walked and the
-        # tags are compared numerically — taking the last page's last entry
-        # yields a stale version that looks plausible.
-        latest_image() {
-          local repo="$1" token url tags page next
-          token="$(curl -fsS "https://ghcr.io/token?scope=repository:agynio/${repo}:pull" |
-            python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
-          url="https://ghcr.io/v2/agynio/${repo}/tags/list?n=1000"
-          tags=""
-          while [ -n "$url" ]; do
-            page="$(curl -fsS -D /tmp/hdr.$$ -H "Authorization: Bearer ${token}" "$url")"
-            tags="${tags}$(printf '%s' "$page" |
-              python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin).get("tags") or []))')
-        "
-            next="$(sed -n 's/^[Ll]ink:.*<\([^>]*\)>.*/\1/p' /tmp/hdr.$$)"
-            rm -f /tmp/hdr.$$
-            [ -n "$next" ] && url="https://ghcr.io${next}" || url=""
-          done
-          # grep exits non-zero on no match, which pipefail would turn into an
-          # abort before the empty check below reports something useful.
-          local latest
-          latest="$(printf '%s\n' "$tags" | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true; } |
-            sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
-          if [ -z "$latest" ]; then
-            echo "No semver tags found for ghcr.io/agynio/${repo}." >&2
-            return 1
-          fi
-          printf 'ghcr.io/agynio/%s:%s' "$repo" "$latest"
-        }
-
         # The cluster is described entirely by the environment the provisioning
         # step exported. Nothing here knows how it was provisioned, which is what
         # let the k3d-and-Terraform stack be swapped for the platform VM without
@@ -145,225 +114,10 @@ runs:
           fi
         fi
 
-        # The seeding below runs on the runner, not in a pod, so it needs a URL
-        # the runner can reach. AGYN_BASE_URL, when a caller sets it at all,
-        # names the in-cluster address the suites use, which resolves to nothing
-        # here -- so the provisioner exports the host-side one separately.
-        seed_base_url="${AGYN_BASE_URL:-${E2E_GATEWAY_URL:-}}"
-
-        if [ -z "${AGYN_AGENT_IMAGE:-}" ]; then
-          AGYN_AGENT_IMAGE="ghcr.io/agynio/agent-runtime:v1.0.0"
-          echo "AGYN_AGENT_IMAGE=$AGYN_AGENT_IMAGE" >> "$GITHUB_ENV"
-        fi
-
-        # Init images are always resolved to the newest published release, never
-        # pinned. A pin here is invisible to the caller and silently opts every
-        # run out of fixes shipped in later init images — which is how a known
-        # agent-reply flake kept reproducing in a service whose workflow pinned
-        # a version predating its fix. Resolution failure is fatal: falling back
-        # to some hardcoded tag is the behaviour this replaces.
-        codex_init_image="$(latest_image agyn-runtime-codex)"
-        agn_init_image="$(latest_image agyn-runtime-agn)"
-        claude_init_image="$(latest_image agyn-runtime-claude)"
-
-        # No agynio/agent-runtime image is published; the codex runtime stands in.
-        {
-          echo "CODEX_INIT_IMAGE=$codex_init_image"
-          echo "AGYN_AGENT_INIT_IMAGE=$codex_init_image"
-          echo "AGN_INIT_IMAGE=$agn_init_image"
-          echo "AGN_EXPOSE_INIT_IMAGE=$agn_init_image"
-          echo "CLAUDE_INIT_IMAGE=$claude_init_image"
-        } >> "$GITHUB_ENV"
-
-        echo "init images: codex=$codex_init_image agn=$agn_init_image claude=$claude_init_image"
-
-        if [ -z "${AGYN_MODEL_ID:-}" ]; then
-          if [ -z "${seed_base_url}" ]; then
-            echo "no gateway URL to seed a model against; run a provisioning action before this one, or pass AGYN_MODEL_ID." >&2
-            exit 1
-          fi
-          list_models_payload=$(cat <<EOF
-        {"organizationId":"${AGYN_ORGANIZATION_ID}","llmProviderId":"","pageSize":200,"pageToken":""}
-        EOF
-        )
-          # The Gateway answers at its root as soon as its own pod serves, which
-          # is what the provisioner waits for. These calls carry on through to
-          # the LLM service behind it, and that is ready a little later -- so a
-          # run can pass the provisioner's check and still meet a 503 here. It
-          # arrives as a body that is not JSON, which the parse below reports as
-          # a malformed ListModels response, naming neither the status nor the
-          # service that returned it.
-          #
-          # Waited on with the request the seeding actually makes, because the
-          # question is whether that one works, and a probe of anything cheaper
-          # was what let this through in the first place.
-          deadline=$((SECONDS + 300))
-          while :; do
-            probe=$(curl -sS -k -o /dev/null -w '%{http_code}' \
-              -H 'Content-Type: application/json' \
-              -H 'Connect-Protocol-Version: 1' \
-              -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
-              -d "$list_models_payload" \
-              "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/ListModels" || true)
-            case "${probe}" in
-            "" | 000 | 5??) ;;
-            *) break ;;
-            esac
-            if [ "${SECONDS}" -ge "${deadline}" ]; then
-              echo "the Gateway never served ListModels (last status ${probe:-none})" >&2
-              exit 1
-            fi
-            sleep 5
-          done
-
-          if ! model_id=$(curl -fsS -k \
-            -H 'Content-Type: application/json' \
-            -H 'Connect-Protocol-Version: 1' \
-            -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
-            -d "$list_models_payload" \
-            "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/ListModels" \
-            | python3 -c "$(cat <<'PY'
-        import json
-        import sys
-
-        try:
-            payload = json.load(sys.stdin)
-        except json.JSONDecodeError as exc:
-            print(f"Invalid JSON in ListModels response: {exc}", file=sys.stderr)
-            sys.exit(1)
-
-        models = payload.get("models") or []
-        for model in models:
-            meta = model.get("meta") or {}
-            model_id = meta.get("id") or model.get("id") or ""
-            if model_id:
-                print(model_id)
-                break
-        PY
-        )"); then
-            echo "Failed to parse ListModels response." >&2
-            exit 1
-          fi
-
-          if [ -z "$model_id" ]; then
-            providers_payload=$(cat <<EOF
-        {"organizationId":"${AGYN_ORGANIZATION_ID}","pageSize":200,"pageToken":""}
-        EOF
-        )
-            if ! provider_id=$(curl -fsS -k \
-              -H 'Content-Type: application/json' \
-              -H 'Connect-Protocol-Version: 1' \
-              -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
-              -d "$providers_payload" \
-              "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/ListLLMProviders" \
-              | python3 -c "$(cat <<'PY'
-        import json
-        import sys
-
-        try:
-            payload = json.load(sys.stdin)
-        except json.JSONDecodeError as exc:
-            print(f"Invalid JSON in ListLLMProviders response: {exc}", file=sys.stderr)
-            sys.exit(1)
-
-        providers = payload.get("providers") or []
-        for provider in providers:
-            meta = provider.get("meta") or {}
-            provider_id = meta.get("id") or provider.get("id") or ""
-            if provider_id:
-                print(provider_id)
-                break
-        PY
-        )"); then
-              echo "Failed to parse ListLLMProviders response." >&2
-              exit 1
-            fi
-
-            if [ -z "$provider_id" ]; then
-              now=$(date +%s)
-              create_provider_payload=$(cat <<EOF
-        {"endpoint":"https://llm.e2e.agyn.dev/${now}","authMethod":"AUTH_METHOD_BEARER","token":"e2e-token-${now}","organizationId":"${AGYN_ORGANIZATION_ID}"}
-        EOF
-        )
-              if ! provider_id=$(curl -fsS -k \
-                -H 'Content-Type: application/json' \
-                -H 'Connect-Protocol-Version: 1' \
-                -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
-                -d "$create_provider_payload" \
-                "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/CreateLLMProvider" \
-                | python3 -c "$(cat <<'PY'
-        import json
-        import sys
-
-        try:
-            payload = json.load(sys.stdin)
-        except json.JSONDecodeError as exc:
-            print(f"Invalid JSON in CreateLLMProvider response: {exc}", file=sys.stderr)
-            sys.exit(1)
-
-        provider = payload.get("provider") or {}
-        meta = provider.get("meta") or {}
-        provider_id = meta.get("id") or provider.get("id") or ""
-        if provider_id:
-            print(provider_id)
-        PY
-        )"); then
-                echo "Failed to parse CreateLLMProvider response." >&2
-                exit 1
-              fi
-              if [ -n "$provider_id" ]; then
-                echo "Created LLM provider ${provider_id}"
-              fi
-            fi
-
-            if [ -z "$provider_id" ]; then
-              echo "Unable to determine LLM provider ID." >&2
-              exit 1
-            fi
-
-            now=$(date +%s)
-            create_model_payload=$(cat <<EOF
-        {"name":"E2E Model ${now}","llmProviderId":"${provider_id}","remoteName":"gpt-4o-mini","organizationId":"${AGYN_ORGANIZATION_ID}"}
-        EOF
-        )
-            if ! model_id=$(curl -fsS -k \
-              -H 'Content-Type: application/json' \
-              -H 'Connect-Protocol-Version: 1' \
-              -H "Authorization: Bearer ${AGYN_API_TOKEN}" \
-              -d "$create_model_payload" \
-              "${seed_base_url}/agynio.api.gateway.v1.LLMGateway/CreateModel" \
-              | python3 -c "$(cat <<'PY'
-        import json
-        import sys
-
-        try:
-            payload = json.load(sys.stdin)
-        except json.JSONDecodeError as exc:
-            print(f"Invalid JSON in CreateModel response: {exc}", file=sys.stderr)
-            sys.exit(1)
-
-        model = payload.get("model") or {}
-        meta = model.get("meta") or {}
-        model_id = meta.get("id") or model.get("id") or ""
-        if model_id:
-            print(model_id)
-        PY
-        )"); then
-              echo "Failed to parse CreateModel response." >&2
-              exit 1
-            fi
-            if [ -n "$model_id" ]; then
-              echo "Created LLM model ${model_id}"
-            fi
-          fi
-
-          if [ -z "$model_id" ]; then
-            echo "Unable to determine LLM model ID." >&2
-            exit 1
-          fi
-
-          echo "AGYN_MODEL_ID=$model_id" >> "$GITHUB_ENV"
-        fi
+        # No image variables. The agent runtimes are catalog records the
+        # release ships and the platform discovers tags for, so the suites name
+        # one -- codex, agn, claude -- and read the newest release from the
+        # catalog. What CI walked ghcr for, the platform already knows.
 
     - name: Run DevSpace E2E pipeline
       id: run
@@ -471,7 +225,11 @@ runs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.service != '' && format('e2e-artifacts-{0}', inputs.service) || 'e2e-artifacts' }}
+        # Distinct per caller. Only `service` used to vary it, so a workflow
+        # selecting by `tag` -- several jobs of one workflow, which is how this
+        # repo runs its own suites -- had every job upload under the same name
+        # and keep one set of results between them.
+        name: e2e-artifacts-${{ inputs.service != '' && inputs.service || github.job }}-${{ strategy.job-index || '0' }}
         path: |
           e2e/.artifacts/
           e2e/.diagnostics/

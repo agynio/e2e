@@ -1,9 +1,12 @@
+import { randomUUID } from 'node:crypto';
+
 import { create, fromBinary, toBinary, toJson } from '@bufbuild/protobuf';
 import type { DescMessage, MessageShape } from '@bufbuild/protobuf';
 import type { Page } from '@playwright/test';
 import { readOidcSession } from './oidc-helpers';
 import {
   AgentAvailability,
+  AgentFinalMessage,
   CreateAgentRequestSchema,
   CreateAgentResponseSchema,
 } from '../../src/gen/agynio/api/agents/v1/agents_pb';
@@ -16,6 +19,11 @@ const AGENTS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.AgentsGateway';
 const THREADS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ThreadsGateway';
 const TRACING_GATEWAY_PATH = '/api/agynio.api.gateway.v1.TracingGateway';
 const RUNNERS_GATEWAY_PATH = '/api/agynio.api.gateway.v1.RunnersGateway';
+const IMAGES_GATEWAY_PATH = '/api/agynio.api.gateway.v1.ImagesGateway';
+
+// The workload's main container. Something the agyn binary can run in; nothing
+// about the image is under test.
+const AGENT_WORKSPACE_IMAGE = 'alpine:3.21';
 
 type IdentityWire = {
   meta?: { id?: string };
@@ -51,7 +59,7 @@ type CreateAgentOptions = {
   name: string;
   model: string;
   image: string;
-  initImage: string;
+  environmentId: string;
   description?: string;
   role?: string;
   configuration?: string;
@@ -59,6 +67,7 @@ type CreateAgentOptions = {
 
 type CreateAgentPayload = Omit<CreateAgentOptions, 'description' | 'role' | 'configuration'> & {
   availability: AgentAvailability.INTERNAL;
+  finalMessage: AgentFinalMessage.DEFAULT_THREAD;
   description: string;
   role: string;
   configuration: string;
@@ -308,18 +317,100 @@ export async function createModel(page: Page, params: {
   return modelId;
 }
 
+type ImageWire = { meta?: { id?: string }; name?: string };
+type ListImagesResponseWire = { images?: ImageWire[] };
+type ListVersionsResponseWire = { versions?: Array<{ tag?: string }> };
+type ListRunnersResponseWire = { runners?: Array<{ meta?: { id?: string } }> };
+type CreateEnvironmentResponseWire = { environment?: { meta?: { id?: string } } };
+
+// The highest x.y.z among the discovered tags. A repository also carries
+// floating tags -- latest, 0, 0.5 -- and a sha-<commit> per build, none of which
+// name a release.
+function newestReleaseTag(tags: string[]): string {
+  const releases = tags
+    .map((tag) => ({ tag, parts: /^(\d+)\.(\d+)\.(\d+)$/.exec(tag) }))
+    .filter((entry) => entry.parts !== null)
+    .map((entry) => ({ tag: entry.tag, parts: entry.parts!.slice(1, 4).map(Number) }));
+  releases.sort((a, b) => a.parts[0] - b.parts[0] || a.parts[1] - b.parts[1] || a.parts[2] - b.parts[2]);
+  return releases.length ? releases[releases.length - 1].tag : '';
+}
+
+// The environment an agent runs in. An agent takes its CLI from the agent
+// runtime image this names, and the Orchestrator refuses to assemble a workload
+// without one -- so an agent with no environment is created, goes ACTIVE, and
+// never starts. The runtime is a catalog record the release publishes, public
+// and already discovered, so a freshly created organization sees it.
+export async function createTestEnvironment(
+  page: Page,
+  organizationId: string,
+  runtime: string,
+): Promise<string> {
+  const listed = await postConnect<ListImagesResponseWire>(page, IMAGES_GATEWAY_PATH, 'ListImages', {
+    organizationId,
+    type: 'IMAGE_TYPE_AGENT_RUNTIME',
+    pageSize: 100,
+  });
+  const images = listed.images ?? [];
+  const imageId = images.find((candidate) => candidate.name === runtime)?.meta?.id;
+  if (!imageId) {
+    throw new Error(
+      `No agent runtime image named "${runtime}" in the catalog; found ${images.map((i) => i.name).join(', ')}`,
+    );
+  }
+  const versions = await postConnect<ListVersionsResponseWire>(page, IMAGES_GATEWAY_PATH, 'ListVersions', {
+    imageId,
+    pageSize: 200,
+  });
+  const tag = newestReleaseTag((versions.versions ?? []).map((version) => version.tag ?? ''));
+  if (!tag) {
+    throw new Error(`No released tag discovered for agent runtime "${runtime}"`);
+  }
+  // Unfiltered: the platform's runner belongs to no organization, and a freshly
+  // created one owns none of its own.
+  const runners = await postConnect<ListRunnersResponseWire>(page, RUNNERS_GATEWAY_PATH, 'ListRunners', {
+    pageSize: 100,
+  });
+  const runnerId = (runners.runners ?? []).map((runner) => runner.meta?.id).find((id) => !!id);
+  if (!runnerId) {
+    throw new Error('No runner is enrolled with the platform.');
+  }
+  const response = await postConnect<CreateEnvironmentResponseWire>(
+    page,
+    AGENTS_GATEWAY_PATH,
+    'CreateEnvironment',
+    {
+      organizationId,
+      name: `e2e-env-${randomUUID().slice(0, 8)}`,
+      runnerId,
+      image: AGENT_WORKSPACE_IMAGE,
+      agentRuntimeImageId: imageId,
+      agentRuntimeImageTag: tag,
+      availability: 'ENVIRONMENT_AVAILABILITY_PRIVATE',
+    },
+  );
+  const environmentId = response.environment?.meta?.id;
+  if (!environmentId) {
+    throw new Error('CreateEnvironment response missing environment id.');
+  }
+  return environmentId;
+}
+
 export function buildCreateAgentPayload(params: CreateAgentOptions): CreateAgentPayload {
-  const initImage = params.initImage.trim();
-  if (!initImage) {
-    throw new Error('initImage is required to create agents.');
+  const environmentId = params.environmentId.trim();
+  if (!environmentId) {
+    throw new Error('environmentId is required to create agents.');
   }
   return {
     organizationId: params.organizationId,
     name: params.name,
     model: params.model,
     image: params.image,
-    initImage,
+    environmentId,
     availability: AgentAvailability.INTERNAL,
+    // The class default is DISCARD -- for agents that post explicitly and would
+    // otherwise say everything twice. Under it the CLI produces the reply, the
+    // turn completes, and the platform drops the text.
+    finalMessage: AgentFinalMessage.DEFAULT_THREAD,
     role: params.role ?? 'assistant',
     description: params.description ?? '',
     configuration: params.configuration ?? '',

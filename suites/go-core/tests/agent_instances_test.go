@@ -32,8 +32,9 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -43,11 +44,11 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 		Nickname:       nicknameFor("e2e-instance-origin"),
 		Model:          modelID,
 		OrganizationID: orgID,
-		InitImage:      codexInitImage,
+		Runtime:        codexRuntime,
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_ORIGIN,
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
@@ -72,8 +73,9 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -83,11 +85,11 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 		Nickname:       nicknameFor("e2e-instance-none"),
 		Model:          modelID,
 		OrganizationID: orgID,
-		InitImage:      codexInitImage,
+		Runtime:        codexRuntime,
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
@@ -110,16 +112,17 @@ func TestThreadMessageReachesTheInstanceInbox(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
 
 	agent := createAgent(t, threadsCtx, agentsClient,
-		fmt.Sprintf("e2e-inbox-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+		fmt.Sprintf("e2e-inbox-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
@@ -209,8 +212,9 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -221,11 +225,11 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 		Nickname:        nicknameFor("e2e-idle-ttl"),
 		Model:           modelID,
 		OrganizationID:  orgID,
-		InitImage:       codexInitImage,
+		Runtime:         codexRuntime,
 		InstanceIdleTTL: "1s",
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
@@ -283,16 +287,17 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
 
 	agent := createAgent(t, threadsCtx, agentsClient,
-		fmt.Sprintf("e2e-no-idle-ttl-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+		fmt.Sprintf("e2e-no-idle-ttl-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
@@ -326,8 +331,9 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	identityID := fetchGatewayIdentity(t, gatewayToken).IdentityID
+	// A person: CreateThread makes the caller a participant, and the bootstrap
+	// token's identity is the platform, which is not one.
+	identityID := suiteUserIdentity(t, ctx)
 	threadsCtx := withIdentity(ctx, identityID)
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
@@ -339,11 +345,11 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 		Nickname:       nicknameFor("e2e-explicit-thread"),
 		Model:          modelID,
 		OrganizationID: orgID,
-		InitImage:      codexInitImage,
+		Runtime:        codexRuntime,
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID})
 	threadID := thread.GetId()

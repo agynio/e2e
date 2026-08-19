@@ -21,16 +21,14 @@ import (
 )
 
 const (
-	gatewayBaseURLEnvKey        = "AGYN_BASE_URL"
-	gatewayAPITokenEnvKey       = "AGYN_API_TOKEN"
-	gatewayOrganizationEnvKey   = "AGYN_ORGANIZATION_ID"
-	gatewayModelEnvKey          = "AGYN_MODEL_ID"
-	gatewayAgentImageEnvKey     = "AGYN_AGENT_IMAGE"
-	gatewayAgentInitImageEnvKey = "AGYN_AGENT_INIT_IMAGE"
-	gatewayUsersAddrEnvKey      = "USERS_ADDRESS"
-	defaultGatewayUsersAddr     = "users:50051"
-	zitiGatewayBaseURL          = "http://gateway"
-	gatewayRequestTimeout       = 30 * time.Second
+	gatewayBaseURLEnvKey      = "AGYN_BASE_URL"
+	gatewayAPITokenEnvKey     = "AGYN_API_TOKEN"
+	gatewayOrganizationEnvKey = "AGYN_ORGANIZATION_ID"
+	gatewayModelEnvKey        = "AGYN_MODEL_ID"
+	gatewayUsersAddrEnvKey    = "USERS_ADDRESS"
+	defaultGatewayUsersAddr   = "users:50051"
+	zitiGatewayBaseURL        = "http://gateway"
+	gatewayRequestTimeout     = 30 * time.Second
 )
 
 type gatewayMePayload struct {
@@ -90,16 +88,6 @@ func gatewayModelID(t *testing.T) string {
 		return value
 	}
 	return ensureSuiteModel(t)
-}
-
-func gatewayAgentImage(t *testing.T) string {
-	t.Helper()
-	return requireGatewayEnv(t, gatewayAgentImageEnvKey)
-}
-
-func gatewayAgentInitImage(t *testing.T) string {
-	t.Helper()
-	return requireGatewayEnv(t, gatewayAgentInitImageEnvKey)
 }
 
 func gatewayUsersAddr() string {

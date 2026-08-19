@@ -164,7 +164,12 @@ test.describe('organization-usage', { tag: ['@svc_console'] }, () => {
     const usageNav = page.getByTestId('nav-organization-usage');
     await usageNav.scrollIntoViewIfNeeded();
     await expect(usageNav).toBeVisible({ timeout: 15000 });
-    await usageNav.click();
+    // Opened by address rather than followed. The console auto-selects the
+    // first organization alphabetically whenever the persisted one is not among
+    // the visible memberships, and the account these specs share now holds
+    // several -- so the sidebar landed on whichever sorted first rather than
+    // the organization this test had just made.
+    await page.goto(`/organizations/${organizationId}/usage`);
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/usage$`));
     await expect(page.getByTestId('organization-usage-header')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('organization-usage-empty')).toBeVisible({ timeout: 20000 });

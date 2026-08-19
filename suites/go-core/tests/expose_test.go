@@ -190,7 +190,6 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	agentsClient := agentsv1.NewAgentsServiceClient(agentsConn)
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
-	exposeInitImage := envOrDefault("AGN_EXPOSE_INIT_IMAGE", "ghcr.io/agynio/agent-init-agn:0.5.5")
 
 	setup := newWorkflowGatewaySetup(t, ctx)
 	identityID := setup.IdentityID
@@ -199,14 +198,14 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	token := setup.Token
 	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointAgn, llmv1.Protocol_PROTOCOL_RESPONSES, "simple-hello")
 
-	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-expose-%s", uuid.NewString()), modelID, orgID, exposeInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-expose-%s", uuid.NewString()), modelID, orgID, agnRuntime)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "HOME", "/tmp")
@@ -240,7 +239,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
 	defer pollCancel()
-	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, exposeExpectedResponse)
+	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, exposeExpectedResponse)
 	if err != nil {
 		t.Fatalf("wait for agent response: %v", err)
 	}

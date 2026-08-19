@@ -1,4 +1,4 @@
-//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_llm || svc_llm_proxy || svc_images || smoke)
+//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_llm || svc_llm_proxy || svc_images || smoke)
 
 package tests
 
@@ -35,13 +35,20 @@ type workflowGatewaySetup struct {
 func newWorkflowGatewaySetup(t *testing.T, ctx context.Context) workflowGatewaySetup {
 	t.Helper()
 	token := gatewayAPIToken(t)
-	identity := fetchGatewayIdentity(t, token)
+	// A person, not whoever holds the token. CreateThread appends the initiator
+	// to the participants, and threads accepts a person, an agent, an app or a
+	// runner there and refuses the rest -- so a caller identified by the
+	// bootstrap token, whose identity is IDENTITY_TYPE_PLATFORM, cannot open a
+	// thread at all: "unsupported identity type 8", on every test that starts
+	// one. The platform is not in the conversation, which is the right answer;
+	// the suite was simply asking as the wrong party.
+	identityID := suiteUserIdentity(t, ctx)
 	return workflowGatewaySetup{
-		IdentityID:     identity.IdentityID,
+		IdentityID:     identityID,
 		Token:          token,
 		OrganizationID: gatewayOrganizationID(t),
 		ModelID:        gatewayModelID(t),
-		Context:        withIdentity(ctx, identity.IdentityID),
+		Context:        withIdentity(ctx, identityID),
 	}
 }
 

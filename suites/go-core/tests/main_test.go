@@ -15,8 +15,10 @@ import (
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
+	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 	threadsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/threads/v1"
+	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,23 +49,14 @@ const (
 )
 
 var (
-	agentsAddr   = envOrDefault("AGENTS_ADDRESS", "agents:50051")
 	threadsAddr  = envOrDefault("THREADS_ADDRESS", "threads:50051")
 	llmAddr      = envOrDefault("LLM_ADDRESS", "llm:50051")
 	meteringAddr = envOrDefault("METERING_ADDRESS", "metering:50051")
 	usersAddr    = envOrDefault("USERS_ADDRESS", "users:50051")
 	orgsAddr     = envOrDefault("ORGANIZATIONS_ADDRESS", "organizations:50051")
 	runnerAddr   = envOrDefault("RUNNER_ADDRESS", "k8s-runner:50051")
-	runnersAddr  = envOrDefault("RUNNERS_ADDRESS", "runners:50051")
 	secretsAddr  = envOrDefault("SECRETS_ADDRESS", "secrets:50051")
 	tracingAddr  = envOrDefault("TRACING_ADDRESS", "tracing:50051")
-	// Init images are resolved to the newest published release by the caller
-	// and are required, not defaulted: a hardcoded fallback here would run a
-	// stale image whenever the env went missing, which is indistinguishable
-	// from a real failure at the point it bites.
-	codexInitImage  = requireEnv("CODEX_INIT_IMAGE")
-	agnInitImage    = requireEnv("AGN_INIT_IMAGE")
-	claudeInitImage = requireEnv("CLAUDE_INIT_IMAGE")
 )
 
 type pipelineRun struct {
@@ -99,6 +92,69 @@ func pollUntil(ctx context.Context, interval time.Duration, check func(ctx conte
 // newUserID returns a random UUID to use as a fake user participant.
 func newUserID() string {
 	return uuid.New().String()
+}
+
+// suiteUserIdentity resolves a person for the suite to act as, and puts them in
+// the organization the tests work in.
+//
+// CreateThread appends the initiator to the participants, and threads accepts a
+// person, an agent, an app or a runner there and refuses the rest. A caller
+// identified by the bootstrap token is IDENTITY_TYPE_PLATFORM, so it cannot open
+// a thread at all -- "unsupported identity type 8", on every test that starts
+// one. The platform is not in the conversation, which is the right answer.
+//
+// The membership is the other half: a subject the platform has not seen belongs
+// to no organization, and the services turn that into "identity lacks owner on
+// organization" the moment it tries to create an agent. Granted as the platform,
+// which is what the bootstrap token is for.
+func suiteUserIdentity(t *testing.T, ctx context.Context) string {
+	t.Helper()
+	callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// The services read the caller from x-identity-id, and this context has
+	// nobody in it yet -- the user being resolved is the point. So the calls that
+	// set them up are made as the platform, which is who is doing the setting up.
+	platformCtx := withIdentity(callCtx, fetchGatewayIdentity(t, gatewayAPIToken(t)).IdentityID)
+
+	subject := fmt.Sprintf("e2e-participant-%s", uuid.NewString())
+	client := usersv1.NewUsersServiceClient(dialGRPC(t, usersAddr))
+	resp, err := client.ResolveOrCreateUser(platformCtx, &usersv1.ResolveOrCreateUserRequest{
+		OidcSubject: subject,
+		Name:        fmt.Sprintf("E2E Participant %s", subject),
+		Email:       fmt.Sprintf("%s@test.local", subject),
+	})
+	if err != nil {
+		t.Fatalf("resolve a user for the suite: %v", err)
+	}
+	identityID := strings.TrimSpace(resp.GetUser().GetMeta().GetId())
+	if identityID == "" {
+		t.Fatalf("resolve a user for the suite: no identity id")
+	}
+
+	organizationID := gatewayOrganizationID(t)
+	orgs := organizationsv1.NewOrganizationsServiceClient(dialGRPC(t, orgsAddr))
+	membership, err := orgs.CreateMembership(platformCtx, &organizationsv1.CreateMembershipRequest{
+		OrganizationId: organizationID,
+		IdentityId:     identityID,
+		Role:           organizationsv1.MembershipRole_MEMBERSHIP_ROLE_OWNER,
+	})
+	if err != nil {
+		t.Fatalf("put the suite user in organization %s: %v", organizationID, err)
+	}
+	// Only if there is something to accept. A membership the platform grants is
+	// active already -- nobody invited anybody -- and accepting one of those is
+	// refused with "membership is not pending". An invitation is taken up by the
+	// invitee, so that is who takes it up when there is one.
+	created := membership.GetMembership()
+	if created.GetStatus() == organizationsv1.MembershipStatus_MEMBERSHIP_STATUS_PENDING {
+		if _, err := orgs.AcceptMembership(withIdentity(callCtx, identityID), &organizationsv1.AcceptMembershipRequest{
+			MembershipId: strings.TrimSpace(created.GetId()),
+		}); err != nil {
+			t.Fatalf("accept the suite user's membership: %v", err)
+		}
+	}
+	return identityID
 }
 
 func createLLMProvider(t *testing.T, ctx context.Context, token string, endpoint, orgID string) *llmv1.LLMProvider {
@@ -138,14 +194,14 @@ func createModel(t *testing.T, ctx context.Context, token, name, providerID, rem
 // createAgent gives every agent a nickname. An agent added to a thread is
 // served by an instance, whose handle is @nickname#suffix -- without one,
 // CreateInstance refuses and the thread cannot be created at all.
-func createAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, initImage string) *agentsv1.Agent {
+func createAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, runtime string) *agentsv1.Agent {
 	t.Helper()
 	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
 		Name:           name,
 		Nickname:       nicknameFor(name),
 		Model:          model,
 		OrganizationID: organizationID,
-		InitImage:      initImage,
+		Runtime:        runtime,
 	})
 }
 
@@ -172,24 +228,25 @@ func nicknameFor(name string) string {
 	return strings.Trim(stem, "-") + "-" + suffix
 }
 
-func createAgentWithNickname(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, nickname, model, organizationID, initImage string) *agentsv1.Agent {
+func createAgentWithNickname(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, nickname, model, organizationID, runtime string) *agentsv1.Agent {
 	t.Helper()
 	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
 		Name:           name,
 		Nickname:       nickname,
 		Model:          model,
 		OrganizationID: organizationID,
-		InitImage:      initImage,
+		Runtime:        runtime,
 	})
 }
 
-func createAgentWithIdleTimeout(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, initImage, idleTimeout string) *agentsv1.Agent {
+func createAgentWithIdleTimeout(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, name, model, organizationID, runtime, idleTimeout string) *agentsv1.Agent {
 	t.Helper()
 	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
 		Name:           name,
+		Nickname:       nicknameFor(name),
 		Model:          model,
 		OrganizationID: organizationID,
-		InitImage:      initImage,
+		Runtime:        runtime,
 		IdleTimeout:    idleTimeout,
 	})
 }
@@ -199,8 +256,11 @@ type agentCreateOptions struct {
 	Nickname       string
 	Model          string
 	OrganizationID string
-	InitImage      string
-	IdleTimeout    string
+	// The agent runtime the environment supplies, by catalog name.
+	Runtime     string
+	IdleTimeout string
+	// The environment the agent runs in. Empty builds one on Runtime.
+	EnvironmentID string
 	// The class policies an instance inherits. Zero values leave them unset,
 	// so the server applies its own defaults.
 	DefaultThread   agentsv1.AgentDefaultThread
@@ -210,16 +270,23 @@ type agentCreateOptions struct {
 
 func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, opts agentCreateOptions) *agentsv1.Agent {
 	t.Helper()
-	if strings.TrimSpace(opts.InitImage) == "" {
-		t.Fatal("create agent: init image is required")
+	// An agent runs the CLI its environment's agent runtime image supplies.
+	// init_image no longer stands in for one: the Orchestrator refuses to
+	// assemble a workload without a runtime, so an environment-less agent is
+	// created and then never starts.
+	environmentID := opts.EnvironmentID
+	if environmentID == "" {
+		if strings.TrimSpace(opts.Runtime) == "" {
+			t.Fatal("create agent: an agent runtime or an environment is required")
+		}
+		environmentID = suiteEnvironment(t, ctx, client, opts.OrganizationID, opts.Runtime)
 	}
 	request := &agentsv1.CreateAgentRequest{
 		Name:           opts.Name,
 		Nickname:       opts.Nickname,
 		Role:           "assistant",
 		Model:          opts.Model,
-		Image:          "alpine:3.21",
-		InitImage:      opts.InitImage,
+		EnvironmentId:  environmentID,
 		OrganizationId: opts.OrganizationID,
 		Availability:   agentsv1.AgentAvailability_AGENT_AVAILABILITY_INTERNAL,
 	}
@@ -229,6 +296,12 @@ func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.A
 	if opts.DefaultThread != agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_UNSPECIFIED {
 		request.DefaultThread = opts.DefaultThread
 	}
+	// The suite's agents answer in the thread, so they have to say so. The
+	// class default is DISCARD -- for agents that post explicitly and would
+	// otherwise say everything twice -- and under it the CLI produces the reply,
+	// the turn completes, and the platform drops the text. That reads from the
+	// outside exactly like an agent that never answered.
+	request.FinalMessage = agentsv1.AgentFinalMessage_AGENT_FINAL_MESSAGE_DEFAULT_THREAD
 	if opts.FinalMessage != agentsv1.AgentFinalMessage_AGENT_FINAL_MESSAGE_UNSPECIFIED {
 		request.FinalMessage = opts.FinalMessage
 	}
@@ -246,11 +319,40 @@ func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.A
 	return agent
 }
 
-func deleteAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, agentID string) {
+// deleteAgent takes the agent's instances with it.
+//
+// An agent with a live instance cannot be deleted -- "agent has non-terminated
+// instances" -- so leaving them behind leaves the agent behind too, and with it
+// every nickname it holds and every instance the Orchestrator keeps trying to
+// start. A suite that runs twice on one platform then fails the second time on
+// a nickname that is already taken.
+func deleteAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) {
 	t.Helper()
-	_, err := client.DeleteAgent(ctx, &agentsv1.DeleteAgentRequest{Id: agentID})
-	if err != nil {
+	deleteAgentInstances(t, ctx, client, organizationID, agentID)
+	if _, err := client.DeleteAgent(ctx, &agentsv1.DeleteAgentRequest{Id: agentID}); err != nil {
 		t.Logf("cleanup: delete agent %s: %v", agentID, err)
+	}
+}
+
+func deleteAgentInstances(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) {
+	t.Helper()
+	listed, err := client.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+		OrganizationId: organizationID,
+		AgentId:        &agentID,
+		PageSize:       100,
+	})
+	if err != nil {
+		t.Logf("cleanup: list instances of agent %s: %v", agentID, err)
+		return
+	}
+	for _, instance := range listed.GetInstances() {
+		id := instance.GetMeta().GetId()
+		if id == "" {
+			continue
+		}
+		if _, err := client.DeleteInstance(ctx, &agentsv1.DeleteInstanceRequest{Id: id}); err != nil {
+			t.Logf("cleanup: delete instance %s: %v", id, err)
+		}
 	}
 }
 
@@ -279,14 +381,17 @@ func deleteAgentEnv(t *testing.T, ctx context.Context, client agentsv1.AgentsSer
 	}
 }
 
-func cleanupAgentEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, agentID string) {
+// The organization is not optional. An env is a reference to a secret, and a
+// caller presenting an identity must name whose secrets it is reading -- so a
+// listing without one is refused rather than scoped to the target id alone.
+func cleanupAgentEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) {
 	t.Helper()
-	cleanupEnvs(t, ctx, client, &agentsv1.ListEnvsRequest{AgentId: agentID})
+	cleanupEnvs(t, ctx, client, &agentsv1.ListEnvsRequest{OrganizationId: organizationID, AgentId: agentID})
 }
 
-func cleanupMCPEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, mcpID string) {
+func cleanupMCPEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, mcpID string) {
 	t.Helper()
-	cleanupEnvs(t, ctx, client, &agentsv1.ListEnvsRequest{McpId: mcpID})
+	cleanupEnvs(t, ctx, client, &agentsv1.ListEnvsRequest{OrganizationId: organizationID, McpId: mcpID})
 }
 
 func cleanupEnvs(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.ListEnvsRequest) {
@@ -330,9 +435,9 @@ func createMCP(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceC
 	return mcp
 }
 
-func deleteMCP(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, mcpID string) {
+func deleteMCP(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, mcpID string) {
 	t.Helper()
-	cleanupMCPEnvs(t, ctx, client, mcpID)
+	cleanupMCPEnvs(t, ctx, client, organizationID, mcpID)
 	_, err := client.DeleteMcp(ctx, &agentsv1.DeleteMcpRequest{Id: mcpID})
 	if err != nil {
 		t.Logf("cleanup: delete mcp %s: %v", mcpID, err)
@@ -533,6 +638,29 @@ func kubeClientset(t *testing.T) *kubernetes.Clientset {
 	return clientset
 }
 
+// diagnosticsClientset is kubeClientset for callers that are explaining a
+// failure rather than testing something.
+//
+// It reports rather than fails. A diagnostics helper that aborts the test
+// replaces the failure it was there to explain -- which is what an
+// out-of-cluster run of this suite did: every agent-reply test died on the
+// tenth poll, in the branch that only runs to say why the poll is still
+// waiting.
+func diagnosticsClientset(t *testing.T) (*kubernetes.Clientset, bool) {
+	t.Helper()
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		t.Logf("diagnostics: unavailable outside the cluster: %v", err)
+		return nil, false
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		t.Logf("diagnostics: kubernetes clientset: %v", err)
+		return nil, false
+	}
+	return clientset, true
+}
+
 func execPodCommand(
 	t *testing.T,
 	ctx context.Context,
@@ -639,11 +767,88 @@ func logMessageDiagnostics(t *testing.T, msg *threadsv1.Message) {
 
 // --- Verification Helpers ---
 
+// waitForAgentInstance returns the agent's instance, which is what a thread
+// actually talks to and what a workload belongs to. The thread creates it, so
+// it may not exist the moment the thread does.
+func waitForAgentInstance(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) string {
+	t.Helper()
+	instanceID := ""
+	waitCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	if err := pollUntil(waitCtx, pollInterval, func(ctx context.Context) error {
+		listed, err := client.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			OrganizationId: organizationID,
+			AgentId:        &agentID,
+			PageSize:       10,
+		})
+		if err != nil {
+			return err
+		}
+		for _, instance := range listed.GetInstances() {
+			if id := instance.GetMeta().GetId(); id != "" {
+				instanceID = id
+				return nil
+			}
+		}
+		return fmt.Errorf("no instance for agent %s yet", agentID)
+	}); err != nil {
+		t.Fatalf("wait for the agent's instance: %v", err)
+	}
+	return instanceID
+}
+
+// agentSenderSet is the set of identities an agent's messages come from: the
+// class, for anything that still posts as one, and every instance of it.
+type agentSenderSet struct {
+	t *testing.T
+	// The organization is not optional: a caller presenting an identity has to
+	// name whose instances it is listing, and without it the listing is refused
+	// rather than scoped to the agent id alone.
+	client         agentsv1.AgentsServiceClient
+	organizationID string
+	agentID        string
+	ids            map[string]struct{}
+}
+
+func newAgentSenderSet(t *testing.T, organizationID, agentID string) *agentSenderSet {
+	t.Helper()
+	return &agentSenderSet{
+		t:              t,
+		client:         agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr)),
+		organizationID: organizationID,
+		agentID:        agentID,
+		ids:            map[string]struct{}{agentID: {}},
+	}
+}
+
+func (s *agentSenderSet) refresh(ctx context.Context) {
+	listed, err := s.client.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+		OrganizationId: s.organizationID,
+		AgentId:        &s.agentID,
+		PageSize:       50,
+	})
+	if err != nil {
+		s.t.Logf("diagnostics: list instances of agent %s: %v", s.agentID, err)
+		return
+	}
+	for _, instance := range listed.GetInstances() {
+		if id := instance.GetMeta().GetId(); id != "" {
+			s.ids[id] = struct{}{}
+		}
+	}
+}
+
+func (s *agentSenderSet) contains(senderID string) bool {
+	_, ok := s.ids[senderID]
+	return ok
+}
+
 func pollForAgentResponse(
 	t *testing.T,
 	ctx context.Context,
 	threadsClient threadsv1.ThreadsServiceClient,
 	runnerClient runnerv1.RunnerServiceClient,
+	organizationID string,
 	threadID string,
 	agentID string,
 	labels map[string]string,
@@ -651,8 +856,12 @@ func pollForAgentResponse(
 	expectedBody string,
 ) (string, error) {
 	t.Helper()
+	// An agent answers as the instance the thread started, not as the class, so
+	// the class id alone matches nothing. The set is rebuilt on each poll: the
+	// instance may not exist yet when the wait begins.
+	senders := newAgentSenderSet(t, organizationID, agentID)
 	messageMatches := func(msg *threadsv1.Message) bool {
-		if msg.GetSenderId() != agentID {
+		if !senders.contains(msg.GetSenderId()) {
 			return false
 		}
 		if !minCreatedAt.IsZero() {
@@ -674,6 +883,7 @@ func pollForAgentResponse(
 	pollCount := 0
 	err := pollUntil(ctx, pollInterval, func(ctx context.Context) error {
 		pollCount++
+		senders.refresh(ctx)
 		logDiagnostics := pollCount%10 == 0
 		resp, err := threadsClient.GetMessages(ctx, &threadsv1.GetMessagesRequest{
 			ThreadId: threadID,

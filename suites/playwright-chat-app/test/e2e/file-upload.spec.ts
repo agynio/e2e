@@ -26,7 +26,6 @@ test.describe('file-upload', {
     test.setTimeout(180_000);
     const { organizationId, agentId, participantId } = await setupTestAgent(page, {
       endpoint: llmEndpoint,
-      initImage: process.env.E2E_AGENT_INIT_IMAGE,
       remoteName: testLlmRemoteName,
     });
     await createAgentEnv(page, agentId, 'TEST_SCENARIO', 'attachments');

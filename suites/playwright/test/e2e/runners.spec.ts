@@ -3,14 +3,14 @@ import { test, expect } from './fixtures';
 import { createOrganization, listRunners, registerRunner, setSelectedOrganization } from './console-api';
 
 test.describe('runners', { tag: ['@svc_console'] }, () => {
-  test('lists cluster runners', async ({ page }) => {
+  test('lists cluster runners', async ({ adminPage: page }) => {
     await page.goto('/runners');
     await expect(page.getByTestId('runners-table')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('runners-row').first()).toBeVisible({ timeout: 15000 });
     await argosScreenshot(page, 'runners-list');
   });
 
-  test('lists organization and cluster runners', async ({ page }) => {
+  test('lists organization and cluster runners', async ({ adminPage: page }) => {
     const orgId = await createOrganization(page, `e2e-org-runners-${Date.now()}`);
     await setSelectedOrganization(page, orgId);
     const orgRunnerName = `e2e-org-runner-${Date.now()}`;
@@ -38,7 +38,7 @@ test.describe('runners', { tag: ['@svc_console'] }, () => {
     await argosScreenshot(page, 'organization-runners-list');
   });
 
-  test('organization runner detail shows metadata', async ({ page }) => {
+  test('organization runner detail shows metadata', async ({ adminPage: page }) => {
     const orgId = await createOrganization(page, `e2e-org-runner-detail-${Date.now()}`);
     await setSelectedOrganization(page, orgId);
     const orgRunnerName = `e2e-org-runner-detail-${Date.now()}`;
@@ -57,7 +57,7 @@ test.describe('runners', { tag: ['@svc_console'] }, () => {
     await argosScreenshot(page, 'organization-runner-detail');
   });
 
-  test('runner detail shows metadata', async ({ page }) => {
+  test('runner detail shows metadata', async ({ adminPage: page }) => {
     const runners = await listRunners(page);
     const runnerId = runners[0]?.meta?.id;
     if (!runnerId) {

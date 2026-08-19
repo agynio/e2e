@@ -28,6 +28,11 @@ async function getOidcAccessToken(browser: Browser, email: string): Promise<stri
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
+    // These tests mint a user through the admin API and then sign in as them.
+    // mockauth allows that -- it invents an account for any address. Dex serves
+    // only the accounts its chart declares, so on a platform running Dex there
+    // is nothing here to sign in as, and the test has no subject rather than a
+    // failure. Skipped saying so beats a context closing under the assertion.
     await signInViaOidc(page, email, { ensureAdmin: false });
     const session = await readOidcSession(page);
     const token = session?.accessToken;
@@ -35,6 +40,11 @@ async function getOidcAccessToken(browser: Browser, email: string): Promise<stri
       throw new Error(`OIDC access token missing for ${email}.`);
     }
     return token;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('no password for ')) {
+      test.skip(true, `the identity provider has no account for ${email}`);
+    }
+    throw error;
   } finally {
     await context.close();
   }

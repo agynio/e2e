@@ -15,11 +15,11 @@ import (
 )
 
 func TestMCPToolsE2E(t *testing.T) {
-	runMCPToolsE2E(t, testLLMEndpointCodex, codexInitImage)
+	runMCPToolsE2E(t, testLLMEndpointCodex, codexRuntime)
 }
 
 func TestMCPToolsAgnE2E(t *testing.T) {
-	runMCPToolsE2E(t, testLLMEndpointAgn, agnInitImage)
+	runMCPToolsE2E(t, testLLMEndpointAgn, agnRuntime)
 }
 
 func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
@@ -48,8 +48,8 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 	memoryMCP := createMCP(
@@ -81,8 +81,8 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		t.Fatal("create filesystem mcp: missing id")
 	}
 	t.Cleanup(func() {
-		deleteMCP(t, threadsCtx, agentsClient, filesystemMcpID)
-		deleteMCP(t, threadsCtx, agentsClient, memoryMcpID)
+		deleteMCP(t, threadsCtx, agentsClient, orgID, filesystemMcpID)
+		deleteMCP(t, threadsCtx, agentsClient, orgID, memoryMcpID)
 	})
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
@@ -124,7 +124,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 6*time.Minute)
 	defer pollCancel()
-	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, expected)
+	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expected)
 	if err != nil {
 		t.Fatalf("wait for agent response: %v", err)
 	}

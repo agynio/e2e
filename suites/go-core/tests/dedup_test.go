@@ -26,14 +26,18 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	threadsClient := threadsv1.NewThreadsServiceClient(threadsConn)
 	runnerClient := runnerv1.NewRunnerServiceClient(runnerConn)
 
-	gatewayToken := gatewayAPIToken(t)
-	gatewayIdentity := fetchGatewayIdentity(t, gatewayToken)
-	identityID := gatewayIdentity.IdentityID
-	threadsCtx := withIdentity(ctx, identityID)
-	orgID := gatewayOrganizationID(t)
-	modelID := gatewayModelID(t)
+	// A person, not whoever holds the bootstrap token: CreateThread appends the
+	// initiator to the participants and refuses IDENTITY_TYPE_PLATFORM there --
+	// "unsupported identity type 8" -- because the platform is not in the
+	// conversation.
+	setup := newWorkflowGatewaySetup(t, ctx)
+	gatewayToken := setup.Token
+	identityID := setup.IdentityID
+	threadsCtx := setup.Context
+	orgID := setup.OrganizationID
+	modelID := setup.ModelID
 
-	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-nodup-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-nodup-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
@@ -43,7 +47,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 		if threadID != "" {
 			archiveThread(t, threadsCtx, threadsClient, threadID)
 		}
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	agentEnv := createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", gatewayToken)
 	agentEnvID := agentEnv.GetMeta().GetId()

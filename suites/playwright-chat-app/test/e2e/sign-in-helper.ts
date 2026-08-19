@@ -3,6 +3,37 @@ import { expect } from '@playwright/test';
 
 const defaultEmail = 'e2e-tester@agyn.test';
 
+// Dex's own password form, which the bundle VM serves. Not the mockauth form
+// below: an h2 rather than an h1, a password field, and no testids to hang a
+// locator on -- so it is matched on the ids Dex's template gives them.
+const dexPasswordField = 'input#password';
+const dexLoginField = 'input#login';
+const dexSubmitButton = 'button#submit-login';
+
+// The accounts the platform charts ship. The ordinary member by default: a
+// suite signed in as cluster admin cannot tell a rule that holds from one that
+// was never asked.
+const dexPasswords: Record<string, string> = {
+  'user@agyn.dev': 'user',
+  'admin@agyn.dev': 'admin',
+};
+const defaultDexEmail = 'user@agyn.dev';
+
+async function fillDexLoginForm(page: Page, email: string): Promise<void> {
+  const address = email === defaultEmail ? defaultDexEmail : email;
+  const password = process.env.E2E_OIDC_PASSWORD ?? dexPasswords[address] ?? '';
+  if (!password) {
+    throw new Error(
+      `no password for ${address}: the bundled accounts are ${Object.keys(dexPasswords).join(' and ')}; ` +
+        'set E2E_OIDC_PASSWORD for any other',
+    );
+  }
+  await page.locator(dexLoginField).fill(address);
+  await page.locator(dexPasswordField).fill(password);
+  await page.locator(dexSubmitButton).click();
+}
+
+
 type SignInOptions = {
   onLoginPage?: (page: Page) => Promise<void>;
   force?: boolean;
@@ -57,6 +88,7 @@ async function waitForLoginForm(page: Page, timeoutMs: number): Promise<boolean>
     waitForLocator(loginHeading, timeoutMs),
     waitForLocator(emailInput, timeoutMs),
     waitForLocator(usernameInput, timeoutMs),
+    waitForLocator(page.locator(dexPasswordField), timeoutMs),
   ]);
 }
 
@@ -67,6 +99,11 @@ async function fillLoginForm(
 ): Promise<void> {
   if (onLoginPage) {
     await onLoginPage(page);
+  }
+
+  if (await isLocatorVisible(page.locator(dexPasswordField), 2000)) {
+    await fillDexLoginForm(page, expectedEmail);
+    return;
   }
 
   const strategyTabs = page.getByTestId('login-strategy-tabs');

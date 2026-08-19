@@ -6,7 +6,8 @@ import {
   createOrganization,
   createTestModel,
   DEFAULT_TEST_AGENT_IMAGE,
-  resolveCodexInitImage,
+  createTestEnvironment,
+  CODEX_RUNTIME,
 } from './chat-api';
 import { setSelectedOrganization } from './organization-helpers';
 
@@ -19,6 +20,7 @@ async function createAgentForOrg(page: Page, organizationId: string, name: strin
     endpoint: llmEndpoint,
     namePrefix: 'e2e-model-org-switch',
   });
+  const environmentId = await createTestEnvironment(page, organizationId, CODEX_RUNTIME);
   await createAgent(page, {
     organizationId,
     name,
@@ -27,7 +29,7 @@ async function createAgentForOrg(page: Page, organizationId: string, name: strin
     description: 'Org switch agent',
     configuration: '{}',
     image: DEFAULT_TEST_AGENT_IMAGE,
-    initImage: resolveCodexInitImage(process.env.E2E_AGENT_INIT_IMAGE),
+    environmentId,
   });
 }
 

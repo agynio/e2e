@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { AgentAvailability } from '../../src/gen/agynio/api/agents/v1/agents_pb';
+import { fromBinary } from '@bufbuild/protobuf';
+import {
+  AgentAvailability,
+  AgentFinalMessage,
+  CreateAgentRequestSchema,
+} from '../../src/gen/agynio/api/agents/v1/agents_pb';
 import { buildCreateAgentPayload, buildCreateAgentRequestBytes, buildCreateAgentRequestJson } from './gateway-api';
 
 const createAgentOptions = {
@@ -10,7 +15,7 @@ const createAgentOptions = {
   description: 'description',
   configuration: '{}',
   image: 'alpine:3.21',
-  initImage: 'ghcr.io/agynio/agent-init-agn:0.5.5',
+  environmentId: '00000000-0000-0000-0000-000000000001',
 };
 
 test.describe('tracing gateway api helpers', () => {
@@ -20,6 +25,7 @@ test.describe('tracing gateway api helpers', () => {
     expect(JSON.parse(JSON.stringify(payload))).toEqual({
       ...createAgentOptions,
       availability: AgentAvailability.INTERNAL,
+      finalMessage: AgentFinalMessage.DEFAULT_THREAD,
     });
   });
 
@@ -29,14 +35,17 @@ test.describe('tracing gateway api helpers', () => {
     expect(JSON.parse(JSON.stringify(payload))).toEqual({
       ...createAgentOptions,
       availability: 'AGENT_AVAILABILITY_INTERNAL',
+      finalMessage: 'AGENT_FINAL_MESSAGE_DEFAULT_THREAD',
     });
   });
 
+  // Decoded rather than compared to a hex literal. The literal encoded every
+  // field of the request, so any change to the fixture had to be hand-computed
+  // to keep a test that is only about how the enum is carried.
   test('CreateAgent ConnectRPC proto bytes include availability value', () => {
     const payload = buildCreateAgentRequestBytes(createAgentOptions);
+    const request = fromBinary(CreateAgentRequestSchema, payload);
 
-    expect(Buffer.from(payload).toString('hex')).toBe(
-      '0a0a6167656e742d6e616d651209617373697374616e741a086d6f64656c2d6964220b6465736372697074696f6e2a027b7d320b616c70696e653a332e3231420f6f7267616e697a6174696f6e2d69644a23676863722e696f2f6167796e696f2f6167656e742d696e69742d61676e3a302e352e346801',
-    );
+    expect(request.availability).toBe(AgentAvailability.INTERNAL);
   });
 });

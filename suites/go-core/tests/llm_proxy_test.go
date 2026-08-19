@@ -17,7 +17,6 @@ import (
 	organizationsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/organizations/v1"
 	usersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/users/v1"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -106,7 +105,7 @@ func ensureLLMProxyModelAccess(t *testing.T, ctx context.Context, client authori
 		return
 	}
 	statusErr, ok := status.FromError(err)
-	if ok && statusErr.Code() == codes.InvalidArgument && strings.Contains(statusErr.Message(), "already exists") {
+	if ok && isAlreadyWritten(statusErr) {
 		return
 	}
 	t.Fatalf("authorization write failed: %v", err)

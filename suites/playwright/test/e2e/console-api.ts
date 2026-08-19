@@ -175,7 +175,7 @@ type AgentWire = {
   description?: string;
   configuration?: string;
   image?: string;
-  initImage?: string;
+  environmentId?: string;
   organizationId?: string;
 };
 
@@ -319,7 +319,7 @@ type CreateAgentOptions = {
   description?: string;
   configuration?: string;
   image?: string;
-  initImage?: string;
+  environmentId?: string;
   availability?: AgentAvailabilityValue;
 };
 
@@ -331,7 +331,7 @@ type CreateAgentPayload = {
   description: string;
   configuration: string;
   image: string;
-  initImage: string;
+  environmentId: string;
   organizationId: string;
   availability: AgentAvailabilityValue;
 };
@@ -660,11 +660,17 @@ export async function createUser(
   return identityId;
 }
 
+// The user directory is the cluster admin's -- the services answer an ordinary
+// member with "cluster admin required". Nothing asserts on it; it is how
+// inviteMember finds the identity behind an address, so it is setup and goes
+// through the bootstrap token like createUser above.
 export async function listUsers(page: Page): Promise<UserWire[]> {
-  const response = await postConnect<ListUsersResponseWire>(page, USERS_GATEWAY_PATH, 'ListUsers', {
-    pageSize: 200,
-    pageToken: '',
-  });
+  const response = await postConnectAsClusterAdmin<ListUsersResponseWire>(
+    page,
+    USERS_GATEWAY_PATH,
+    'ListUsers',
+    { pageSize: 200, pageToken: '' },
+  );
   return response.users ?? [];
 }
 
@@ -987,7 +993,7 @@ export function buildCreateAgentPayload(opts: CreateAgentOptions, modelId: strin
     description: opts.description ?? '',
     configuration: opts.configuration ?? '',
     image: opts.image ?? '',
-    initImage: opts.initImage ?? '',
+    environmentId: opts.environmentId ?? '',
     organizationId: opts.organizationId,
     availability: opts.availability ?? DEFAULT_AGENT_AVAILABILITY,
   };
@@ -1006,7 +1012,10 @@ export async function createAgent(page: Page, opts: CreateAgentOptions): Promise
   if (!modelId) {
     modelId = await ensureModelId(page, opts.organizationId);
   }
-  const payload = buildCreateAgentPayload(opts, modelId);
+  // An agent takes its CLI from an environment's agent runtime image, so it
+  // cannot be created without one.
+  const environmentId = opts.environmentId?.trim() || (await createTestEnvironment(page, opts.organizationId));
+  const payload = buildCreateAgentPayload({ ...opts, environmentId }, modelId);
   const trimmedNickname = opts.nickname?.trim();
   if (trimmedNickname) {
     payload.nickname = trimmedNickname;
@@ -1227,6 +1236,10 @@ export async function registerRunner(
   if (opts.organizationId) {
     payload.organizationId = opts.organizationId;
   }
+  // As the signed-in session, not the bootstrap token: registering a runner is
+  // the cluster admin's, and the platform identity the token carries is refused
+  // it outright -- "permission denied". A spec that needs one signs in as the
+  // admin, which is what adminPage is for.
   const response = await postConnect<RegisterRunnerResponseWire>(
     page,
     RUNNERS_GATEWAY_PATH,
@@ -1252,6 +1265,83 @@ export async function getRunner(page: Page, runnerId: string): Promise<RunnerWir
 type CreateImageResponseWire = {
   image?: { meta?: { id?: string } };
 };
+
+type ListImagesResponseWire = {
+  images?: Array<{ meta?: { id?: string }; name?: string }>;
+};
+type ListVersionsResponseWire = { versions?: Array<{ tag?: string }> };
+type CreateEnvironmentResponseWire = { environment?: { meta?: { id?: string } } };
+
+// The agent runtimes the release publishes to the image catalog. Public
+// records, already discovered, so a freshly created organization sees them.
+export const CODEX_RUNTIME = 'codex';
+
+// The highest x.y.z among the discovered tags. A repository also carries
+// floating tags -- latest, 0, 0.5 -- and a sha-<commit> per build, none of which
+// name a release.
+function newestReleaseTag(tags: string[]): string {
+  const releases = tags
+    .map((tag) => ({ tag, parts: /^(\d+)\.(\d+)\.(\d+)$/.exec(tag) }))
+    .filter((entry) => entry.parts !== null)
+    .map((entry) => ({ tag: entry.tag, parts: entry.parts!.slice(1, 4).map(Number) }));
+  releases.sort((a, b) => a.parts[0] - b.parts[0] || a.parts[1] - b.parts[1] || a.parts[2] - b.parts[2]);
+  return releases.length ? releases[releases.length - 1].tag : '';
+}
+
+// The environment an agent runs in. An agent takes its CLI from the agent
+// runtime image this names, and the platform refuses an agent that has none --
+// there would be nothing for its workload to run.
+export async function createTestEnvironment(
+  page: Page,
+  organizationId: string,
+  runtime: string = CODEX_RUNTIME,
+): Promise<string> {
+  const listed = await postConnect<ListImagesResponseWire>(page, IMAGES_GATEWAY_PATH, 'ListImages', {
+    organizationId,
+    type: 'IMAGE_TYPE_AGENT_RUNTIME',
+    pageSize: 100,
+  });
+  const images = listed.images ?? [];
+  const imageId = images.find((candidate) => candidate.name === runtime)?.meta?.id;
+  if (!imageId) {
+    throw new Error(
+      `No agent runtime image named "${runtime}" in the catalog; found ${images.map((i) => i.name).join(', ')}`,
+    );
+  }
+  const versions = await postConnect<ListVersionsResponseWire>(page, IMAGES_GATEWAY_PATH, 'ListVersions', {
+    imageId,
+    pageSize: 200,
+  });
+  const tag = newestReleaseTag((versions.versions ?? []).map((version) => version.tag ?? ''));
+  if (!tag) {
+    throw new Error(`No released tag discovered for agent runtime "${runtime}"`);
+  }
+  // Unfiltered: the platform's runner belongs to no organization, and a freshly
+  // created one owns none of its own.
+  const runnerId = (await listRunners(page)).map((runner) => runner.meta?.id).find((id) => !!id);
+  if (!runnerId) {
+    throw new Error('No runner is enrolled with the platform.');
+  }
+  const response = await postConnect<CreateEnvironmentResponseWire>(
+    page,
+    AGENTS_GATEWAY_PATH,
+    'CreateEnvironment',
+    {
+      organizationId,
+      name: `e2e-env-${Date.now()}`,
+      runnerId,
+      image: 'alpine:3.21',
+      agentRuntimeImageId: imageId,
+      agentRuntimeImageTag: tag,
+      availability: 'ENVIRONMENT_AVAILABILITY_PRIVATE',
+    },
+  );
+  const environmentId = response.environment?.meta?.id;
+  if (!environmentId) {
+    throw new Error('CreateEnvironment response missing environment id.');
+  }
+  return environmentId;
+}
 
 export async function createImage(
   page: Page,

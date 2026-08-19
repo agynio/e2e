@@ -1,4 +1,4 @@
-//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_llm || svc_llm_proxy || svc_images || smoke)
+//go:build e2e && (svc_agents_orchestrator || svc_runners || svc_metering || svc_k8s_runner || svc_organizations || svc_llm || svc_llm_proxy || svc_images || smoke)
 
 package tests
 
@@ -20,7 +20,10 @@ func logTracingDiagnostics(t *testing.T, threadID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	clientset := kubeClientset(t)
+	clientset, ok := diagnosticsClientset(t)
+	if !ok {
+		return
+	}
 	namespace := workloadNamespace(t)
 	selector := fmt.Sprintf("%s=%s,%s=%s", labelManagedBy, managedByValue, labelThreadID, threadID)
 	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
@@ -57,7 +60,11 @@ func readWorkloadLogs(t *testing.T, ctx context.Context, namespace, podName, con
 
 func readWorkloadLogsWithOptions(t *testing.T, ctx context.Context, namespace, podName, containerName string, options logReadOptions) {
 	t.Helper()
-	request := kubeClientset(t).CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
+	clientset, ok := diagnosticsClientset(t)
+	if !ok {
+		return
+	}
+	request := clientset.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
 		Container:  containerName,
 		TailLines:  &options.TailLines,
 		Timestamps: true,
@@ -100,7 +107,10 @@ func logTracingStackDiagnostics(t *testing.T) {
 	defer cancel()
 
 	namespace := currentNamespace(t)
-	clientset := kubeClientset(t)
+	clientset, ok := diagnosticsClientset(t)
+	if !ok {
+		return
+	}
 	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Logf("diagnostics: list tracing pods: %v", err)
@@ -165,7 +175,10 @@ func logWorkloadPodDiagnostics(t *testing.T, ctx context.Context, workloadID str
 	t.Helper()
 	namespace := workloadNamespace(t)
 	podName := fmt.Sprintf("workload-%s", workloadID)
-	clientset := kubeClientset(t)
+	clientset, ok := diagnosticsClientset(t)
+	if !ok {
+		return
+	}
 	pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
 		t.Logf("diagnostics: pod=%s get error: %v", podName, err)
@@ -181,7 +194,11 @@ func logWorkloadPodDiagnostics(t *testing.T, ctx context.Context, workloadID str
 func logLLMProxyDiagnostics(t *testing.T, ctx context.Context) {
 	t.Helper()
 	namespace := currentNamespace(t)
-	pods, err := kubeClientset(t).CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	clientset, ok := diagnosticsClientset(t)
+	if !ok {
+		return
+	}
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Logf("diagnostics: list llm-proxy pods: %v", err)
 		return
@@ -305,7 +322,10 @@ func summarizeContainerState(state corev1.ContainerState) (string, string, strin
 
 func logWorkloadPodEvents(t *testing.T, ctx context.Context, namespace, podName string) {
 	t.Helper()
-	clientset := kubeClientset(t)
+	clientset, ok := diagnosticsClientset(t)
+	if !ok {
+		return
+	}
 	fieldSelector := fmt.Sprintf("involvedObject.name=%s", podName)
 	events, err := clientset.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
 	if err != nil {

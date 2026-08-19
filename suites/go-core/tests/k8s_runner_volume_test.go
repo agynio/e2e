@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 
 	runnerv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runner/v1"
 )
@@ -41,8 +40,10 @@ func TestVolumeQueries(t *testing.T) {
 
 		_, err = client.RemoveVolume(ctx, &runnerv1.RemoveVolumeRequest{VolumeName: volumeName})
 		require.NoError(t, err)
+		// And again: the runner answers a missing PVC with success, so removing
+		// twice is the same as removing once.
 		_, err = client.RemoveVolume(ctx, &runnerv1.RemoveVolumeRequest{VolumeName: volumeName})
-		requireGRPCCode(t, err, codes.NotFound)
+		require.NoError(t, err)
 	})
 }
 

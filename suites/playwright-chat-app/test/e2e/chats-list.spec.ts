@@ -8,7 +8,8 @@ import {
   createTestModel,
   DEFAULT_TEST_AGENT_IMAGE,
   resolveIdentityId,
-  resolveCodexInitImage,
+  createTestEnvironment,
+  CODEX_RUNTIME,
   waitForChatInList,
 } from './chat-api';
 import { setSelectedOrganization, waitForChatList } from './organization-helpers';
@@ -45,6 +46,7 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
         namePrefix: 'e2e-model-picker',
       });
       const agentName = `e2e-agent-picker-${now}`;
+      const environmentId = await createTestEnvironment(userAPage, organizationId, CODEX_RUNTIME);
       await createAgent(userAPage, {
         organizationId,
         name: agentName,
@@ -53,7 +55,7 @@ test.describe('chats-list', { tag: ['@svc_chat_app', '@svc_gateway', '@svc_organ
         description: 'E2E participant picker agent',
         configuration: '{}',
         image: DEFAULT_TEST_AGENT_IMAGE,
-        initImage: resolveCodexInitImage(process.env.E2E_AGENT_INIT_IMAGE),
+        environmentId,
       });
       await userAPage.goto('/chats');
       await waitForChatList(userAPage, organizationId);

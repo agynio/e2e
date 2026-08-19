@@ -33,14 +33,14 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 	token := setup.Token
 	modelID := setup.ModelID
 
-	agent := createAgent(t, identityCtx, agentsClient, fmt.Sprintf("e2e-test-agent-start-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agent := createAgent(t, identityCtx, agentsClient, fmt.Sprintf("e2e-test-agent-start-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, identityCtx, agentsClient, agentID)
-		deleteAgent(t, identityCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, identityCtx, agentsClient, orgID, agentID)
+		deleteAgent(t, identityCtx, agentsClient, orgID, agentID)
 	})
 	createAgentEnv(t, identityCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 
@@ -50,6 +50,31 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 		t.Fatal("create thread: missing id")
 	}
 	t.Cleanup(func() { archiveThread(t, identityCtx, threadsClient, threadID) })
+
+	// The thread creates the agent's instance, and the instance is what has an
+	// inbox. Sending before it exists leaves the message with nowhere to land:
+	// the orchestrator then sees an ACTIVE instance with nothing unacked and
+	// wants no workload, which is exactly what it reported -- desired=0 against
+	// an instance this test could see.
+	instanceCtx, instanceCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer instanceCancel()
+	if err := pollUntil(instanceCtx, pollInterval, func(ctx context.Context) error {
+		listed, err := agentsClient.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			OrganizationId: orgID,
+			AgentId:        &agentID,
+			PageSize:       10,
+			StateIn:        []agentsv1.AgentInstanceState{agentsv1.AgentInstanceState_AGENT_INSTANCE_STATE_ACTIVE},
+		})
+		if err != nil {
+			return err
+		}
+		if len(listed.GetInstances()) == 0 {
+			return fmt.Errorf("no active instance for agent %s yet", agentID)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("wait for the agent's instance: %v", err)
+	}
 
 	_ = sendMessage(t, identityCtx, threadsClient, threadID, identityID, "e2e test message")
 
@@ -73,7 +98,39 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 		workloadID = ids[0]
 		return nil
 	}); err != nil {
-		t.Fatalf("wait for workload: %v", err)
+		// Say what the platform thinks it should be running. The orchestrator
+		// starts a workload for an ACTIVE instance with something unacked in its
+		// inbox, so an empty desired set is either no instance or no message --
+		// and which one it is decides where to look next.
+		// And whether any of them has something unacked, which is the other half
+		// of what the orchestrator selects on. Waiting for the instance did not
+		// change the outcome, so the message is either not reaching the inbox or
+		// not staying unacked -- and this says which.
+		unacked := true
+		unackedCount := -1
+		if listed, listErr := agentsClient.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			PageSize:   50,
+			StateIn:    []agentsv1.AgentInstanceState{agentsv1.AgentInstanceState_AGENT_INSTANCE_STATE_ACTIVE},
+			HasUnacked: &unacked,
+		}); listErr == nil {
+			unackedCount = len(listed.GetInstances())
+		}
+
+		instances := "unavailable"
+		if listed, listErr := agentsClient.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			PageSize: 50,
+		}); listErr == nil {
+			seen := []string{}
+			for _, instance := range listed.GetInstances() {
+				seen = append(seen, fmt.Sprintf("%s state=%s agent=%s",
+					instance.GetMeta().GetId(), instance.GetState(), instance.GetAgentId()))
+			}
+			instances = fmt.Sprintf("%v", seen)
+		} else {
+			instances = listErr.Error()
+		}
+		t.Fatalf("wait for workload: %v; agent=%s thread=%s active-with-unacked=%d instances=%s",
+			err, agentID, threadID, unackedCount, instances)
 	}
 
 	t.Cleanup(func() { cleanupWorkload(t, ctx, runnerClient, workloadID) })
