@@ -740,28 +740,35 @@ func logMessageDiagnostics(t *testing.T, msg *threadsv1.Message) {
 // agentSenderSet is the set of identities an agent's messages come from: the
 // class, for anything that still posts as one, and every instance of it.
 type agentSenderSet struct {
-	t       *testing.T
-	client  agentsv1.AgentsServiceClient
-	agentID string
-	ids     map[string]struct{}
+	t *testing.T
+	// The organization is not optional: a caller presenting an identity has to
+	// name whose instances it is listing, and without it the listing is refused
+	// rather than scoped to the agent id alone.
+	client         agentsv1.AgentsServiceClient
+	organizationID string
+	agentID        string
+	ids            map[string]struct{}
 }
 
-func newAgentSenderSet(t *testing.T, agentID string) *agentSenderSet {
+func newAgentSenderSet(t *testing.T, organizationID, agentID string) *agentSenderSet {
 	t.Helper()
 	return &agentSenderSet{
-		t:       t,
-		client:  agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr)),
-		agentID: agentID,
-		ids:     map[string]struct{}{agentID: {}},
+		t:              t,
+		client:         agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr)),
+		organizationID: organizationID,
+		agentID:        agentID,
+		ids:            map[string]struct{}{agentID: {}},
 	}
 }
 
 func (s *agentSenderSet) refresh(ctx context.Context) {
 	listed, err := s.client.ListInstances(ctx, &agentsv1.ListInstancesRequest{
-		AgentId:  &s.agentID,
-		PageSize: 50,
+		OrganizationId: s.organizationID,
+		AgentId:        &s.agentID,
+		PageSize:       50,
 	})
 	if err != nil {
+		s.t.Logf("diagnostics: list instances of agent %s: %v", s.agentID, err)
 		return
 	}
 	for _, instance := range listed.GetInstances() {
@@ -781,6 +788,7 @@ func pollForAgentResponse(
 	ctx context.Context,
 	threadsClient threadsv1.ThreadsServiceClient,
 	runnerClient runnerv1.RunnerServiceClient,
+	organizationID string,
 	threadID string,
 	agentID string,
 	labels map[string]string,
@@ -791,7 +799,7 @@ func pollForAgentResponse(
 	// An agent answers as the instance the thread started, not as the class, so
 	// the class id alone matches nothing. The set is rebuilt on each poll: the
 	// instance may not exist yet when the wait begins.
-	senders := newAgentSenderSet(t, agentID)
+	senders := newAgentSenderSet(t, organizationID, agentID)
 	messageMatches := func(msg *threadsv1.Message) bool {
 		if !senders.contains(msg.GetSenderId()) {
 			return false

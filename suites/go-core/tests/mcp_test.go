@@ -124,7 +124,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 6*time.Minute)
 	defer pollCancel()
-	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, expected)
+	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expected)
 	if err != nil {
 		t.Fatalf("wait for agent response: %v", err)
 	}

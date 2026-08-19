@@ -175,7 +175,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 
 	responseCtx, responseCancel := context.WithTimeout(threadsCtx, responseWaitTimeout)
 	defer responseCancel()
-	agentBody, err := pollForAgentResponse(t, responseCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, expectedAgentResponse)
+	agentBody, err := pollForAgentResponse(t, responseCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expectedAgentResponse)
 	if err != nil {
 		t.Fatalf("wait for agent response: %v", err)
 	}

@@ -115,7 +115,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 
 	responseCtx, responseCancel := context.WithTimeout(threadsCtx, agentResponseTimeout)
 	defer responseCancel()
-	if _, err := pollForAgentResponse(t, responseCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, ""); err != nil {
+	if _, err := pollForAgentResponse(t, responseCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, ""); err != nil {
 		t.Fatalf("wait for agent response: %v", err)
 	}
 

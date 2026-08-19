@@ -95,7 +95,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
 	defer pollCancel()
-	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, threadAID, agentAID, labels, sentMessageTime, agynWaitAgentAResponse)
+	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadAID, agentAID, labels, sentMessageTime, agynWaitAgentAResponse)
 	if err != nil {
 		logAgynWaitDiagnostics(t, threadsCtx, threadsClient, orgID, threadAID, agentAID, agentBID)
 		t.Fatalf("wait for agent A agyn --wait response: %v", err)
