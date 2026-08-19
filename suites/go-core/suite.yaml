@@ -32,7 +32,17 @@ run: |
     tags=("smoke")
   fi
 
-  buf generate
+  # Only when the bindings are not already here. They are generated from the
+  # BSR, which rate-limits anonymous callers, and a suite that regenerates on
+  # every run spends that budget re-downloading a schema it already has -- until
+  # the limit is reached and no suite can run at all. .gen is gitignored, so a
+  # fresh checkout has none and generates once; a working copy that already
+  # generated reuses it. Delete .gen to force a refresh after an API change.
+  if [ ! -d .gen/go/agynio/api ]; then
+    buf generate
+  else
+    echo "reusing generated bindings in .gen"
+  fi
 
   tag_args="e2e"
   for tag in "${tags[@]}"; do
