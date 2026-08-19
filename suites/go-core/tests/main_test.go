@@ -767,6 +767,36 @@ func logMessageDiagnostics(t *testing.T, msg *threadsv1.Message) {
 
 // --- Verification Helpers ---
 
+// waitForAgentInstance returns the agent's instance, which is what a thread
+// actually talks to and what a workload belongs to. The thread creates it, so
+// it may not exist the moment the thread does.
+func waitForAgentInstance(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) string {
+	t.Helper()
+	instanceID := ""
+	waitCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	if err := pollUntil(waitCtx, pollInterval, func(ctx context.Context) error {
+		listed, err := client.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+			OrganizationId: organizationID,
+			AgentId:        &agentID,
+			PageSize:       10,
+		})
+		if err != nil {
+			return err
+		}
+		for _, instance := range listed.GetInstances() {
+			if id := instance.GetMeta().GetId(); id != "" {
+				instanceID = id
+				return nil
+			}
+		}
+		return fmt.Errorf("no instance for agent %s yet", agentID)
+	}); err != nil {
+		t.Fatalf("wait for the agent's instance: %v", err)
+	}
+	return instanceID
+}
+
 // agentSenderSet is the set of identities an agent's messages come from: the
 // class, for anything that still posts as one, and every instance of it.
 type agentSenderSet struct {

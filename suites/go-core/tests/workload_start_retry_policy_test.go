@@ -20,8 +20,14 @@ import (
 )
 
 const (
-	startRetryTestTimeout  = 8 * time.Minute
-	failedWorkloadTimeout  = 3 * time.Minute
+	startRetryTestTimeout = 12 * time.Minute
+	// Two consecutive start failures, derived from the thresholds rather than
+	// guessed: a workload is failed once a container has been waiting for
+	// START_GRACE_S (60s), observed on the next WORKLOAD_RECONCILE_INTERVAL
+	// tick (60s), and the second attempt waits BACKOFF_SCHEDULE[0] (10s) after
+	// the first is removed -- 250s in the worst case. The old three minutes
+	// could not cover two of them.
+	failedWorkloadTimeout  = 5 * time.Minute
 	fastRetryTimeout       = 40 * time.Second
 	fastRetryWindow        = 30 * time.Second
 	startRetryPollInterval = time.Second
@@ -108,9 +114,11 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 		}
 	})
 
+	instanceID := waitForAgentInstance(t, threadsCtx, agentsClient, orgID, agentID)
+
 	failureCtx, failureCancel := context.WithTimeout(ctx, failedWorkloadTimeout)
 	defer failureCancel()
-	failedWorkloads, err := waitForFailedWorkloads(failureCtx, runnersClient, threadID, agentID, 2)
+	failedWorkloads, err := waitForFailedWorkloads(failureCtx, runnersClient, instanceID, agentID, 2)
 	if err != nil {
 		t.Fatalf("wait for failed workloads: %v", err)
 	}
@@ -120,10 +128,10 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	logStep("failed_workloads_observed")
 	failedLatest := failedWorkloads[0]
 	failedPrevious := failedWorkloads[1]
-	assertFailedWorkload(t, failedLatest, threadID, agentID)
-	assertFailedWorkload(t, failedPrevious, threadID, agentID)
+	assertFailedWorkload(t, failedLatest, instanceID, agentID)
+	assertFailedWorkload(t, failedPrevious, instanceID, agentID)
 
-	allWorkloads, err := listWorkloadsByThread(ctx, runnersClient, threadID, agentID, nil)
+	allWorkloads, err := listWorkloadsByInstance(ctx, runnersClient, instanceID, nil)
 	if err != nil {
 		t.Fatalf("list workloads by thread: %v", err)
 	}
@@ -152,18 +160,27 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 		t.Fatalf("expected thread status active, got %s", threadResp.GetThread().GetStatus())
 	}
 
+	// Repair what is actually broken. The workload cannot pull the
+	// environment's main container image, and an environment change is the
+	// documented fast-retry trigger: agents publishes environment.updated, the
+	// orchestrator wakes, and the start decision compares the environment's
+	// updated_at against the failed workload's removed_at, so the next tick
+	// retries at consecutive_failures = 1 rather than waiting out the backoff.
 	removedAt := workloadRemovedAt(t, failedLatest)
 	updateCtx, updateCancel := context.WithTimeout(threadsCtx, 30*time.Second)
 	defer updateCancel()
-	validInitImage := codexRuntime
-	if _, err := agentsClient.UpdateAgent(updateCtx, &agentsv1.UpdateAgentRequest{Id: agentID, InitImage: &validInitImage}); err != nil {
-		t.Fatalf("update agent init image: %v", err)
+	validImage := "alpine:3.21"
+	if _, err := agentsClient.UpdateEnvironment(updateCtx, &agentsv1.UpdateEnvironmentRequest{
+		Id:    environmentID,
+		Image: &validImage,
+	}); err != nil {
+		t.Fatalf("update environment image: %v", err)
 	}
 	logStep("valid_image_updated")
 
 	fastRetryCtx, fastRetryCancel := context.WithTimeout(ctx, fastRetryTimeout)
 	defer fastRetryCancel()
-	retryWorkload, err := waitForRetryWorkload(fastRetryCtx, runnersClient, threadID, agentID, removedAt)
+	retryWorkload, err := waitForRetryWorkload(fastRetryCtx, runnersClient, instanceID, removedAt)
 	if err != nil {
 		t.Fatalf("wait for retry workload: %v", err)
 	}
@@ -204,7 +221,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 func waitForFailedWorkloads(
 	ctx context.Context,
 	client runnersv1.RunnersServiceClient,
-	threadID string,
+	instanceID string,
 	agentID string,
 	count int,
 ) ([]*runnersv1.Workload, error) {
@@ -213,7 +230,7 @@ func waitForFailedWorkloads(
 	}
 	var failed []*runnersv1.Workload
 	err := pollUntil(ctx, startRetryPollInterval, func(ctx context.Context) error {
-		workloads, err := listWorkloadsByThread(ctx, client, threadID, agentID, []runnersv1.WorkloadStatus{runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED})
+		workloads, err := listWorkloadsByInstance(ctx, client, instanceID, []runnersv1.WorkloadStatus{runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED})
 		if err != nil {
 			return err
 		}
@@ -225,7 +242,7 @@ func waitForFailedWorkloads(
 			return fmt.Errorf("expected %d failed workloads, got %d", count, len(workloads))
 		}
 		for _, workload := range sortedWorkloads[:count] {
-			if err := validateFailedWorkload(workload, threadID, agentID); err != nil {
+			if err := validateFailedWorkload(workload, instanceID, agentID); err != nil {
 				return err
 			}
 		}
@@ -238,31 +255,32 @@ func waitForFailedWorkloads(
 	return failed, nil
 }
 
-func listWorkloadsByThread(
+// listWorkloadsByInstance reads an instance's workloads.
+//
+// A workload belongs to an agent instance, not to a thread -- an instance
+// serves an inbox drawn from many threads -- so the by-thread listing returned
+// nothing for a thread id and every failure this test waits for was invisible
+// to it.
+func listWorkloadsByInstance(
 	ctx context.Context,
 	client runnersv1.RunnersServiceClient,
-	threadID string,
-	agentID string,
+	instanceID string,
 	statuses []runnersv1.WorkloadStatus,
 ) ([]*runnersv1.Workload, error) {
-	if threadID == "" {
-		return nil, fmt.Errorf("thread id is empty")
-	}
-	if agentID == "" {
-		return nil, fmt.Errorf("agent id is empty")
+	if instanceID == "" {
+		return nil, fmt.Errorf("agent instance id is empty")
 	}
 	pageToken := ""
 	workloads := make([]*runnersv1.Workload, 0, 4)
 	for {
-		resp, err := client.ListWorkloadsByThread(ctx, &runnersv1.ListWorkloadsByThreadRequest{
-			ThreadId:  threadID,
-			AgentId:   &agentID,
-			Statuses:  statuses,
-			PageSize:  20,
-			PageToken: pageToken,
+		resp, err := client.ListWorkloadsByAgentInstance(ctx, &runnersv1.ListWorkloadsByAgentInstanceRequest{
+			AgentInstanceId: instanceID,
+			Statuses:        statuses,
+			PageSize:        20,
+			PageToken:       pageToken,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("list workloads by thread: %w", err)
+			return nil, fmt.Errorf("list workloads by agent instance: %w", err)
 		}
 		workloads = append(workloads, resp.GetWorkloads()...)
 		pageToken = resp.GetNextPageToken()
@@ -276,8 +294,7 @@ func listWorkloadsByThread(
 func waitForRetryWorkload(
 	ctx context.Context,
 	client runnersv1.RunnersServiceClient,
-	threadID string,
-	agentID string,
+	instanceID string,
 	removedAt time.Time,
 ) (*runnersv1.Workload, error) {
 	if removedAt.IsZero() {
@@ -285,7 +302,7 @@ func waitForRetryWorkload(
 	}
 	var retry *runnersv1.Workload
 	err := pollUntil(ctx, startRetryPollInterval, func(ctx context.Context) error {
-		workloads, err := listWorkloadsByThread(ctx, client, threadID, agentID, nil)
+		workloads, err := listWorkloadsByInstance(ctx, client, instanceID, nil)
 		if err != nil {
 			return err
 		}
@@ -436,14 +453,14 @@ func sortedMapKeys(values map[string]struct{}) []string {
 	return keys
 }
 
-func assertFailedWorkload(t *testing.T, workload *runnersv1.Workload, threadID, agentID string) {
+func assertFailedWorkload(t *testing.T, workload *runnersv1.Workload, instanceID, agentID string) {
 	t.Helper()
-	if err := validateFailedWorkload(workload, threadID, agentID); err != nil {
+	if err := validateFailedWorkload(workload, instanceID, agentID); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func validateFailedWorkload(workload *runnersv1.Workload, threadID, agentID string) error {
+func validateFailedWorkload(workload *runnersv1.Workload, instanceID, agentID string) error {
 	if workload == nil {
 		return fmt.Errorf("workload is nil")
 	}
@@ -458,8 +475,10 @@ func validateFailedWorkload(workload *runnersv1.Workload, threadID, agentID stri
 	if workload.GetStatus() != runnersv1.WorkloadStatus_WORKLOAD_STATUS_FAILED {
 		return fmt.Errorf("workload %s status %s is not failed", workloadID, workload.GetStatus())
 	}
-	if workload.GetThreadId() != threadID {
-		return fmt.Errorf("workload %s thread mismatch", workloadID)
+	// The record's thread_id carries the agent instance, which is what a
+	// workload belongs to.
+	if workload.GetThreadId() != instanceID {
+		return fmt.Errorf("workload %s agent instance mismatch", workloadID)
 	}
 	if workload.GetAgentId() != agentID {
 		return fmt.Errorf("workload %s agent mismatch", workloadID)
