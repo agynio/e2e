@@ -109,7 +109,22 @@ func discoveredTag(t *testing.T, ctx context.Context, imageID string) string {
 	return refreshed.GetVersions()[0].GetTag()
 }
 
+// createEnvironment builds one and removes it when the test that asked ends.
 func createEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.CreateEnvironmentRequest) *agentsv1.Environment {
+	t.Helper()
+	return createEnvironmentWithLifetime(t, ctx, client, request, true)
+}
+
+// createLastingEnvironment builds one that outlives the test that asked, for a
+// fixture shared across the run. Tying it to the first caller would delete it
+// out from under everyone after that test, which is what happened: the second
+// expose test was handed an id and told "environment not found".
+func createLastingEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.CreateEnvironmentRequest) *agentsv1.Environment {
+	t.Helper()
+	return createEnvironmentWithLifetime(t, ctx, client, request, false)
+}
+
+func createEnvironmentWithLifetime(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.CreateEnvironmentRequest, removeWithTest bool) *agentsv1.Environment {
 	t.Helper()
 	// An environment has to say who can reach it, and the callers here do not
 	// care -- they are about images and sandboxes. Left unset it is UNSPECIFIED,
@@ -123,6 +138,9 @@ func createEnvironment(t *testing.T, ctx context.Context, client agentsv1.Agents
 		t.Fatalf("CreateEnvironment: %v", err)
 	}
 	environment := created.GetEnvironment()
+	if !removeWithTest {
+		return environment
+	}
 	t.Cleanup(func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -194,7 +212,7 @@ func suiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsS
 	// The workload's main container. The free-form field rather than a catalog
 	// workspace image: the suites need something the agyn binary can run in,
 	// and nothing about the image under test.
-	id := newSuiteEnvironment(t, ctx, client, organizationID, runtime, "alpine:3.21")
+	id := lastingSuiteEnvironment(t, ctx, client, organizationID, runtime, "alpine:3.21")
 	suiteEnvironments[key] = id
 	return id
 }
@@ -203,12 +221,30 @@ func suiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsS
 // shared fixture above calls it once per runtime; a test about an image that
 // cannot be pulled calls it directly, because its whole point is an image the
 // others must not get and it repairs that image in place.
+func lastingSuiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime, workspaceImage string) string {
+	t.Helper()
+	return buildSuiteEnvironment(t, ctx, client, organizationID, runtime, workspaceImage, createLastingEnvironment)
+}
+
 func newSuiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime, workspaceImage string) string {
 	t.Helper()
+	return buildSuiteEnvironment(t, ctx, client, organizationID, runtime, workspaceImage, createEnvironment)
+}
+
+type environmentBuilder func(*testing.T, context.Context, agentsv1.AgentsServiceClient, *agentsv1.CreateEnvironmentRequest) *agentsv1.Environment
+
+func buildSuiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime, workspaceImage string, build environmentBuilder) string {
+	t.Helper()
 	imageID, tag := platformAgentRuntime(t, ctx, organizationID, runtime)
-	environment := createEnvironment(t, ctx, client, &agentsv1.CreateEnvironmentRequest{
-		OrganizationId:       organizationID,
-		Name:                 fmt.Sprintf("e2e-env-%s", uuid.NewString()[:8]),
+	environment := build(t, ctx, client, &agentsv1.CreateEnvironmentRequest{
+		OrganizationId: organizationID,
+		Name:           fmt.Sprintf("e2e-env-%s", uuid.NewString()[:8]),
+		// Every member of the organization, because each test acts as a person
+		// of its own and a shared fixture cannot belong to whichever one
+		// happened to build it. Private extends can_use to role holders alone,
+		// so the second test to reuse this was told "identity lacks can_use on
+		// environment".
+		Availability:         agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
 		RunnerId:             catalogRunnerID(t, ctx),
 		Image:                workspaceImage,
 		AgentRuntimeImageId:  imageID,

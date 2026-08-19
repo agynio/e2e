@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -106,9 +105,20 @@ func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
 	if addEntry.Port != exposePort {
 		t.Fatalf("expose add port mismatch: got %d want %d", addEntry.Port, exposePort)
 	}
-	expectedURL := fmt.Sprintf("http://exposed-%s.agyn:%d", addEntry.ID, exposePort)
-	if addEntry.URL != expectedURL {
-		t.Fatalf("expose add url mismatch: got %q want %q", addEntry.URL, expectedURL)
+	// The readable form, which is what an exposure is for: an agent instance
+	// serves at <instance_suffix>.<nickname>.<org.slug>.agyn, so the address
+	// says whose it is and survives the workload restarting. The opaque
+	// exposed-<id>.agyn this used to assert is the fallback taken only when a
+	// label is missing or is not a valid DNS label -- asserting it meant the
+	// test passed only while the readable form was unavailable.
+	if !strings.HasSuffix(addEntry.URL, fmt.Sprintf(".agyn:%d", exposePort)) {
+		t.Fatalf("expose add url %q does not address the overlay on port %d", addEntry.URL, exposePort)
+	}
+	if strings.Contains(addEntry.URL, "exposed-") {
+		t.Fatalf("expose add fell back to an opaque address: %q", addEntry.URL)
+	}
+	if labels := strings.Count(strings.TrimPrefix(addEntry.URL, "http://"), "."); labels < 3 {
+		t.Fatalf("expose add url %q has fewer labels than <suffix>.<nickname>.<slug>.agyn", addEntry.URL)
 	}
 	if addEntry.Status != exposeStatusActive {
 		t.Fatalf("expose add status mismatch: got %q want %q", addEntry.Status, exposeStatusActive)
@@ -135,13 +145,13 @@ func TestAgentExposeLifecycle_ListAddRemove(t *testing.T) {
 		t.Fatalf("expose list url mismatch: got %q want %q", listedEntry.URL, addEntry.URL)
 	}
 	if err := validateActiveExposureZitiIDs(listedEntry); err != nil {
-		serviceName := exposeServiceName(t, addEntry.URL)
+		serviceName := exposeServiceName(t, addEntry)
 		exposedURL := fmt.Sprintf("http://%s:%d/index.html", serviceName, exposePort)
 		logExposeTimeoutDiagnostics(t, fixture, listedEntry, exposedURL)
 		t.Fatalf("active exposure has invalid Ziti resource ids: %v", err)
 	}
 
-	serviceName := exposeServiceName(t, addEntry.URL)
+	serviceName := exposeServiceName(t, addEntry)
 	exposedURL := fmt.Sprintf("http://%s:%d/index.html", serviceName, exposePort)
 
 	httpClient := createZitiHTTPClient(t)
@@ -317,9 +327,14 @@ exit 1`,
 	return nil
 }
 
+// Where the platform's agyn CLI lands in a workload: the agyn-bin volume is
+// mounted at /agyn and the binaries sit in bin/. It was /agyn-bin/cli/agyn
+// under the layout before that, and every exec here failed on the stat.
+const agynCLIPath = "/agyn/bin/agyn"
+
 func execExposeList(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture) ([]exposeEntry, error) {
 	t.Helper()
-	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "--output", "json", "expose", "list"})
+	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{agynCLIPath, "--output", "json", "expose", "list"})
 	if result.exitCode != 0 {
 		return nil, fmt.Errorf("expose list exit code %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
 	}
@@ -348,7 +363,7 @@ func execExposeEntryByID(t *testing.T, parentCtx context.Context, fixture expose
 
 func execExposeAdd(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, port int) (exposeEntry, error) {
 	t.Helper()
-	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "--output", "json", "expose", "add", fmt.Sprintf("%d", port)})
+	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{agynCLIPath, "--output", "json", "expose", "add", fmt.Sprintf("%d", port)})
 	if result.exitCode != 0 {
 		return exposeEntry{}, fmt.Errorf("expose add exit code %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
 	}
@@ -361,7 +376,7 @@ func execExposeAdd(t *testing.T, ctx context.Context, fixture exposeWorkloadFixt
 
 func execExposeRemove(t *testing.T, ctx context.Context, fixture exposeWorkloadFixture, port int) error {
 	t.Helper()
-	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{"/agyn-bin/cli/agyn", "expose", "remove", fmt.Sprintf("%d", port)})
+	result := execPodCommand(t, ctx, workloadNamespace(t), fixture.podName, fixture.containerName, []string{agynCLIPath, "expose", "remove", fmt.Sprintf("%d", port)})
 	if result.exitCode != 0 {
 		return fmt.Errorf("expose remove exit code %d stdout=%q stderr=%q", result.exitCode, result.stdout, result.stderr)
 	}
@@ -557,31 +572,20 @@ func waitForExposeUnreachable(t *testing.T, ctx context.Context, client *http.Cl
 	})
 }
 
-func exposeServiceName(t *testing.T, exposeURL string) string {
+// exposeServiceName is the OpenZiti service an exposure is dialable as.
+//
+// Not the hostname. The service is named for the exposure and the hostname is
+// the address written into its intercept config -- they coincided only while
+// that address was the opaque exposed-<id>.agyn, so deriving one from the other
+// by trimming ".agyn" started resolving nothing the moment exposures got
+// readable addresses. The SDK dials by service name; a person dials the
+// hostname.
+func exposeServiceName(t *testing.T, exposure exposeEntry) string {
 	t.Helper()
-	parsedURL, err := url.Parse(exposeURL)
-	if err != nil {
-		t.Fatalf("parse expose url: %v", err)
+	if strings.TrimSpace(exposure.ID) == "" {
+		t.Fatal("exposure id missing")
 	}
-	if parsedURL.Scheme != "http" {
-		t.Fatalf("expected expose url scheme http, got %q", parsedURL.Scheme)
-	}
-	if parsedURL.Port() != fmt.Sprintf("%d", exposePort) {
-		t.Fatalf("expected expose url port %d, got %q", exposePort, parsedURL.Port())
-	}
-	host := strings.TrimSpace(parsedURL.Hostname())
-	if host == "" {
-		t.Fatal("expose url host missing")
-	}
-	serviceName := strings.TrimSuffix(host, ".agyn")
-	if serviceName == host {
-		t.Fatalf("expected expose url host to end with .agyn, got %q", host)
-	}
-	serviceName = strings.TrimSpace(serviceName)
-	if serviceName == "" {
-		t.Fatal("expose service name missing")
-	}
-	return serviceName
+	return "exposed-" + exposure.ID
 }
 
 func createZitiHTTPClient(t *testing.T) *http.Client {
@@ -640,8 +644,7 @@ func logExposeTimeoutDiagnostics(t *testing.T, fixture exposeWorkloadFixture, ex
 	diagnosticsCtx, diagnosticsCancel := context.WithTimeout(context.Background(), exposeDiagnosticsTimeout)
 	defer diagnosticsCancel()
 
-	serviceName := fmt.Sprintf("exposed-%s", exposure.ID)
-	logExposureDetails(t, exposure, serviceName, exposedURL)
+	logExposureDetails(t, exposure, exposeServiceName(t, exposure), exposedURL)
 	logExposeWorkloadSidecarLogs(t, diagnosticsCtx, fixture)
 }
 
