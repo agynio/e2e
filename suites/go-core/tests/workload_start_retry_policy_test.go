@@ -69,7 +69,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointCodex, llmv1.Protocol_PROTOCOL_RESPONSES, "simple-hello")
 	logStep("workflow_setup")
 
-	environmentID := suiteEnvironmentOn(t, threadsCtx, agentsClient, orgID, codexRuntime, invalidWorkspaceImage)
+	environmentID := newSuiteEnvironment(t, threadsCtx, agentsClient, orgID, codexRuntime, invalidWorkspaceImage)
 	agent := createAgentWithOptions(t, threadsCtx, agentsClient, agentCreateOptions{
 		Name:           fmt.Sprintf("e2e-start-retry-%s", uuid.NewString()),
 		Nickname:       nicknameFor(fmt.Sprintf("e2e-start-retry-%s", uuid.NewString())),

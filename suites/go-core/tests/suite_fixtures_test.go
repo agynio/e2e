@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -168,17 +169,41 @@ func catalogRunnerID(t *testing.T, ctx context.Context) string {
 // be registered as one first; and the release already publishes exactly these
 // three, so registering a second copy of one is a fixture pretending to be a
 // platform.
+// Shared across the run, keyed on the runtime, because an environment describes
+// how a workload runs rather than anything about one test. Building one per
+// agent left a platform carrying an environment per test per run -- ninety-six
+// of them on a local VM after a day -- which is both litter and load: the
+// Agents service walks every environment on startup, and enough of them stop it
+// coming up at all.
+//
+// Deliberately never deleted. It is created once, outlives the test that first
+// asked for it, and a run's worth of them costs one row per runtime.
+var (
+	suiteEnvironmentsMu sync.Mutex
+	suiteEnvironments   = map[string]string{}
+)
+
 func suiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime string) string {
 	t.Helper()
+	suiteEnvironmentsMu.Lock()
+	defer suiteEnvironmentsMu.Unlock()
+	key := organizationID + "/" + runtime
+	if id, ok := suiteEnvironments[key]; ok {
+		return id
+	}
 	// The workload's main container. The free-form field rather than a catalog
 	// workspace image: the suites need something the agyn binary can run in,
 	// and nothing about the image under test.
-	return suiteEnvironmentOn(t, ctx, client, organizationID, runtime, "alpine:3.21")
+	id := newSuiteEnvironment(t, ctx, client, organizationID, runtime, "alpine:3.21")
+	suiteEnvironments[key] = id
+	return id
 }
 
-// suiteEnvironmentOn is suiteEnvironment with the main container named, for the
-// tests that are about what happens when it cannot be pulled.
-func suiteEnvironmentOn(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime, workspaceImage string) string {
+// newSuiteEnvironment builds one outright, with the main container named. The
+// shared fixture above calls it once per runtime; a test about an image that
+// cannot be pulled calls it directly, because its whole point is an image the
+// others must not get and it repairs that image in place.
+func newSuiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime, workspaceImage string) string {
 	t.Helper()
 	imageID, tag := platformAgentRuntime(t, ctx, organizationID, runtime)
 	environment := createEnvironment(t, ctx, client, &agentsv1.CreateEnvironmentRequest{
