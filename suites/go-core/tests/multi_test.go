@@ -42,11 +42,11 @@ func TestMultipleAgentsSeparateThreads(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentAID)
-		deleteAgent(t, threadsCtx, agentsClient, agentAID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentAID)
 	})
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentBID)
-		deleteAgent(t, threadsCtx, agentsClient, agentBID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentBID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentAID, "LLM_API_TOKEN", token)
 	createAgentEnv(t, threadsCtx, agentsClient, agentBID, "LLM_API_TOKEN", token)
@@ -166,7 +166,7 @@ func TestSameAgentMultipleThreads(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 

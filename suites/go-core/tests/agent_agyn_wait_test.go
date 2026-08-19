@@ -47,7 +47,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentBID)
-		deleteAgent(t, threadsCtx, agentsClient, agentBID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentBID)
 	})
 
 	agentA := createAgent(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModelID, orgID, agnRuntime)
@@ -57,7 +57,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentAID)
-		deleteAgent(t, threadsCtx, agentsClient, agentAID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentAID)
 	})
 
 	threadA := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentAID})

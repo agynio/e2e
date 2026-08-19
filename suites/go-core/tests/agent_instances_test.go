@@ -48,7 +48,7 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_ORIGIN,
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
@@ -89,7 +89,7 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
@@ -122,7 +122,7 @@ func TestThreadMessageReachesTheInstanceInbox(t *testing.T) {
 	agent := createAgent(t, threadsCtx, agentsClient,
 		fmt.Sprintf("e2e-inbox-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	threadID := thread.GetId()
@@ -229,7 +229,7 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 		InstanceIdleTTL: "1s",
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
@@ -297,7 +297,7 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 	agent := createAgent(t, threadsCtx, agentsClient,
 		fmt.Sprintf("e2e-no-idle-ttl-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID, agentID})
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, thread.GetId()) })
@@ -349,7 +349,7 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
 	})
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
+	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, orgID, agentID) })
 
 	thread := createThread(t, threadsCtx, threadsClient, orgID, []string{identityID})
 	threadID := thread.GetId()

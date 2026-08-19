@@ -40,7 +40,7 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, identityCtx, agentsClient, orgID, agentID)
-		deleteAgent(t, identityCtx, agentsClient, agentID)
+		deleteAgent(t, identityCtx, agentsClient, orgID, agentID)
 	})
 	createAgentEnv(t, identityCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 

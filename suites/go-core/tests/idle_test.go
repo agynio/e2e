@@ -52,7 +52,7 @@ func TestWorkloadStopsAfterIdleTimeout(t *testing.T) {
 	agentThreadsCtx := withAgentIdentity(ctx, agentID)
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	agentInfoResp, err := agentsClient.GetAgent(ctx, &agentsv1.GetAgentRequest{Id: agentID})
 	if err != nil {

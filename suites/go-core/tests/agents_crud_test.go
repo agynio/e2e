@@ -66,7 +66,7 @@ func TestAgentsServiceRefusals(t *testing.T) {
 
 	agent := createAgent(t, ctx, client, "e2e-refusal-"+uuid.NewString(), gatewayModelID(t), orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
+	t.Cleanup(func() { deleteAgent(t, ctx, client, orgID, agentID) })
 
 	_, err = client.UpdateAgent(ctx, &agentsv1.UpdateAgentRequest{Id: agentID, InitImage: proto.String("")})
 	requireCode(t, err, codes.InvalidArgument, "UpdateAgent clearing init_image")
@@ -150,7 +150,7 @@ func TestSubResourcesTargetAnMcp(t *testing.T) {
 
 	agent := createAgent(t, ctx, client, "e2e-mcp-target-"+uuid.NewString(), gatewayModelID(t), orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
+	t.Cleanup(func() { deleteAgent(t, ctx, client, orgID, agentID) })
 
 	mcp := createMCP(t, ctx, client, agentID, "e2e_mcp_target", "node:22-slim", "mcp")
 	mcpID := mcp.GetMeta().GetId()
@@ -224,7 +224,7 @@ func TestEnvSourceSwitchesToASecret(t *testing.T) {
 
 	agent := createAgent(t, ctx, client, "e2e-env-source-"+uuid.NewString(), gatewayModelID(t), orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
-	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
+	t.Cleanup(func() { deleteAgent(t, ctx, client, orgID, agentID) })
 
 	env := createAgentEnv(t, ctx, client, agentID, "E2E_ENV_SOURCE", "literal")
 	envID := env.GetMeta().GetId()

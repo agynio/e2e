@@ -47,7 +47,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 		if threadID != "" {
 			archiveThread(t, threadsCtx, threadsClient, threadID)
 		}
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	agentEnv := createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", gatewayToken)
 	agentEnvID := agentEnv.GetMeta().GetId()

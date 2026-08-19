@@ -77,7 +77,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
-		deleteAgent(t, threadsCtx, agentsClient, agentID)
+		deleteAgent(t, threadsCtx, agentsClient, orgID, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
 

@@ -319,11 +319,40 @@ func createAgentWithOptions(t *testing.T, ctx context.Context, client agentsv1.A
 	return agent
 }
 
-func deleteAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, agentID string) {
+// deleteAgent takes the agent's instances with it.
+//
+// An agent with a live instance cannot be deleted -- "agent has non-terminated
+// instances" -- so leaving them behind leaves the agent behind too, and with it
+// every nickname it holds and every instance the Orchestrator keeps trying to
+// start. A suite that runs twice on one platform then fails the second time on
+// a nickname that is already taken.
+func deleteAgent(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) {
 	t.Helper()
-	_, err := client.DeleteAgent(ctx, &agentsv1.DeleteAgentRequest{Id: agentID})
-	if err != nil {
+	deleteAgentInstances(t, ctx, client, organizationID, agentID)
+	if _, err := client.DeleteAgent(ctx, &agentsv1.DeleteAgentRequest{Id: agentID}); err != nil {
 		t.Logf("cleanup: delete agent %s: %v", agentID, err)
+	}
+}
+
+func deleteAgentInstances(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, agentID string) {
+	t.Helper()
+	listed, err := client.ListInstances(ctx, &agentsv1.ListInstancesRequest{
+		OrganizationId: organizationID,
+		AgentId:        &agentID,
+		PageSize:       100,
+	})
+	if err != nil {
+		t.Logf("cleanup: list instances of agent %s: %v", agentID, err)
+		return
+	}
+	for _, instance := range listed.GetInstances() {
+		id := instance.GetMeta().GetId()
+		if id == "" {
+			continue
+		}
+		if _, err := client.DeleteInstance(ctx, &agentsv1.DeleteInstanceRequest{Id: id}); err != nil {
+			t.Logf("cleanup: delete instance %s: %v", id, err)
+		}
 	}
 }
 
