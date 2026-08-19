@@ -12,10 +12,7 @@ import (
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	imagesv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/images/v1"
-	runnersv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/runners/v1"
 	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,75 +27,8 @@ import (
 // image proxy, and pulled by the runner with a credential minted for that one
 // workload. Every step of it used to be a free-form string typed by an operator.
 
-var imagesAddr = envOrDefault("IMAGES_ADDRESS", "images:50051")
-
 // The label the assembler stamps on every sandbox workload.
 const assemblerSandboxIDLabel = "sandbox-id"
-
-// Authoring an image is an owner's write, so every call here carries the
-// identity the Gateway would attach. Without it the service refuses, which is
-// the point of requiring one.
-func asOwner(t *testing.T, ctx context.Context) context.Context {
-	t.Helper()
-	return withIdentity(ctx, fetchGatewayIdentity(t, gatewayAPIToken(t)).IdentityID)
-}
-
-func newImagesClient(t *testing.T) imagesv1.ImagesServiceClient {
-	t.Helper()
-	return imagesv1.NewImagesServiceClient(dialGRPC(t, imagesAddr))
-}
-
-// registerCatalogImage registers a repository the platform itself publishes, so
-// discovery has real tags to find rather than a stub's.
-func registerCatalogImage(t *testing.T, ctx context.Context, organizationID string, imageType imagesv1.ImageType) *imagesv1.Image {
-	t.Helper()
-	return registerCatalogImageFrom(t, ctx, organizationID, imageType,
-		envOrDefault("TEST_PUBLIC_REPOSITORY", "ghcr.io/agynio/devcontainer-go"))
-}
-
-func registerCatalogImageFrom(t *testing.T, ctx context.Context, organizationID string, imageType imagesv1.ImageType, repository string) *imagesv1.Image {
-	t.Helper()
-	client := newImagesClient(t)
-	created, err := client.CreateImage(ctx, &imagesv1.CreateImageRequest{
-		OrganizationId: organizationID,
-		Name:           fmt.Sprintf("e2e-catalog-%s", uuid.NewString()[:8]),
-		Type:           imageType,
-		Repository:     repository,
-		Visibility:     imagesv1.ImageVisibility_IMAGE_VISIBILITY_INTERNAL,
-	})
-	if err != nil {
-		t.Fatalf("CreateImage: %v", err)
-	}
-	image := created.GetImage()
-	t.Cleanup(func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if _, err := client.DeleteImage(asOwner(t, cleanupCtx), &imagesv1.DeleteImageRequest{Id: image.GetMeta().GetId()}); err != nil {
-			t.Logf("cleanup DeleteImage: %v", err)
-		}
-	})
-	return image
-}
-
-// discoveredTag returns a tag the catalog has actually seen. Registration kicks
-// off discovery in the background, so this refreshes rather than assuming.
-func discoveredTag(t *testing.T, ctx context.Context, imageID string) string {
-	t.Helper()
-	refreshed, err := newImagesClient(t).RefreshImage(ctx, &imagesv1.RefreshImageRequest{ImageId: imageID})
-	if err != nil {
-		t.Fatalf("RefreshImage: %v", err)
-	}
-	preferred := envOrDefault("TEST_PUBLIC_TAG", "1.2.0")
-	for _, version := range refreshed.GetVersions() {
-		if version.GetTag() == preferred {
-			return preferred
-		}
-	}
-	if len(refreshed.GetVersions()) == 0 {
-		t.Fatal("discovery found no versions")
-	}
-	return refreshed.GetVersions()[0].GetTag()
-}
 
 // An environment that names catalog records makes the Orchestrator rewrite the
 // reference onto the proxy and attach a credential. Nothing in the pod may name
@@ -393,36 +323,6 @@ func TestAnEnvironmentRejectsAnImageOfTheWrongType(t *testing.T) {
 	}
 }
 
-func createEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, request *agentsv1.CreateEnvironmentRequest) *agentsv1.Environment {
-	t.Helper()
-	// An environment has to say who can reach it, and the callers here do not
-	// care -- they are about images and sandboxes. Left unset it is UNSPECIFIED,
-	// which agents refuses with "availability: must be internal or private", so
-	// the narrower of the two stands in.
-	if request.GetAvailability() == agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_UNSPECIFIED {
-		request.Availability = agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_PRIVATE
-	}
-	created, err := client.CreateEnvironment(ctx, request)
-	if err != nil {
-		t.Fatalf("CreateEnvironment: %v", err)
-	}
-	environment := created.GetEnvironment()
-	t.Cleanup(func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if _, err := client.DeleteEnvironment(asOwner(t, cleanupCtx), &agentsv1.DeleteEnvironmentRequest{Id: environment.GetMeta().GetId()}); err != nil {
-			if status.Code(err) == codes.FailedPrecondition {
-				// A terminated sandbox is collected on a later cycle and still
-				// references the environment until then.
-				t.Logf("cleanup: environment %s outlives its sandbox; it is collected later", environment.GetMeta().GetId())
-			} else {
-				t.Logf("cleanup DeleteEnvironment: %v", err)
-			}
-		}
-	})
-	return environment
-}
-
 func createSandbox(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, environmentID string) *agentsv1.Sandbox {
 	t.Helper()
 	created, err := client.CreateSandbox(ctx, &agentsv1.CreateSandboxRequest{
@@ -525,25 +425,4 @@ func waitForWorkloadPod(t *testing.T, ctx context.Context, sandbox *agentsv1.San
 	}
 	t.Fatalf("no workload pod carrying %s", selector)
 	return nil
-}
-
-// catalogRunnerID picks the organization's runner. An environment must name one,
-// and the local platform provisions exactly one.
-func catalogRunnerID(t *testing.T, ctx context.Context) string {
-	t.Helper()
-	organizationID := gatewayOrganizationID(t)
-	listed, err := runnersv1.NewRunnersServiceClient(dialGRPC(t, runnersAddr)).ListRunners(ctx, &runnersv1.ListRunnersRequest{
-		OrganizationId: &organizationID,
-		PageSize:       100,
-	})
-	if err != nil {
-		t.Fatalf("ListRunners: %v", err)
-	}
-	for _, runner := range listed.GetRunners() {
-		if id := runner.GetMeta().GetId(); id != "" {
-			return id
-		}
-	}
-	t.Fatal("no runner in the organization")
-	return ""
 }

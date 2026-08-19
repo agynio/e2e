@@ -64,7 +64,7 @@ func TestAgentsServiceRefusals(t *testing.T) {
 	})
 	requireCode(t, err, codes.NotFound, "CreateMcp naming an unknown agent")
 
-	agent := createAgent(t, ctx, client, "e2e-refusal-"+uuid.NewString(), gatewayModelID(t), orgID, codexInitImage)
+	agent := createAgent(t, ctx, client, "e2e-refusal-"+uuid.NewString(), gatewayModelID(t), orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
 
@@ -73,7 +73,7 @@ func TestAgentsServiceRefusals(t *testing.T) {
 
 	mcp := createMCP(t, ctx, client, agentID, "e2e_refusal", "node:22-slim", "mcp")
 	mcpID := mcp.GetMeta().GetId()
-	t.Cleanup(func() { deleteMCP(t, ctx, client, mcpID) })
+	t.Cleanup(func() { deleteMCP(t, ctx, client, orgID, mcpID) })
 
 	// The MCP is a child row, so the agent cannot go while it is there.
 	_, err = client.DeleteAgent(ctx, &agentsv1.DeleteAgentRequest{Id: agentID})
@@ -148,13 +148,13 @@ func TestVolumeTTLRoundTrip(t *testing.T) {
 func TestSubResourcesTargetAnMcp(t *testing.T) {
 	ctx, client, orgID := agentsCRUDContext(t)
 
-	agent := createAgent(t, ctx, client, "e2e-mcp-target-"+uuid.NewString(), gatewayModelID(t), orgID, codexInitImage)
+	agent := createAgent(t, ctx, client, "e2e-mcp-target-"+uuid.NewString(), gatewayModelID(t), orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
 
 	mcp := createMCP(t, ctx, client, agentID, "e2e_mcp_target", "node:22-slim", "mcp")
 	mcpID := mcp.GetMeta().GetId()
-	t.Cleanup(func() { deleteMCP(t, ctx, client, mcpID) })
+	t.Cleanup(func() { deleteMCP(t, ctx, client, orgID, mcpID) })
 
 	script, err := client.CreateInitScript(ctx, &agentsv1.CreateInitScriptRequest{
 		Target: &agentsv1.CreateInitScriptRequest_McpId{McpId: mcpID},
@@ -222,7 +222,7 @@ func TestSubResourcesTargetAnMcp(t *testing.T) {
 func TestEnvSourceSwitchesToASecret(t *testing.T) {
 	ctx, client, orgID := agentsCRUDContext(t)
 
-	agent := createAgent(t, ctx, client, "e2e-env-source-"+uuid.NewString(), gatewayModelID(t), orgID, codexInitImage)
+	agent := createAgent(t, ctx, client, "e2e-env-source-"+uuid.NewString(), gatewayModelID(t), orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, ctx, client, agentID) })
 

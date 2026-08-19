@@ -40,23 +40,23 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 	agentBModelID := createWorkflowGatewayModel(t, setup, testLLMEndpointAgn, llmv1.Protocol_PROTOCOL_RESPONSES, "agyn-wait-agent-b-reply")
 
 	agentBNickname := "e2e-agyn-wait-b-fixed"
-	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModelID, orgID, agnInitImage)
+	agentB := createAgentWithNickname(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-b-"+uuid.NewString(), agentBNickname, agentBModelID, orgID, agnRuntime)
 	agentBID := agentB.GetMeta().GetId()
 	if agentBID == "" {
 		t.Fatal("create agent B: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentBID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentBID)
 		deleteAgent(t, threadsCtx, agentsClient, agentBID)
 	})
 
-	agentA := createAgent(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModelID, orgID, agnInitImage)
+	agentA := createAgent(t, threadsCtx, agentsClient, "e2e-agyn-wait-agent-a-"+uuid.NewString(), agentAModelID, orgID, agnRuntime)
 	agentAID := agentA.GetMeta().GetId()
 	if agentAID == "" {
 		t.Fatal("create agent A: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentAID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentAID)
 		deleteAgent(t, threadsCtx, agentsClient, agentAID)
 	})
 

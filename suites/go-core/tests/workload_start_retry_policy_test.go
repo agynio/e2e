@@ -27,8 +27,11 @@ const (
 	startRetryPollInterval = time.Second
 	responseWaitTimeout    = 3 * time.Minute
 	runnerCleanupTimeout   = 90 * time.Second
-	invalidInitImage       = "INVALID_IMAGE_NAME:latest"
-	expectedAgentResponse  = "Hi! How are you?"
+	// The environment's main container, named so the pull fails. The agent
+	// runtime is a catalog record and cannot be given a name like this; the
+	// workspace image is free-form, and is what the pod actually pulls.
+	invalidWorkspaceImage = "INVALID_IMAGE_NAME:latest"
+	expectedAgentResponse = "Hi! How are you?"
 )
 
 var configInvalidContainerReasons = map[string]struct{}{
@@ -60,13 +63,20 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointCodex, llmv1.Protocol_PROTOCOL_RESPONSES, "simple-hello")
 	logStep("workflow_setup")
 
-	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-start-retry-%s", uuid.NewString()), modelID, orgID, invalidInitImage)
+	environmentID := suiteEnvironmentOn(t, threadsCtx, agentsClient, orgID, codexRuntime, invalidWorkspaceImage)
+	agent := createAgentWithOptions(t, threadsCtx, agentsClient, agentCreateOptions{
+		Name:           fmt.Sprintf("e2e-start-retry-%s", uuid.NewString()),
+		Nickname:       nicknameFor(fmt.Sprintf("e2e-start-retry-%s", uuid.NewString())),
+		Model:          modelID,
+		OrganizationID: orgID,
+		EnvironmentID:  environmentID,
+	})
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
 		deleteAgent(t, threadsCtx, agentsClient, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)
@@ -145,7 +155,7 @@ func TestWorkloadStartRetryPolicyFastRetry(t *testing.T) {
 	removedAt := workloadRemovedAt(t, failedLatest)
 	updateCtx, updateCancel := context.WithTimeout(threadsCtx, 30*time.Second)
 	defer updateCancel()
-	validInitImage := codexInitImage
+	validInitImage := codexRuntime
 	if _, err := agentsClient.UpdateAgent(updateCtx, &agentsv1.UpdateAgentRequest{Id: agentID, InitImage: &validInitImage}); err != nil {
 		t.Fatalf("update agent init image: %v", err)
 	}

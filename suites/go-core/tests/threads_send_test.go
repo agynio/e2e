@@ -34,13 +34,13 @@ func TestThreadsSendShell(t *testing.T) {
 	token := setup.Token
 	modelID := createWorkflowGatewayModel(t, setup, testLLMEndpointAgn, llmv1.Protocol_PROTOCOL_RESPONSES, "shell-threads-send")
 
-	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-threads-send-%s", uuid.NewString()), modelID, orgID, agnInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-threads-send-%s", uuid.NewString()), modelID, orgID, agnRuntime)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
 		deleteAgent(t, threadsCtx, agentsClient, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)

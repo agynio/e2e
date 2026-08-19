@@ -33,7 +33,7 @@ func TestNoDuplicateWorkloads(t *testing.T) {
 	orgID := gatewayOrganizationID(t)
 	modelID := gatewayModelID(t)
 
-	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-nodup-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agent := createAgent(t, threadsCtx, agentsClient, fmt.Sprintf("e2e-test-agent-nodup-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")

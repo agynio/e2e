@@ -16,15 +16,15 @@ import (
 )
 
 func TestFullPipelineMessageResponse(t *testing.T) {
-	runFullPipelineMessageResponse(t, testLLMEndpointCodex, codexInitImage, "hello", "Hi! How are you?")
+	runFullPipelineMessageResponse(t, testLLMEndpointCodex, codexRuntime, "hello", "Hi! How are you?")
 }
 
 func TestFullPipelineAgnMessageResponse(t *testing.T) {
-	runFullPipelineMessageResponse(t, testLLMEndpointAgn, agnInitImage, "hi", "Hi! How are you?")
+	runFullPipelineMessageResponse(t, testLLMEndpointAgn, agnRuntime, "hi", "Hi! How are you?")
 }
 
 func TestFullPipelineClaudeMessageResponse(t *testing.T) {
-	runFullPipelineMessageResponseWithProtocol(t, testLLMEndpointClaude, claudeInitImage, llmv1.Protocol_PROTOCOL_ANTHROPIC_MESSAGES, "hello", "Hi! How are you?")
+	runFullPipelineMessageResponseWithProtocol(t, testLLMEndpointClaude, claudeRuntime, llmv1.Protocol_PROTOCOL_ANTHROPIC_MESSAGES, "hello", "Hi! How are you?")
 }
 
 func runFullPipelineMessageResponse(t *testing.T, llmEndpoint, initImage, message, expectedResponse string) pipelineRun {
@@ -58,7 +58,7 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, threadsCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, threadsCtx, agentsClient, orgID, agentID)
 		deleteAgent(t, threadsCtx, agentsClient, agentID)
 	})
 	createAgentEnv(t, threadsCtx, agentsClient, agentID, "LLM_API_TOKEN", token)

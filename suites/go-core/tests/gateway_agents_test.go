@@ -41,8 +41,7 @@ func TestAgentsGateway_CreateAndDeleteAgent(t *testing.T) {
 		Role:           "assistant",
 		Model:          gatewayModelID(t),
 		Configuration:  "{}",
-		Image:          gatewayAgentImage(t),
-		InitImage:      gatewayAgentInitImage(t),
+		EnvironmentId:  suiteEnvironment(t, ctx, agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr)), gatewayOrganizationID(t), codexRuntime),
 		OrganizationId: gatewayOrganizationID(t),
 		Availability:   agentsv1.AgentAvailability_AGENT_AVAILABILITY_INTERNAL,
 	}
@@ -106,8 +105,7 @@ func createGatewayAgent(t *testing.T, client gatewayv1connect.AgentsGatewayClien
 		Role:           "assistant",
 		Model:          gatewayModelID(t),
 		Configuration:  "{}",
-		Image:          gatewayAgentImage(t),
-		InitImage:      gatewayAgentInitImage(t),
+		EnvironmentId:  suiteEnvironment(t, ctx, agentsv1.NewAgentsServiceClient(dialGRPC(t, agentsAddr)), gatewayOrganizationID(t), codexRuntime),
 		OrganizationId: gatewayOrganizationID(t),
 		Availability:   agentsv1.AgentAvailability_AGENT_AVAILABILITY_INTERNAL,
 	}))

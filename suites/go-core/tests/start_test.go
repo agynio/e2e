@@ -33,13 +33,13 @@ func TestWorkloadStartsOnUnackedMessage(t *testing.T) {
 	token := setup.Token
 	modelID := setup.ModelID
 
-	agent := createAgent(t, identityCtx, agentsClient, fmt.Sprintf("e2e-test-agent-start-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+	agent := createAgent(t, identityCtx, agentsClient, fmt.Sprintf("e2e-test-agent-start-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	if agentID == "" {
 		t.Fatal("create agent: missing id")
 	}
 	t.Cleanup(func() {
-		cleanupAgentEnvs(t, identityCtx, agentsClient, agentID)
+		cleanupAgentEnvs(t, identityCtx, agentsClient, orgID, agentID)
 		deleteAgent(t, identityCtx, agentsClient, agentID)
 	})
 	createAgentEnv(t, identityCtx, agentsClient, agentID, "LLM_API_TOKEN", token)

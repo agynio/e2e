@@ -44,7 +44,7 @@ func TestInstanceInheritsOriginThread(t *testing.T) {
 		Nickname:       nicknameFor("e2e-instance-origin"),
 		Model:          modelID,
 		OrganizationID: orgID,
-		InitImage:      codexInitImage,
+		Runtime:        codexRuntime,
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_ORIGIN,
 	})
 	agentID := agent.GetMeta().GetId()
@@ -85,7 +85,7 @@ func TestInstanceWithoutOriginPolicyHasNoDefaultThread(t *testing.T) {
 		Nickname:       nicknameFor("e2e-instance-none"),
 		Model:          modelID,
 		OrganizationID: orgID,
-		InitImage:      codexInitImage,
+		Runtime:        codexRuntime,
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
 	})
 	agentID := agent.GetMeta().GetId()
@@ -120,7 +120,7 @@ func TestThreadMessageReachesTheInstanceInbox(t *testing.T) {
 	modelID := gatewayModelID(t)
 
 	agent := createAgent(t, threadsCtx, agentsClient,
-		fmt.Sprintf("e2e-inbox-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+		fmt.Sprintf("e2e-inbox-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
@@ -225,7 +225,7 @@ func TestIdleInstanceIsPausedByTheSweep(t *testing.T) {
 		Nickname:        nicknameFor("e2e-idle-ttl"),
 		Model:           modelID,
 		OrganizationID:  orgID,
-		InitImage:       codexInitImage,
+		Runtime:         codexRuntime,
 		InstanceIdleTTL: "1s",
 	})
 	agentID := agent.GetMeta().GetId()
@@ -295,7 +295,7 @@ func TestInstanceWithoutIdleTTLIsNotPaused(t *testing.T) {
 	modelID := gatewayModelID(t)
 
 	agent := createAgent(t, threadsCtx, agentsClient,
-		fmt.Sprintf("e2e-no-idle-ttl-%s", uuid.NewString()), modelID, orgID, codexInitImage)
+		fmt.Sprintf("e2e-no-idle-ttl-%s", uuid.NewString()), modelID, orgID, codexRuntime)
 	agentID := agent.GetMeta().GetId()
 	t.Cleanup(func() { deleteAgent(t, threadsCtx, agentsClient, agentID) })
 
@@ -345,7 +345,7 @@ func TestExplicitDefaultThreadOverridesThePolicy(t *testing.T) {
 		Nickname:       nicknameFor("e2e-explicit-thread"),
 		Model:          modelID,
 		OrganizationID: orgID,
-		InitImage:      codexInitImage,
+		Runtime:        codexRuntime,
 		DefaultThread:  agentsv1.AgentDefaultThread_AGENT_DEFAULT_THREAD_NONE,
 	})
 	agentID := agent.GetMeta().GetId()
