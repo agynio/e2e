@@ -30,9 +30,18 @@ import (
 )
 
 const (
-	pollInterval    = 2 * time.Second
-	testTimeout     = 120 * time.Second
-	unackedPageSize = 100
+	pollInterval = 2 * time.Second
+	testTimeout  = 120 * time.Second
+
+	// What the platform actually takes, not what it might: a workload starts in
+	// a few seconds and the LLM turn behind a reply is about one. Sized to fail
+	// while a person still has the context to read it -- a five-minute wait for
+	// a reply that arrived, wrong, in one second turns every such failure into
+	// five minutes of nothing, and three of them exhaust the suite's own
+	// timeout before the rest of it has run.
+	agentReplyTimeout   = 90 * time.Second
+	pipelineTestTimeout = 3 * time.Minute
+	unackedPageSize     = 100
 
 	tracingDiscoverTimeout = 2 * time.Minute
 	tracingSummaryTimeout  = 2 * time.Minute

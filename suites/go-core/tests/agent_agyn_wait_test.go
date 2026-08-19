@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
@@ -22,7 +21,7 @@ const (
 )
 
 func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), pipelineTestTimeout)
 	t.Cleanup(cancel)
 
 	agentsConn := dialGRPC(t, agentsAddr)
@@ -93,7 +92,7 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 		}
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
+	pollCtx, pollCancel := context.WithTimeout(threadsCtx, agentReplyTimeout)
 	defer pollCancel()
 	agentABody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadAID, agentAID, labels, sentMessageTime, agynWaitAgentAResponse)
 	if err != nil {

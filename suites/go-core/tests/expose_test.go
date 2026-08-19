@@ -237,7 +237,7 @@ func setupExposeTestWorkload(t *testing.T) exposeWorkloadFixture {
 	sentMessage := sendMessage(t, threadsCtx, threadsClient, threadID, identityID, "hi")
 	sentMessageTime := messageCreatedAt(t, sentMessage)
 
-	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
+	pollCtx, pollCancel := context.WithTimeout(threadsCtx, agentReplyTimeout)
 	defer pollCancel()
 	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, exposeExpectedResponse)
 	if err != nil {

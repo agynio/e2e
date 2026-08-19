@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	agentsv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/agents/v1"
 	llmv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/llm/v1"
@@ -35,7 +34,7 @@ func runFullPipelineMessageResponse(t *testing.T, llmEndpoint, initImage, messag
 func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initImage string, protocol llmv1.Protocol, message, expectedResponse string) pipelineRun {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), pipelineTestTimeout)
 	t.Cleanup(cancel)
 
 	agentsConn := dialGRPC(t, agentsAddr)
@@ -90,7 +89,7 @@ func runFullPipelineMessageResponseWithProtocol(t *testing.T, llmEndpoint, initI
 		}
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
+	pollCtx, pollCancel := context.WithTimeout(threadsCtx, agentReplyTimeout)
 	defer pollCancel()
 	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expectedResponse)
 	if err != nil {

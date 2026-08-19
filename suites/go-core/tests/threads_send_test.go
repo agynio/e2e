@@ -17,7 +17,7 @@ import (
 )
 
 func TestThreadsSendShell(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), pipelineTestTimeout)
 	t.Cleanup(cancel)
 
 	agentsConn := dialGRPC(t, agentsAddr)
@@ -72,7 +72,7 @@ func TestThreadsSendShell(t *testing.T) {
 		}
 	})
 
-	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
+	pollCtx, pollCancel := context.WithTimeout(threadsCtx, agentReplyTimeout)
 	defer pollCancel()
 	expectedBodies := []string{"Thinking", "Done thinking. Here is my reply."}
 	agentMessages, err := pollForAgentMessages(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expectedBodies)

@@ -122,7 +122,7 @@ func runMCPToolsE2E(t *testing.T, llmEndpoint, initImage string) pipelineRun {
 		t.Fatalf("wait for mcp sidecars: %v", err)
 	}
 
-	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 6*time.Minute)
+	pollCtx, pollCancel := context.WithTimeout(threadsCtx, agentReplyTimeout)
 	defer pollCancel()
 	agentBody, err := pollForAgentResponse(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expected)
 	if err != nil {
