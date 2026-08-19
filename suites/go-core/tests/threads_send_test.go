@@ -75,7 +75,7 @@ func TestThreadsSendShell(t *testing.T) {
 	pollCtx, pollCancel := context.WithTimeout(threadsCtx, 5*time.Minute)
 	defer pollCancel()
 	expectedBodies := []string{"Thinking", "Done thinking. Here is my reply."}
-	agentMessages, err := pollForAgentMessages(t, pollCtx, threadsClient, runnerClient, threadID, agentID, labels, sentMessageTime, expectedBodies)
+	agentMessages, err := pollForAgentMessages(t, pollCtx, threadsClient, runnerClient, orgID, threadID, agentID, labels, sentMessageTime, expectedBodies)
 	if err != nil {
 		logShellToolExecutionDiagnostics(t, startTimeMinNs, orgID, threadID)
 		t.Fatalf("wait for agent messages: %v", err)
@@ -96,6 +96,7 @@ func pollForAgentMessages(
 	ctx context.Context,
 	threadsClient threadsv1.ThreadsServiceClient,
 	runnerClient runnerv1.RunnerServiceClient,
+	organizationID string,
 	threadID string,
 	agentID string,
 	labels map[string]string,
@@ -106,10 +107,13 @@ func pollForAgentMessages(
 	if len(expectedBodies) == 0 {
 		return nil, fmt.Errorf("expected bodies list is empty")
 	}
+	// An agent answers as the instance the thread started, not as the class.
+	senders := newAgentSenderSet(t, organizationID, agentID)
 	var agentMessages []*threadsv1.Message
 	pollCount := 0
 	err := pollUntil(ctx, pollInterval, func(ctx context.Context) error {
 		pollCount++
+		senders.refresh(ctx)
 		logDiagnostics := pollCount%10 == 0
 		resp, err := threadsClient.GetMessages(ctx, &threadsv1.GetMessagesRequest{
 			ThreadId: threadID,
@@ -123,7 +127,7 @@ func pollForAgentMessages(
 			if logDiagnostics {
 				logMessageDiagnostics(t, msg)
 			}
-			if msg.GetSenderId() != agentID {
+			if !senders.contains(msg.GetSenderId()) {
 				continue
 			}
 			createdAt := msg.GetCreatedAt()

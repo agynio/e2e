@@ -110,7 +110,10 @@ func TestAgentAgynCLIWaitToAnotherAgent(t *testing.T) {
 		t.Fatalf("find agent A to agent B thread: %v", err)
 	}
 	t.Cleanup(func() { archiveThread(t, threadsCtx, threadsClient, threadB.GetId()) })
-	if !messagesContainSenderBody(messagesB, agentBID, agynWaitAgentBResponse) {
+	// Agent B answers as its instance, not as the class.
+	sendersB := newAgentSenderSet(t, orgID, agentBID)
+	sendersB.refresh(threadsCtx)
+	if !messagesContainSenderBody(messagesB, sendersB, agynWaitAgentBResponse) {
 		t.Fatalf("agent B reply %q not found in thread %s; messages=%s", agynWaitAgentBResponse, threadB.GetId(), describeThreadMessages(messagesB))
 	}
 }
@@ -180,9 +183,9 @@ func messagesContainBodySubstring(messages []*threadsv1.Message, substring strin
 	return false
 }
 
-func messagesContainSenderBody(messages []*threadsv1.Message, senderID, body string) bool {
+func messagesContainSenderBody(messages []*threadsv1.Message, senders *agentSenderSet, body string) bool {
 	for _, msg := range messages {
-		if msg.GetSenderId() == senderID && msg.GetBody() == body {
+		if senders.contains(msg.GetSenderId()) && msg.GetBody() == body {
 			return true
 		}
 	}
