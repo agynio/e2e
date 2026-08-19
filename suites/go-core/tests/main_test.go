@@ -243,6 +243,7 @@ func createAgentWithIdleTimeout(t *testing.T, ctx context.Context, client agents
 	t.Helper()
 	return createAgentWithOptions(t, ctx, client, agentCreateOptions{
 		Name:           name,
+		Nickname:       nicknameFor(name),
 		Model:          model,
 		OrganizationID: organizationID,
 		Runtime:        runtime,
