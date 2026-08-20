@@ -21,10 +21,13 @@ func TestAgentSimpleHelloProducesTrace(t *testing.T) {
 		"llm.call":           1,
 	}, 2, result.threadID)
 
+	// agyn.message.kind is deliberately absent. It was set by agn, on the
+	// invocation.message it used to record for itself -- and a turn now carries
+	// one such span, the one agynd records for the message it fed the CLI. What
+	// that span asserts is what the platform knows about the message.
 	assertSpanAttributes(t, ctx, tracingClient, traceID, "invocation.message", map[string]string{
 		"agyn.message.text": result.messageText,
 		"agyn.message.role": "user",
-		"agyn.message.kind": "source",
 	})
 	llmAttrs := assertSpanAttributes(t, ctx, tracingClient, traceID, "llm.call", map[string]string{
 		"gen_ai.system":          "openai",
