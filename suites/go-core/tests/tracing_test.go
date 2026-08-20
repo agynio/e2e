@@ -46,12 +46,17 @@ func TestAgentMCPToolsProducesTrace(t *testing.T) {
 	ctx := context.Background()
 	tracingClient := newTracingClient(t)
 	traceID := discoverTraceID(t, ctx, tracingClient, result.organizationID, result.threadID, result.startTimeMinNs, result.messageText)
+	// Three model turns for two tools, which is what the scripted conversation
+	// asks for: a turn that calls create_entities, a turn that calls
+	// list_directory once it has the result, and a turn that answers. Two was
+	// the count from before agn's spans joined the cycle's trace, when one of
+	// the three was landing somewhere else.
 	expectedCounts := map[string]int64{
 		"invocation.message": 1,
-		"llm.call":           2,
+		"llm.call":           3,
 		"tool.execution":     2,
 	}
-	assertTraceSummary(t, ctx, tracingClient, traceID, expectedCounts, 5, result.threadID)
+	assertTraceSummary(t, ctx, tracingClient, traceID, expectedCounts, 6, result.threadID)
 
 	spans := traceSpans(t, ctx, tracingClient, traceID)
 	foundCreate := false
