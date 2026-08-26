@@ -176,6 +176,7 @@ resource "agyn_environment" "test" {
 	  workspace_image_tag     = "latest"
 	  agent_runtime_image_id  = agyn_image.runtime.id
 	  agent_runtime_image_tag = "latest"
+	  availability            = "internal"
 }
 
 resource "agyn_agent" "test" {
@@ -233,6 +234,7 @@ resource "agyn_environment" "test" {
 	  workspace_image_tag     = "latest"
 	  agent_runtime_image_id  = agyn_image.runtime.id
 	  agent_runtime_image_tag = "latest"
+	  availability            = "internal"
 }
 
 resource "agyn_agent" "test" {
@@ -288,6 +290,7 @@ resource "agyn_environment" "test" {
 	  workspace_image_tag     = "latest"
 	  agent_runtime_image_id  = agyn_image.runtime.id
 	  agent_runtime_image_tag = "latest"
+	  availability            = "internal"
 }
 
 resource "agyn_agent" "test" {
