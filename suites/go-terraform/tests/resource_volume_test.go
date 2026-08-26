@@ -17,13 +17,12 @@ func TestAccAgynVolume_basic(t *testing.T) {
 		PreCheck:          func() { testAccOrganizationPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAgynVolumeConfig(t, organizationName, "Terraform acceptance volume", "/data", "1Gi"),
+				Config: testAccAgynVolumeConfig(t, organizationName, "tf-acc-volume", "/data", "1Gi"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("agyn_volume.test", "persistent", "true"),
+					resource.TestCheckResourceAttr("agyn_volume.test", "name", "tf-acc-volume"),
 					resource.TestCheckResourceAttr("agyn_volume.test", "mount_path", "/data"),
 					resource.TestCheckResourceAttr("agyn_volume.test", "size", "1Gi"),
-					resource.TestCheckResourceAttr("agyn_volume.test", "description", "Terraform acceptance volume"),
-					resource.TestCheckResourceAttrSet("agyn_volume.test", "organization_id"),
+					resource.TestCheckResourceAttrPair("agyn_volume.test", "environment_id", "agyn_environment.test", "id"),
 					resource.TestCheckResourceAttrSet("agyn_volume.test", "id"),
 				),
 			},
@@ -38,24 +37,18 @@ func TestAccAgynVolume_update(t *testing.T) {
 		PreCheck:          func() { testAccOrganizationPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAgynVolumeConfig(t, organizationName, "Terraform acceptance volume", "/data", "1Gi"),
+				Config: testAccAgynVolumeConfig(t, organizationName, "tf-acc-volume", "/data", "1Gi"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("agyn_volume.test", "persistent", "true"),
 					resource.TestCheckResourceAttr("agyn_volume.test", "mount_path", "/data"),
 					resource.TestCheckResourceAttr("agyn_volume.test", "size", "1Gi"),
-					resource.TestCheckResourceAttr("agyn_volume.test", "description", "Terraform acceptance volume"),
-					resource.TestCheckResourceAttrSet("agyn_volume.test", "organization_id"),
-					resource.TestCheckResourceAttrSet("agyn_volume.test", "id"),
 				),
 			},
 			{
-				Config: testAccAgynVolumeConfig(t, organizationName, "Terraform acceptance volume updated", "/data-updated", "2Gi"),
+				Config: testAccAgynVolumeConfig(t, organizationName, "tf-acc-volume", "/data-updated", "2Gi"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("agyn_volume.test", "persistent", "true"),
+					resource.TestCheckResourceAttr("agyn_volume.test", "name", "tf-acc-volume"),
 					resource.TestCheckResourceAttr("agyn_volume.test", "mount_path", "/data-updated"),
 					resource.TestCheckResourceAttr("agyn_volume.test", "size", "2Gi"),
-					resource.TestCheckResourceAttr("agyn_volume.test", "description", "Terraform acceptance volume updated"),
-					resource.TestCheckResourceAttrSet("agyn_volume.test", "organization_id"),
 					resource.TestCheckResourceAttrSet("agyn_volume.test", "id"),
 				),
 			},
@@ -70,19 +63,20 @@ func TestAccAgynVolume_import(t *testing.T) {
 		PreCheck:          func() { testAccOrganizationPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAgynVolumeConfig(t, organizationName, "Terraform acceptance volume", "/data", "1Gi"),
+				Config: testAccAgynVolumeConfig(t, organizationName, "tf-acc-volume", "/data", "1Gi"),
 			},
 			{
-				ResourceName:            "agyn_volume.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"organization_id"},
+				ResourceName:      "agyn_volume.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-func testAccAgynVolumeConfig(t *testing.T, organizationName, description, mountPath, size string) string {
+// A volume belongs to an environment (or an MCP), so the environment the agent
+// fixtures already build is what this one declares itself against.
+func testAccAgynVolumeConfig(t *testing.T, organizationName, name, mountPath, size string) string {
 	return fmt.Sprintf(`
 %s
 
@@ -90,12 +84,15 @@ resource "agyn_organization" "test" {
 	  name = %q
 }
 
+%s
+
 resource "agyn_volume" "test" {
-	  organization_id = agyn_organization.test.id
-	  persistent  = true
-	  mount_path  = %q
-	  size        = %q
-	  description = %q
+	  environment_id = agyn_environment.test.id
+	  name           = %q
+	  mount_path     = %q
+	  size           = %q
 }
-`, testAccProviderConfig(t), organizationName, mountPath, size, description)
+`, testAccProviderConfig(t), organizationName,
+		testAccAgynAgentResourceBlock(t, "agyn_organization.test.id", "tf-acc-volume-agent", "Terraform acceptance agent", "Terraform acceptance role"),
+		name, mountPath, size)
 }

@@ -47,10 +47,17 @@ run: |
   terraform_version="${TERRAFORM_VERSION:-1.6.6}"
   terraform_dir="${PWD}/.terraform-bin"
   terraform_path="${terraform_dir}/terraform"
+  # CI runners are amd64 and a local VM on Apple silicon is not, and a binary
+  # for the wrong one fails as "exec format error" once the tests call it.
+  case "$(uname -m)" in
+    x86_64|amd64) terraform_arch="amd64" ;;
+    aarch64|arm64) terraform_arch="arm64" ;;
+    *) echo "unsupported architecture $(uname -m) for terraform" >&2; exit 1 ;;
+  esac
   if [ ! -x "${terraform_path}" ]; then
     mkdir -p "${terraform_dir}"
     terraform_zip="${terraform_dir}/terraform.zip"
-    terraform_url="https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_amd64.zip"
+    terraform_url="https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_${terraform_arch}.zip"
     if command -v curl >/dev/null 2>&1; then
       curl -sSL -o "${terraform_zip}" "${terraform_url}"
     elif command -v wget >/dev/null 2>&1; then
