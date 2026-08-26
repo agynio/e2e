@@ -105,7 +105,7 @@ func resolveOrCreateProvider(t *testing.T, organizationID string) (string, error
 			Meta struct {
 				ID string `json:"id"`
 			} `json:"meta"`
-		} `json:"llmProviders"`
+		} `json:"providers"`
 	}
 	if err := gatewayCall(t, "LLMGateway/ListLLMProviders", map[string]any{
 		"organizationId": organizationID,
@@ -126,7 +126,7 @@ func resolveOrCreateProvider(t *testing.T, organizationID string) (string, error
 			Meta struct {
 				ID string `json:"id"`
 			} `json:"meta"`
-		} `json:"llmProvider"`
+		} `json:"provider"`
 	}
 	stamp := time.Now().UnixNano()
 	if err := gatewayCall(t, "LLMGateway/CreateLLMProvider", map[string]any{
