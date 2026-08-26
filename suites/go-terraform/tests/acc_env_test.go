@@ -11,6 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
+// An agent's own image is deprecated and nothing reads it -- an agent runs the
+// runtime image its environment names -- but the field is still required on the
+// resource, so the suite supplies the runtime the environments here register.
+const accAgentImage = "ghcr.io/agynio/agyn-runtime-codex:latest"
+
 type accEnv struct {
 	BaseURL    string
 	ModelID    string
@@ -23,7 +28,7 @@ func testAccEnv(t *testing.T) accEnv {
 	return accEnv{
 		BaseURL:    requireEnv(t, "AGYN_BASE_URL"),
 		ModelID:    requireModelID(t),
-		AgentImage: requireEnv(t, "AGYN_AGENT_IMAGE"),
+		AgentImage: accAgentImage,
 	}
 }
 
