@@ -410,10 +410,14 @@ EOF
       exec_env+=("AGYN_BASE_URL=${gateway_internal_url}")
     fi
 
+    # The proxy is reached the same way the gateway is: by service, from inside
+    # the cluster. The ingress host answers on the VM, not in this pod, where
+    # llm.agyn.dev resolves to 127.0.0.1 and nothing listens on the host port.
+    llm_proxy_internal_url="http://llm-proxy.${namespace}.svc.cluster.local:8080"
     if [ -n "${LLM_PROXY_URL:-}" ]; then
       exec_env+=("LLM_PROXY_URL=${LLM_PROXY_URL}")
     else
-      exec_env+=("LLM_PROXY_URL=https://llm.${e2e_domain}:${e2e_ingress_port}")
+      exec_env+=("LLM_PROXY_URL=${llm_proxy_internal_url}")
     fi
 
     forwarded_env_names=(

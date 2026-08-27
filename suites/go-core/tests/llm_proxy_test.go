@@ -34,6 +34,9 @@ const (
 )
 
 func TestLLMProxyURLDefaultUsesIngress(t *testing.T) {
+	// The default is only reachable with no explicit URL in the way, and the
+	// suite always runs with one set.
+	t.Setenv("LLM_PROXY_URL", "")
 	t.Setenv("E2E_DOMAIN", "e2e.agyn.dev")
 	t.Setenv("E2E_INGRESS_PORT", "30443")
 
