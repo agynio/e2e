@@ -330,14 +330,20 @@ func TestResolveWithoutAnAttachmentIsNotFound(t *testing.T) {
 
 func createPlatformEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, identityID, organizationID string) string {
 	t.Helper()
+	runtimeImageID, runtimeImageTag := platformAgentRuntime(t, ctx, organizationID, agnRuntime)
 	created, err := client.CreateEnvironment(ctx, &agentsv1.CreateEnvironmentRequest{
 		OrganizationId: organizationID,
 		Name:           "e2e-platform-" + uuid.NewString(),
 		RunnerId:       uuid.NewString(),
 		// Deprecated inline image rather than a catalog entry: these tests never
 		// start a workload, and registering an image would test the catalog.
-		Image:        environmentPlaceholderImage,
-		Availability: agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
+		Image: environmentPlaceholderImage,
+		// The runtime image is not optional even here. An environment names the
+		// agent CLI an agent runs, so one without it can host no agent at all --
+		// CreateAgent refuses it long before anything would start a workload.
+		AgentRuntimeImageId:  runtimeImageID,
+		AgentRuntimeImageTag: runtimeImageTag,
+		Availability:         agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
 		// Left unset on purpose: an environment that predates native mode
 		// carries no mode at all and must read as platform.
 	})

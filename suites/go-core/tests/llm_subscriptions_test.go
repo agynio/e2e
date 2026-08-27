@@ -90,15 +90,21 @@ func setupSubscriptionFixture(t *testing.T, ctx context.Context) subscriptionFix
 
 func createSubscriptionEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, identityID, organizationID string) string {
 	t.Helper()
+	runtimeImageID, runtimeImageTag := platformAgentRuntime(t, ctx, organizationID, agnRuntime)
 	created, err := client.CreateEnvironment(ctx, &agentsv1.CreateEnvironmentRequest{
 		OrganizationId: organizationID,
 		Name:           "e2e-native-" + uuid.NewString(),
 		RunnerId:       uuid.NewString(),
 		// Deprecated inline image rather than a catalog entry: these tests never
 		// start a workload, and registering an image would test the catalog.
-		Image:        environmentPlaceholderImage,
-		Availability: agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
-		LlmMode:      agentsv1.LLMMode_LLM_MODE_NATIVE,
+		Image: environmentPlaceholderImage,
+		// The runtime image is not optional even here. An environment names the
+		// agent CLI an agent runs, so one without it can host no agent at all --
+		// CreateAgent refuses it long before anything would start a workload.
+		AgentRuntimeImageId:  runtimeImageID,
+		AgentRuntimeImageTag: runtimeImageTag,
+		Availability:         agentsv1.EnvironmentAvailability_ENVIRONMENT_AVAILABILITY_INTERNAL,
+		LlmMode:              agentsv1.LLMMode_LLM_MODE_NATIVE,
 		// The allowlist is the environment's, and the proxy reads it through
 		// ResolveSubscription rather than calling Agents on the request path.
 		LlmAllowedModels: []string{"claude-sonnet-4-6"},
