@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -845,6 +846,16 @@ func (s *agentSenderSet) refresh(ctx context.Context) {
 			s.ids[id] = struct{}{}
 		}
 	}
+}
+
+// all is every id this agent may appear under -- the class and each instance.
+func (s *agentSenderSet) all() []string {
+	ids := make([]string, 0, len(s.ids))
+	for id := range s.ids {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 func (s *agentSenderSet) contains(senderID string) bool {
