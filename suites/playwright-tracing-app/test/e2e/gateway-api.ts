@@ -66,6 +66,7 @@ type CreateAgentOptions = {
 };
 
 type CreateAgentPayload = Omit<CreateAgentOptions, 'description' | 'role' | 'configuration'> & {
+  nickname: string;
   availability: AgentAvailability.INTERNAL;
   finalMessage: AgentFinalMessage.DEFAULT_THREAD;
   description: string;
@@ -395,6 +396,16 @@ export async function createTestEnvironment(
   return environmentId;
 }
 
+// A handle is a slug: lower case, with anything else folded to a dash, and
+// short enough to leave room for a suffix that keeps it unique per run.
+function nicknameFor(name: string): string {
+  const maxNickname = 32;
+  const suffix = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+  const stem = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  const trimmed = stem.slice(0, maxNickname - suffix.length - 1).replace(/^-+|-+$/g, '');
+  return `${trimmed}-${suffix}`;
+}
+
 export function buildCreateAgentPayload(params: CreateAgentOptions): CreateAgentPayload {
   const environmentId = params.environmentId.trim();
   if (!environmentId) {
@@ -403,6 +414,10 @@ export function buildCreateAgentPayload(params: CreateAgentOptions): CreateAgent
   return {
     organizationId: params.organizationId,
     name: params.name,
+    // An instance is created under the agent's handle, so an agent without a
+    // nickname cannot be put in a thread: CreateThread fails on the instance
+    // with "agent nickname is required to create an instance".
+    nickname: nicknameFor(params.name),
     model: params.model,
     image: params.image,
     environmentId,
