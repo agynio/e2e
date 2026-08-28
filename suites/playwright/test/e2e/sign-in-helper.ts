@@ -44,6 +44,14 @@ function isTimeoutError(error: unknown): error is Error {
   return error instanceof Error && error.name === 'TimeoutError';
 }
 
+// The caller may give up on the sign-in and close the context while this wait
+// is still pending -- which is what happens when the provider has no account
+// for the address and the test means to skip. The navigation can no longer be
+// observed, and that is the answer, not a failure to report over the real one.
+function isClosedError(error: unknown): boolean {
+  return error instanceof Error && /has been closed|Target page, context or browser/.test(error.message);
+}
+
 async function waitForLocator(locator: Locator, timeout: number): Promise<boolean> {
   try {
     await locator.waitFor({ timeout });
@@ -211,7 +219,7 @@ export async function signInViaOidc(page: Page, email?: string, options: SignInO
 
   if (initialState === 'login') {
     const callbackPromise = page.waitForURL(/\/callback/, { timeout: 60000 }).catch((error) => {
-      if (isTimeoutError(error)) {
+      if (isTimeoutError(error) || isClosedError(error)) {
         return null;
       }
       throw error;

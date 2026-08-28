@@ -59,6 +59,7 @@ type UserWire = {
 type MembershipWire = {
   id?: string;
   identityId?: string;
+  organizationId?: string;
   role?: string | number;
   status?: string | number;
 };
@@ -141,6 +142,7 @@ type CreateMembershipResponseWire = {
 
 type ListMembersResponseWire = {
   memberships?: MembershipWire[];
+  nextPageToken?: string;
 };
 
 type UpdateMembershipRoleResponseWire = {
@@ -557,17 +559,45 @@ export async function listAccessibleOrganizations(page: Page): Promise<Organizat
   return response.organizations ?? [];
 }
 
+// The console decides which organizations it will show from the caller's
+// active memberships, and falls back to the first one alphabetically when the
+// persisted choice is not among them. Waiting for the organization to be
+// listed is a weaker condition than that: an organization is accessible before
+// the membership that makes it visible has landed, and the console then
+// silently opens a different one.
 async function waitForOrganization(page: Page, organizationId: string): Promise<void> {
   const timeoutMs = 10000;
   const start = Date.now();
+  let lastSeen = 'none';
   while (Date.now() - start < timeoutMs) {
-    const organizations = await listAccessibleOrganizations(page);
-    if (organizations.some((org) => org.id === organizationId)) {
+    const memberships = await listMyActiveMemberships(page);
+    if (memberships.some((membership) => membership.organizationId === organizationId)) {
       return;
     }
+    lastSeen = memberships.map((membership) => membership.organizationId).join(', ') || 'none';
     await page.waitForTimeout(500);
   }
-  throw new Error(`Organization ${organizationId} did not appear in time.`);
+  throw new Error(
+    `Organization ${organizationId} did not become an active membership in time; saw ${lastSeen}.`,
+  );
+}
+
+// Every page: an account that has run these specs before holds hundreds of
+// memberships, and the one just created is not reliably on the first page.
+async function listMyActiveMemberships(page: Page): Promise<MembershipWire[]> {
+  const memberships: MembershipWire[] = [];
+  let pageToken = '';
+  do {
+    const response = await postConnect<ListMembersResponseWire>(
+      page,
+      ORGS_GATEWAY_PATH,
+      'ListMyMemberships',
+      { status: 'MEMBERSHIP_STATUS_ACTIVE', pageSize: 200, pageToken },
+    );
+    memberships.push(...(response.memberships ?? []));
+    pageToken = response.nextPageToken ?? '';
+  } while (pageToken);
+  return memberships;
 }
 
 export async function setSelectedOrganization(page: Page, organizationId: string): Promise<void> {
