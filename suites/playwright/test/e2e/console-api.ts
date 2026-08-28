@@ -44,11 +44,6 @@ const METERING_GRPC_URL = process.env.METERING_GRPC_URL ?? 'http://metering:5005
 const meteringTransport = createGrpcTransport({ baseUrl: METERING_GRPC_URL });
 const meteringClient = createClient(MeteringService, meteringTransport);
 
-type OrganizationWire = {
-  id: string;
-  name: string;
-};
-
 type UserWire = {
   meta?: { id?: string };
   email?: string;
@@ -113,10 +108,6 @@ type CreateThreadResponseWire = {
 
 type SendMessageResponseWire = {
   message?: MessageWire;
-};
-
-type ListAccessibleOrganizationsResponseWire = {
-  organizations?: OrganizationWire[];
 };
 
 type CreateUserResponseWire = {
@@ -544,21 +535,6 @@ export async function createOrganization(page: Page, name: string): Promise<stri
   return response.organization.id;
 }
 
-export async function listAccessibleOrganizations(page: Page): Promise<OrganizationWire[]> {
-  const me = await getMe(page);
-  const identityId = me.user?.meta?.id;
-  if (!identityId) {
-    throw new Error('GetMe response missing identity id for ListAccessibleOrganizations.');
-  }
-  const response = await postConnect<ListAccessibleOrganizationsResponseWire>(
-    page,
-    ORGS_GATEWAY_PATH,
-    'ListAccessibleOrganizations',
-    { identityId },
-  );
-  return response.organizations ?? [];
-}
-
 // The console decides which organizations it will show from the caller's
 // active memberships, and falls back to the first one alphabetically when the
 // persisted choice is not among them. Waiting for the organization to be
@@ -574,7 +550,10 @@ async function waitForOrganization(page: Page, organizationId: string): Promise<
     if (memberships.some((membership) => membership.organizationId === organizationId)) {
       return;
     }
-    lastSeen = memberships.map((membership) => membership.organizationId).join(', ') || 'none';
+    // A count and a sample: an account that has run these specs before holds
+    // hundreds, and naming them all buries the one that matters.
+    const ids = memberships.map((membership) => membership.organizationId);
+    lastSeen = ids.length === 0 ? 'none' : `${ids.length}: ${ids.slice(0, 5).join(', ')}...`;
     await page.waitForTimeout(500);
   }
   throw new Error(
@@ -608,6 +587,17 @@ export async function setSelectedOrganization(page: Page, organizationId: string
       JSON.stringify({ mode: 'organization', organizationId: orgId }),
     );
     window.localStorage.removeItem('console.selectedOrganization');
+    // An organization holding no agent and no sandbox opens the setup wizard
+    // instead of its Overview, and the wizard takes the page title's place --
+    // so a spec about the ordinary sections lands in onboarding and finds none
+    // of them. These specs make an empty organization and are not about that
+    // flow, so they skip it the way the button does.
+    const key = 'console.setupSkipped';
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(key) ?? '[]');
+    const skipped = Array.isArray(parsed) ? (parsed as string[]) : [];
+    if (!skipped.includes(orgId)) {
+      window.localStorage.setItem(key, JSON.stringify([...skipped, orgId]));
+    }
   }, organizationId);
 }
 

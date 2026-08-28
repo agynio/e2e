@@ -74,8 +74,11 @@ test.describe('organization-images', { tag: ['@svc_console'] }, () => {
     // all.
     const workspaceImage = page.getByTestId('organization-environments-create-workspace-image');
     await workspaceImage.click();
+    // Typing the whole name is the selection: the field resolves a complete
+    // name to the image behind it, and the option list closes as it does. An
+    // option to click afterwards is not there to be clicked.
     await workspaceImage.fill(name);
-    await page.getByRole('option', { name: new RegExp(name) }).click();
+    await expect(workspaceImage).toHaveValue(name);
 
     // The newest version is preselected, so the common case needs no choice.
     const version = page.getByTestId('organization-environments-create-workspace-version');
@@ -86,7 +89,13 @@ test.describe('organization-images', { tag: ['@svc_console'] }, () => {
     await page.getByRole('option').first().click();
 
     await page.getByTestId('organization-environments-create-submit').click();
-    await expect(page.getByText(`e2e-env-${now}`)).toBeVisible();
+    // The dialog closing is what says the form was accepted; a required field
+    // it is still missing keeps it open and says so in place, which is worth
+    // reading rather than waiting out a row that was never going to appear.
+    await expect(page.getByTestId('organization-environments-create-dialog')).toBeHidden({ timeout: 15000 });
+    await expect(
+      page.getByTestId('organization-environment-row').filter({ hasText: `e2e-env-${now}` }),
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('offers no free-form image field on an environment', async ({ page }) => {

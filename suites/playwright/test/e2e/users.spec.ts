@@ -11,8 +11,17 @@ test.describe('users', { tag: ['@svc_console'] }, () => {
     }
 
     await page.goto('/users');
+    // The directory arrives a page at a time and the box filters what has
+    // arrived, so on an installation holding hundreds of users the one being
+    // looked for has to be fetched before it can be found.
+    await page.getByTestId('list-search').fill(userLabel);
     const userRow = page.getByTestId('users-row').filter({ hasText: userLabel });
-    await expect(userRow).toBeVisible({ timeout: 15000 });
+    const loadMore = page.getByTestId('load-more');
+    while ((await userRow.count()) === 0 && (await loadMore.count()) > 0) {
+      await loadMore.click();
+      await expect(loadMore).toBeEnabled({ timeout: 15000 });
+    }
+    await expect(userRow.first()).toBeVisible({ timeout: 15000 });
     await argosScreenshot(page, 'users-list');
   });
 

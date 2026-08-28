@@ -65,9 +65,12 @@ test.describe('organization-egress-rules', { tag: ['@svc_console'] }, () => {
     await page.getByRole('option', { name: 'Bearer' }).click();
     await page.getByTestId('egress-rules-create-header-source').click();
     await page.getByRole('option', { name: 'Secret' }).click();
-    await page.getByTestId('egress-rules-create-header-secret-search').fill(secretName);
+    // The secret is picked from a popover: its search box only exists once the
+    // popover is open, and what the search narrows are buttons rather than the
+    // options a select would have offered.
     await page.getByTestId('egress-rules-create-header-secret').click();
-    await page.getByRole('option', { name: secretName }).click();
+    await page.getByTestId('egress-rules-create-header-secret-search').fill(secretName);
+    await page.getByRole('button', { name: secretName, exact: true }).click();
     await page.getByTestId('egress-rules-create-submit').click();
     await expect(page.getByTestId('egress-rule-row').filter({ hasText: uiRuleName })).toBeVisible({ timeout: 15000 });
 
