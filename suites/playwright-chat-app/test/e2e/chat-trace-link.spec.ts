@@ -223,7 +223,9 @@ async function openTraceFromChat(
     await callbackPromise;
   }
 
-  const runUrlPattern = new RegExp(`/${params.organizationId}/runs/[0-9a-f]{32}(\\?.*)?$`);
+  // The run screen is not organization-scoped: /:orgId/runs/:runId is a legacy
+  // route the tracing app redirects away from, so the tab never settles there.
+  const runUrlPattern = new RegExp(`/runs/[0-9a-f]{32}(\\?.*)?$`);
   const reachedRunPage = await waitForRunPageFromMessageDeepLink(tracePage, {
     messageId: params.messageId,
     organizationId: params.organizationId,
