@@ -87,11 +87,16 @@ async function waitForUsageData(page: Page, organizationId: string): Promise<voi
 
 async function seedUsageRecords(organizationId: string): Promise<void> {
   const timestamp = new Date();
+  // Tokens are split by what they were spent on -- a model the organization
+  // configured, or a subscription it runs on -- and the LLM tab reads each
+  // apart. Seeded without saying which, these count as neither and the tab
+  // reads empty however much was recorded.
+  const model = { resource: 'model' };
   await recordUsage(organizationId, [
-    { labels: { kind: 'input' }, unit: Unit.TOKENS, value: 1200n * MICRO_UNITS, timestamp },
-    { labels: { kind: 'cached' }, unit: Unit.TOKENS, value: 300n * MICRO_UNITS, timestamp },
-    { labels: { kind: 'output' }, unit: Unit.TOKENS, value: 800n * MICRO_UNITS, timestamp },
-    { labels: { kind: 'request', status: 'success' }, unit: Unit.COUNT, value: 1n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'input' }, unit: Unit.TOKENS, value: 1200n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'cached' }, unit: Unit.TOKENS, value: 300n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'output' }, unit: Unit.TOKENS, value: 800n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'request', status: 'success' }, unit: Unit.COUNT, value: 1n * MICRO_UNITS, timestamp },
   ]);
 }
 
