@@ -140,7 +140,7 @@ export type TraceSummaryResponseWire = {
   totalSpans?: number | string;
 };
 
-export type ListWorkloadsByThreadResponseWire = {
+export type ListWorkloadsResponseWire = {
   workloads?: WorkloadWire[];
   nextPageToken?: string;
 };
@@ -606,13 +606,13 @@ export async function listAgentInstances(page: Page, params: {
 export async function listWorkloadsByAgentInstance(page: Page, params: {
   agentInstanceId: string;
   token?: string;
-}): Promise<ListWorkloadsByThreadResponseWire> {
+}): Promise<ListWorkloadsResponseWire> {
   const payload: Record<string, unknown> = {
     agentInstanceId: params.agentInstanceId,
     pageSize: 25,
   };
   if (params.token) {
-    return postConnectWithToken<ListWorkloadsByThreadResponseWire>(
+    return postConnectWithToken<ListWorkloadsResponseWire>(
       page,
       RUNNERS_GATEWAY_PATH,
       'ListWorkloadsByAgentInstance',
@@ -620,39 +620,10 @@ export async function listWorkloadsByAgentInstance(page: Page, params: {
       params.token,
     );
   }
-  return postConnect<ListWorkloadsByThreadResponseWire>(
+  return postConnect<ListWorkloadsResponseWire>(
     page,
     RUNNERS_GATEWAY_PATH,
     'ListWorkloadsByAgentInstance',
-    payload,
-  );
-}
-
-export async function listWorkloadsByThread(page: Page, params: {
-  threadId: string;
-  agentId?: string;
-  token?: string;
-}): Promise<ListWorkloadsByThreadResponseWire> {
-  const payload: Record<string, unknown> = {
-    threadId: params.threadId,
-    pageSize: 25,
-  };
-  if (params.agentId) {
-    payload.agentId = params.agentId;
-  }
-  if (params.token) {
-    return postConnectWithToken<ListWorkloadsByThreadResponseWire>(
-      page,
-      RUNNERS_GATEWAY_PATH,
-      'ListWorkloadsByThread',
-      payload,
-      params.token,
-    );
-  }
-  return postConnect<ListWorkloadsByThreadResponseWire>(
-    page,
-    RUNNERS_GATEWAY_PATH,
-    'ListWorkloadsByThread',
     payload,
   );
 }
