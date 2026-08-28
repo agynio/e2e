@@ -141,7 +141,9 @@ func assertEgressCAInlineWorkloadPath(t *testing.T, ctx context.Context) {
 	}
 	runnerClient := newK8sRunnerClient(t)
 	request := sleepWorkloadRequest()
-	request.AdditionalProperties = map[string]string{"label.agyn.dev/managed-by": egressManagedByValue}
+	// The runner stamps agyn.dev/managed-by on every workload it starts, which
+	// is the label the egress policy selects. Asking for it here sets a label
+	// the platform owns, and the runner refuses it as reserved.
 	request.InlineFiles = map[string][]byte{egressCACertPath: caBytes}
 	request.Main.InlineFileMounts = []*runnerv1.InlineFileMount{{Path: egressCACertPath}}
 	request.Main.Env = []*runnerv1.EnvVar{
