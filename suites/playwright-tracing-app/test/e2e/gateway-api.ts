@@ -114,7 +114,7 @@ type ContainerWire = {
   status?: string | number;
 };
 
-type WorkloadWire = {
+export type WorkloadWire = {
   meta?: { id?: string };
   containers?: ContainerWire[];
 };
@@ -142,6 +142,11 @@ export type TraceSummaryResponseWire = {
 
 export type ListWorkloadsByThreadResponseWire = {
   workloads?: WorkloadWire[];
+  nextPageToken?: string;
+};
+
+export type ListInstancesResponseWire = {
+  instances?: { meta?: { id?: string } }[];
   nextPageToken?: string;
 };
 
@@ -571,6 +576,56 @@ export async function getTraceSummary(page: Page, traceId: string): Promise<Trac
   return postConnect<TraceSummaryResponseWire>(page, TRACING_GATEWAY_PATH, 'GetTraceSummary', {
     traceId,
   });
+}
+
+// A workload belongs to the agent instance that runs it, not to the thread the
+// work arrived on -- ListWorkloadsByThread filters a column that now holds the
+// instance, so asking it for a thread finds nothing.
+export async function listAgentInstances(page: Page, params: {
+  organizationId: string;
+  agentId: string;
+  token?: string;
+}): Promise<ListInstancesResponseWire> {
+  const payload: Record<string, unknown> = {
+    organizationId: params.organizationId,
+    agentId: params.agentId,
+    pageSize: 50,
+  };
+  if (params.token) {
+    return postConnectWithToken<ListInstancesResponseWire>(
+      page,
+      AGENTS_GATEWAY_PATH,
+      'ListInstances',
+      payload,
+      params.token,
+    );
+  }
+  return postConnect<ListInstancesResponseWire>(page, AGENTS_GATEWAY_PATH, 'ListInstances', payload);
+}
+
+export async function listWorkloadsByAgentInstance(page: Page, params: {
+  agentInstanceId: string;
+  token?: string;
+}): Promise<ListWorkloadsByThreadResponseWire> {
+  const payload: Record<string, unknown> = {
+    agentInstanceId: params.agentInstanceId,
+    pageSize: 25,
+  };
+  if (params.token) {
+    return postConnectWithToken<ListWorkloadsByThreadResponseWire>(
+      page,
+      RUNNERS_GATEWAY_PATH,
+      'ListWorkloadsByAgentInstance',
+      payload,
+      params.token,
+    );
+  }
+  return postConnect<ListWorkloadsByThreadResponseWire>(
+    page,
+    RUNNERS_GATEWAY_PATH,
+    'ListWorkloadsByAgentInstance',
+    payload,
+  );
 }
 
 export async function listWorkloadsByThread(page: Page, params: {
