@@ -20,6 +20,7 @@ const (
 	agynGatewayURLEnv     = "AGYN_BASE_URL"
 	agynAPITokenEnv       = "AGYN_API_TOKEN"
 	agynOrganizationIDEnv = "AGYN_ORGANIZATION_ID"
+	agynAgentIDEnv        = "AGYN_AGENT_ID"
 )
 
 type agynEgressRuleOutput struct {
@@ -50,7 +51,7 @@ type agynEgressAttachmentOutput struct {
 }
 
 func TestAgynEgressRuleLifecycle(t *testing.T) {
-	binary := agnBinaryPath(t)
+	binary := agynBinaryPath(t)
 	env := newAgynCLIGatewayEnv(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -59,7 +60,12 @@ func TestAgynEgressRuleLifecycle(t *testing.T) {
 	ruleName := "e2e-cli-egress-" + uniqueID()
 	updatedRuleName := ruleName + "-updated"
 	domainPattern := fmt.Sprintf("api-%s.example.com", uniqueID())
-	agentID := uniqueID()
+	// Attaching needs an agent that exists and that this caller may reach:
+	// Egress authorizes the target rather than merely parsing it. This suite
+	// ships two CLIs and no way to create an agent, so the attach and detach
+	// commands run only when the harness names one. The rule-to-agent
+	// behaviour itself is covered in go-core, which can build the agent.
+	agentID := strings.TrimSpace(os.Getenv(agynAgentIDEnv))
 
 	createStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "create",
 		"--organization-id", organizationID,
@@ -124,13 +130,18 @@ func TestAgynEgressRuleLifecycle(t *testing.T) {
 	require.Equal(t, "/repos/**/issues", updatedRule.Matcher.PathPattern)
 	require.Equal(t, "deny", updatedRule.Effect.Action)
 
-	attachStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "attach", ruleID, agentID, "--output", "json")
-	attachment := decodeAgynEgressAttachment(t, attachStdout)
-	require.NotEmpty(t, attachment.ID)
-	require.Equal(t, ruleID, attachment.RuleID)
-	require.Equal(t, agentID, attachment.AgentID)
+	if agentID == "" {
+		t.Logf("%s not set; skipping the attach and detach commands", agynAgentIDEnv)
+	} else {
+		attachStdout, _ := runAgnWithContext(t, ctx, binary, env, "egress", "rule", "attach", ruleID, agentID, "--output", "json")
+		attachment := decodeAgynEgressAttachment(t, attachStdout)
+		require.NotEmpty(t, attachment.ID)
+		require.Equal(t, ruleID, attachment.RuleID)
+		require.Equal(t, agentID, attachment.AgentID)
 
-	_, _ = runAgnWithContext(t, ctx, binary, env, "egress", "rule", "detach", attachment.ID)
+		_, _ = runAgnWithContext(t, ctx, binary, env, "egress", "rule", "detach", attachment.ID)
+	}
+
 	_, _ = runAgnWithContext(t, ctx, binary, env, "egress", "rule", "delete", ruleID)
 	deleted = true
 }
@@ -140,7 +151,10 @@ func newAgynCLIGatewayEnv(t *testing.T) []string {
 	home := t.TempDir()
 	configDir := filepath.Join(home, ".agyn")
 	require.NoError(t, os.MkdirAll(configDir, 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(configDir, "credentials"), []byte(requireAgynCLIEnv(t, agynAPITokenEnv)+"\n"), 0o600))
+	// The CLI reads credentials as a profile map, not a bare token: a plain
+	// string fails to parse and the command never reaches the gateway.
+	credentials := fmt.Sprintf("default:\n  token: %s\n", requireAgynCLIEnv(t, agynAPITokenEnv))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "credentials"), []byte(credentials), 0o600))
 	return append(os.Environ(),
 		"HOME="+home,
 		"AGYN_GATEWAY_URL="+requireAgynCLIEnv(t, agynGatewayURLEnv),

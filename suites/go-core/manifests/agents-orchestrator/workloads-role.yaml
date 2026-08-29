@@ -12,3 +12,8 @@ rules:
   - apiGroups: [""]
     resources: ["pods/exec"]
     verbs: ["create"]
+  # The egress wiring assertion reads the policy that confines a workload's
+  # egress, and it lives in this namespace beside the workloads it selects.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list"]

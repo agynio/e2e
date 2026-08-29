@@ -14,7 +14,9 @@ import {
   createThread,
   getIdentityId,
   getTraceSummary,
-  listWorkloadsByThread,
+  type WorkloadWire,
+  listAgentInstances,
+  listWorkloadsByAgentInstance,
   listSpans,
   sendThreadMessage,
 } from './gateway-api';
@@ -94,15 +96,6 @@ function resolveLlmEndpoint(sdk: TraceSdk): string {
 
 function resolveLlmProtocol(sdk: TraceSdk): string {
   return TEST_LLM_PROTOCOLS[sdk];
-}
-
-function resolveRunnerToken(): string | undefined {
-  const token =
-    process.env.E2E_CLUSTER_ADMIN_TOKEN?.trim() ||
-    process.env.CLUSTER_ADMIN_TOKEN?.trim() ||
-    process.env.AGYN_API_TOKEN?.trim() ||
-    '';
-  return token || undefined;
 }
 
 function buildMcpName(prefix: string): string {
@@ -243,18 +236,34 @@ function isContainerRunning(status: string | number | undefined): boolean {
 }
 
 async function waitForMcpSidecarsReady(page: Page, params: {
-  threadId: string;
+  organizationId: string;
   agentId: string;
 }): Promise<void> {
   const start = Date.now();
-  const token = resolveRunnerToken();
+  let seen = 'no instances';
   while (Date.now() - start < MCP_READY_TIMEOUT_MS) {
-    const response = await listWorkloadsByThread(page, {
-      threadId: params.threadId,
+    // The workload belongs to the instance that runs the agent, so reach it
+    // through the instance rather than the thread the work arrived on.
+    // Both calls go as the signed-in user. Listing instances is an
+    // organization read, and the runner token is a member of none; listing
+    // workloads is filtered by organization membership, and hands a caller
+    // that is not a member an empty list rather than an error.
+    const instances = await listAgentInstances(page, {
+      organizationId: params.organizationId,
       agentId: params.agentId,
-      token,
     });
-    const workloads = response.workloads ?? [];
+    const workloads: WorkloadWire[] = [];
+    for (const instance of instances.instances ?? []) {
+      const instanceId = instance.meta?.id;
+      if (!instanceId) {
+        continue;
+      }
+      const response = await listWorkloadsByAgentInstance(page, { agentInstanceId: instanceId });
+      workloads.push(...(response.workloads ?? []));
+    }
+    seen = workloads
+      .map((workload) => `${workload.id ?? '?'}[${(workload.containers ?? []).map((c) => `${c.name}=${c.status}`).join(',')}]`)
+      .join(' ') || `${(instances.instances ?? []).length} instance(s), no workloads`;
     for (const workload of workloads) {
       const containers = workload.containers ?? [];
       const mcpContainers = containers.filter((container) => container.name?.startsWith('mcp-'));
@@ -268,7 +277,7 @@ async function waitForMcpSidecarsReady(page: Page, params: {
     }
     await page.waitForTimeout(MCP_READY_POLL_INTERVAL_MS);
   }
-  throw new Error(`Timed out waiting for MCP sidecars on thread ${params.threadId}.`);
+  throw new Error(`Timed out waiting for MCP sidecars for agent ${params.agentId}; saw ${seen}.`);
 }
 
 async function waitForTraceIdByMessageId(page: Page, params: {
@@ -406,7 +415,7 @@ export async function createFullChainRun(page: Page, options: FullChainRunOption
     body: MCP_TOOLS_PROMPT,
   });
 
-  await waitForMcpSidecarsReady(page, { threadId, agentId });
+  await waitForMcpSidecarsReady(page, { organizationId, agentId });
 
   const runId = await waitForTraceIdByMessageId(page, { organizationId, messageId, sdk, messageText: MCP_TOOLS_PROMPT });
   await waitForTraceSummary(page, runId);

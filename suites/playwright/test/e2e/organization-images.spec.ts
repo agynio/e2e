@@ -73,9 +73,19 @@ test.describe('organization-images', { tag: ['@svc_console'] }, () => {
     // in an organization with a catalog behind it, not showing this image at
     // all.
     const workspaceImage = page.getByTestId('organization-environments-create-workspace-image');
+    // Typed only once the catalog is in: the field resolves what is typed
+    // against the images it holds, and while they are still arriving it holds
+    // none -- so the name lands as text with no image behind it and the form
+    // is submitted without the id it needs.
+    await expect(workspaceImage).toHaveAttribute('placeholder', 'Select an image', { timeout: 15000 });
     await workspaceImage.click();
+    // Chosen from the list rather than typed. Typing narrows the list and sets
+    // the text, but the image behind the field is set by picking one -- and a
+    // form submitted without that id is refused with nothing to show for it.
     await workspaceImage.fill(name);
-    await page.getByRole('option', { name: new RegExp(name) }).click();
+    await page
+      .getByTestId(`organization-environments-create-workspace-image-option-${name}`)
+      .click({ timeout: 15000 });
 
     // The newest version is preselected, so the common case needs no choice.
     const version = page.getByTestId('organization-environments-create-workspace-version');
@@ -86,7 +96,13 @@ test.describe('organization-images', { tag: ['@svc_console'] }, () => {
     await page.getByRole('option').first().click();
 
     await page.getByTestId('organization-environments-create-submit').click();
-    await expect(page.getByText(`e2e-env-${now}`)).toBeVisible();
+    // The dialog closing is what says the form was accepted; a required field
+    // it is still missing keeps it open and says so in place, which is worth
+    // reading rather than waiting out a row that was never going to appear.
+    await expect(page.getByTestId('organization-environments-create-dialog')).toBeHidden({ timeout: 15000 });
+    await expect(
+      page.getByTestId('organization-environment-row').filter({ hasText: `e2e-env-${now}` }),
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('offers no free-form image field on an environment', async ({ page }) => {

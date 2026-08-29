@@ -104,6 +104,16 @@ test.describe.serial('devices', { tag: ['@svc_console'] }, () => {
   });
 
   test('shows empty devices page', async ({ page }) => {
+    // Cleanup removes the devices this suite made and leaves the rest alone,
+    // so an account someone has actually enrolled a machine on is not empty
+    // and never will be. The empty state is still worth asserting where it can
+    // be: this says which it found rather than failing on someone's laptop.
+    const existing = await listDevices(page);
+    test.skip(
+      existing.length > 0,
+      `the account already has ${existing.length} device(s) this suite did not create`,
+    );
+
     await page.goto('/devices');
     await expect(page.getByTestId('list-search')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('devices-empty')).toBeVisible({ timeout: 15000 });

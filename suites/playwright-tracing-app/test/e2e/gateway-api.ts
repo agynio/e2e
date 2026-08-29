@@ -66,6 +66,7 @@ type CreateAgentOptions = {
 };
 
 type CreateAgentPayload = Omit<CreateAgentOptions, 'description' | 'role' | 'configuration'> & {
+  nickname: string;
   availability: AgentAvailability.INTERNAL;
   finalMessage: AgentFinalMessage.DEFAULT_THREAD;
   description: string;
@@ -113,7 +114,7 @@ type ContainerWire = {
   status?: string | number;
 };
 
-type WorkloadWire = {
+export type WorkloadWire = {
   meta?: { id?: string };
   containers?: ContainerWire[];
 };
@@ -139,8 +140,13 @@ export type TraceSummaryResponseWire = {
   totalSpans?: number | string;
 };
 
-export type ListWorkloadsByThreadResponseWire = {
+export type ListWorkloadsResponseWire = {
   workloads?: WorkloadWire[];
+  nextPageToken?: string;
+};
+
+export type ListInstancesResponseWire = {
+  instances?: { meta?: { id?: string } }[];
   nextPageToken?: string;
 };
 
@@ -395,6 +401,16 @@ export async function createTestEnvironment(
   return environmentId;
 }
 
+// A handle is a slug: lower case, with anything else folded to a dash, and
+// short enough to leave room for a suffix that keeps it unique per run.
+function nicknameFor(name: string): string {
+  const maxNickname = 32;
+  const suffix = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+  const stem = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  const trimmed = stem.slice(0, maxNickname - suffix.length - 1).replace(/^-+|-+$/g, '');
+  return `${trimmed}-${suffix}`;
+}
+
 export function buildCreateAgentPayload(params: CreateAgentOptions): CreateAgentPayload {
   const environmentId = params.environmentId.trim();
   if (!environmentId) {
@@ -403,6 +419,10 @@ export function buildCreateAgentPayload(params: CreateAgentOptions): CreateAgent
   return {
     organizationId: params.organizationId,
     name: params.name,
+    // An instance is created under the agent's handle, so an agent without a
+    // nickname cannot be put in a thread: CreateThread fails on the instance
+    // with "agent nickname is required to create an instance".
+    nickname: nicknameFor(params.name),
     model: params.model,
     image: params.image,
     environmentId,
@@ -558,31 +578,52 @@ export async function getTraceSummary(page: Page, traceId: string): Promise<Trac
   });
 }
 
-export async function listWorkloadsByThread(page: Page, params: {
-  threadId: string;
-  agentId?: string;
+// A workload belongs to the agent instance that runs it, not to the thread the
+// work arrived on -- ListWorkloadsByThread filters a column that now holds the
+// instance, so asking it for a thread finds nothing.
+export async function listAgentInstances(page: Page, params: {
+  organizationId: string;
+  agentId: string;
   token?: string;
-}): Promise<ListWorkloadsByThreadResponseWire> {
+}): Promise<ListInstancesResponseWire> {
   const payload: Record<string, unknown> = {
-    threadId: params.threadId,
-    pageSize: 25,
+    organizationId: params.organizationId,
+    agentId: params.agentId,
+    pageSize: 50,
   };
-  if (params.agentId) {
-    payload.agentId = params.agentId;
-  }
   if (params.token) {
-    return postConnectWithToken<ListWorkloadsByThreadResponseWire>(
+    return postConnectWithToken<ListInstancesResponseWire>(
       page,
-      RUNNERS_GATEWAY_PATH,
-      'ListWorkloadsByThread',
+      AGENTS_GATEWAY_PATH,
+      'ListInstances',
       payload,
       params.token,
     );
   }
-  return postConnect<ListWorkloadsByThreadResponseWire>(
+  return postConnect<ListInstancesResponseWire>(page, AGENTS_GATEWAY_PATH, 'ListInstances', payload);
+}
+
+export async function listWorkloadsByAgentInstance(page: Page, params: {
+  agentInstanceId: string;
+  token?: string;
+}): Promise<ListWorkloadsResponseWire> {
+  const payload: Record<string, unknown> = {
+    agentInstanceId: params.agentInstanceId,
+    pageSize: 25,
+  };
+  if (params.token) {
+    return postConnectWithToken<ListWorkloadsResponseWire>(
+      page,
+      RUNNERS_GATEWAY_PATH,
+      'ListWorkloadsByAgentInstance',
+      payload,
+      params.token,
+    );
+  }
+  return postConnect<ListWorkloadsResponseWire>(
     page,
     RUNNERS_GATEWAY_PATH,
-    'ListWorkloadsByThread',
+    'ListWorkloadsByAgentInstance',
     payload,
   );
 }

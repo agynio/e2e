@@ -48,6 +48,39 @@ jobs:
           curl -fsSL -o agn "${asset_url}"
           chmod +x agn
 
+      - name: Download agyn CLI release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api_url="https://api.github.com/repos/agynio/agyn-cli/releases/latest"
+          asset_name="agyn-linux-amd64"
+          asset_url=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api_url}" \
+            | AGN_ASSET_NAME="${asset_name}" python3 -c "$(cat <<'PY'
+          import json
+          import os
+          import sys
+
+          asset_name = os.environ.get('AGN_ASSET_NAME', '')
+          if not asset_name:
+              raise SystemExit('AGN_ASSET_NAME is required')
+          data = json.load(sys.stdin)
+          for asset in data.get('assets', []):
+              if asset.get('name') == asset_name:
+                  print(asset.get('browser_download_url', ''))
+                  break
+          PY
+          )")
+          if [ -z "${asset_url}" ]; then
+            echo "Failed to find ${asset_name} release asset." >&2
+            exit 1
+          fi
+          curl -fsSL -o agyn "${asset_url}"
+          chmod +x agyn
+
       - name: Provision cluster
         uses: ./.github/actions/provision-vm
 
@@ -57,5 +90,6 @@ jobs:
           tag: svc_agn_cli
           include_smoke: false
           agn-binary: agn
+          agyn-binary: agyn
           # This repo's own suites, not main's.
           e2e-ref: ${{ github.sha }}

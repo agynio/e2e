@@ -35,6 +35,17 @@ run: |
     exit 1
   fi
 
+  # The egress tests drive the agyn CLI, not agn: they create egress rules on
+  # the platform, which is not something an agent CLI does.
+  if [ -z "${AGYN_BINARY:-}" ]; then
+    export AGYN_BINARY="./bin/agyn"
+  fi
+
+  if [ ! -x "${AGYN_BINARY}" ]; then
+    echo "AGYN binary not found at ${AGYN_BINARY}" >&2
+    exit 1
+  fi
+
   tag_args="e2e"
   for tag in "${tags[@]}"; do
     tag_args="${tag_args} ${tag}"

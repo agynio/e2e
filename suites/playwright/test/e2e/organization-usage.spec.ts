@@ -87,11 +87,16 @@ async function waitForUsageData(page: Page, organizationId: string): Promise<voi
 
 async function seedUsageRecords(organizationId: string): Promise<void> {
   const timestamp = new Date();
+  // Tokens are split by what they were spent on -- a model the organization
+  // configured, or a subscription it runs on -- and the LLM tab reads each
+  // apart. Seeded without saying which, these count as neither and the tab
+  // reads empty however much was recorded.
+  const model = { resource: 'model' };
   await recordUsage(organizationId, [
-    { labels: { kind: 'input' }, unit: Unit.TOKENS, value: 1200n * MICRO_UNITS, timestamp },
-    { labels: { kind: 'cached' }, unit: Unit.TOKENS, value: 300n * MICRO_UNITS, timestamp },
-    { labels: { kind: 'output' }, unit: Unit.TOKENS, value: 800n * MICRO_UNITS, timestamp },
-    { labels: { kind: 'request', status: 'success' }, unit: Unit.COUNT, value: 1n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'input' }, unit: Unit.TOKENS, value: 1200n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'cached' }, unit: Unit.TOKENS, value: 300n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'output' }, unit: Unit.TOKENS, value: 800n * MICRO_UNITS, timestamp },
+    { labels: { ...model, kind: 'request', status: 'success' }, unit: Unit.COUNT, value: 1n * MICRO_UNITS, timestamp },
   ]);
 }
 
@@ -145,9 +150,12 @@ test.describe('organization-usage', { tag: ['@svc_console'] }, () => {
     expect(llmUsageValue).not.toBeNull();
     expect(llmUsageValue).toBeGreaterThan(0);
     await expect(page.getByTestId('organization-usage-llm-daily-chart')).toBeVisible();
-    await expect(page.getByTestId('organization-usage-compute-section')).toBeVisible();
-    await expect(page.getByTestId('organization-usage-storage-section')).toBeVisible();
-    await expect(page.getByTestId('organization-usage-platform-section')).toBeVisible();
+    // One resource at a time: each kind of usage has its own tab now, so the
+    // others are reached rather than read off the same screen.
+    for (const kind of ['compute', 'storage', 'platform'] as const) {
+      await page.getByTestId(`organization-usage-${kind}-tab`).click();
+      await expect(page.getByTestId(`organization-usage-${kind}-section`)).toBeVisible({ timeout: 15000 });
+    }
 
     await argosScreenshot(page, 'organization-usage-dashboard');
   });
@@ -172,7 +180,10 @@ test.describe('organization-usage', { tag: ['@svc_console'] }, () => {
     await page.goto(`/organizations/${organizationId}/usage`);
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/usage$`));
     await expect(page.getByTestId('organization-usage-header')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('organization-usage-empty')).toBeVisible({ timeout: 20000 });
+    // Usage is per resource now, each tab reporting its own emptiness. The LLM
+    // tab is the one that opens, and the section it would fill is what stays
+    // absent while there is nothing to show.
+    await expect(page.getByTestId('organization-usage-llm-empty')).toBeVisible({ timeout: 20000 });
     await expect(page.getByTestId('organization-usage-llm-section')).toHaveCount(0);
 
     await argosScreenshot(page, 'organization-usage-empty');

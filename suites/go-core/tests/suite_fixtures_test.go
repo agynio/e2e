@@ -235,6 +235,12 @@ type environmentBuilder func(*testing.T, context.Context, agentsv1.AgentsService
 
 func buildSuiteEnvironment(t *testing.T, ctx context.Context, client agentsv1.AgentsServiceClient, organizationID, runtime, workspaceImage string, build environmentBuilder) string {
 	t.Helper()
+	// The fixture says who it is rather than borrowing whoever asked for it.
+	// Memoized, it is built by whichever test happens to want it first, and a
+	// caller that passes a bare context is only found when the tag set is
+	// narrow enough that it comes first -- which is how it failed in CI while
+	// passing locally behind a warm entry.
+	ctx = asOwner(t, ctx)
 	imageID, tag := platformAgentRuntime(t, ctx, organizationID, runtime)
 	environment := build(t, ctx, client, &agentsv1.CreateEnvironmentRequest{
 		OrganizationId: organizationID,

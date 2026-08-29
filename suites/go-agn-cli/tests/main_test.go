@@ -150,11 +150,23 @@ func writeKeyValue(builder *strings.Builder, indent int, key string, value strin
 	builder.WriteString(fmt.Sprintf("%s%s: %s\n", spaces, key, quoted))
 }
 
+// agynBinaryPath is the platform CLI, which is a different program from the
+// agent CLI this suite is named after. The egress tests drive it.
+func agynBinaryPath(t *testing.T) string {
+	t.Helper()
+	return cliBinaryPath(t, "AGYN_BINARY", "agyn")
+}
+
 func agnBinaryPath(t *testing.T) string {
 	t.Helper()
-	path := strings.TrimSpace(os.Getenv("AGN_BINARY"))
+	return cliBinaryPath(t, "AGN_BINARY", "agn")
+}
+
+func cliBinaryPath(t *testing.T, env, name string) string {
+	t.Helper()
+	path := strings.TrimSpace(os.Getenv(env))
 	if path == "" {
-		path = filepath.Join("bin", "agn")
+		path = filepath.Join("bin", name)
 	}
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(suiteRoot(t), path)
@@ -162,7 +174,7 @@ func agnBinaryPath(t *testing.T) string {
 	info, err := os.Stat(path)
 	require.NoError(t, err)
 	if info.Mode()&0o111 == 0 {
-		t.Fatalf("agn binary is not executable: %s", path)
+		t.Fatalf("%s binary is not executable: %s", name, path)
 	}
 	return path
 }

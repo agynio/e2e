@@ -13,10 +13,13 @@ if (!BASE_URL) {
 export default defineConfig({
   testDir: './test/e2e',
   timeout: 60000,
-  fullyParallel: true,
+  // Several tests drive a second browser through a full OIDC login while the
+  // platform runs beside them. Two at once is what closed the browser
+  // mid-callback with "target page, context or browser has been closed".
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 1,
-  workers: 2,
+  workers: 1,
   reporter: [
     process.env.CI ? ['dot'] : ['list'],
     ['junit', { outputFile: 'junit.xml' }],

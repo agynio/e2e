@@ -38,7 +38,9 @@ test.describe('message deep link oidc callback', { tag: ['@svc_tracing_app', '@s
       await callbackPromise;
     }
 
-    const runUrlPattern = new RegExp(`/${run.organizationId}/runs/${run.runId}(\\?.*)?$`);
+    // The run screen is not organization-scoped: /:orgId/runs/:runId is a
+    // legacy route that redirects here, so it is never where the page lands.
+    const runUrlPattern = new RegExp(`/runs/${run.runId}(\\?.*)?$`);
     await expect(page).toHaveURL(runUrlPattern, { timeout: 60000 });
 
     const currentUrl = new URL(page.url());
