@@ -152,9 +152,13 @@ test.describe('organization-usage', { tag: ['@svc_console'] }, () => {
     await expect(page.getByTestId('organization-usage-llm-daily-chart')).toBeVisible();
     // One resource at a time: each kind of usage has its own tab now, so the
     // others are reached rather than read off the same screen.
+    // A tab reports either what was used or that nothing was: this test seeds
+    // LLM tokens only, so the others answer honestly with their empty state.
     for (const kind of ['compute', 'storage', 'platform'] as const) {
       await page.getByTestId(`organization-usage-${kind}-tab`).click();
-      await expect(page.getByTestId(`organization-usage-${kind}-section`)).toBeVisible({ timeout: 15000 });
+      const section = page.getByTestId(`organization-usage-${kind}-section`);
+      const empty = page.getByTestId(`organization-usage-${kind}-empty`);
+      await expect(section.or(empty).first()).toBeVisible({ timeout: 15000 });
     }
 
     await argosScreenshot(page, 'organization-usage-dashboard');
