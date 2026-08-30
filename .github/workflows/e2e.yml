@@ -95,8 +95,10 @@ jobs:
       - name: Provision cluster
         uses: ./.github/actions/provision-vm
         with:
-          # 6 of the runner's 8: qemu's IO threads and the host tooling keep two.
+          # 6 of the runner's 8 cores and 24 of its 32GiB; the rest is qemu's
+          # IO threads and the host tooling.
           cpus: "6"
+          memory: 24GiB
 
       - name: Run suites
         uses: ./.github/actions/run-tests
