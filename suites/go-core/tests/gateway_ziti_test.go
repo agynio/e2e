@@ -19,7 +19,14 @@ import (
 	zitimgmtv1 "github.com/agynio/e2e/suites/go-core/.gen/go/agynio/api/ziti_management/v1"
 )
 
-const zitiRequestTimeout = 30 * time.Second
+const (
+	zitiRequestTimeout = 30 * time.Second
+
+	// A Gateway deployed from source re-enrolls and re-binds, which takes
+	// noticeably longer than a pod that started from an image.
+	zitiBindTimeout      = 90 * time.Second
+	zitiBindPollInterval = 2 * time.Second
+)
 
 func TestZitiMeEndpointAuthenticated(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), zitiRequestTimeout)
@@ -52,13 +59,12 @@ func TestZitiMeEndpointAuthenticated(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { zitiContext.Close() })
 
-	requestCtx, requestCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer requestCancel()
-
-	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, zitiGatewayBaseURL+"/me", nil)
-	require.NoError(t, err)
-
-	response, err := sdk.NewHttpClient(zitiContext, nil).Do(request)
+	// The Gateway binds its Ziti service at startup, and a suite that runs
+	// against a Gateway deployed from source can reach this line while that is
+	// still in flight: the overlay then reports no terminators, or an identity
+	// it has not finished registering. Both are the same "not bound yet", so
+	// the dial is retried rather than failed on first contact.
+	response, err := dialGatewayMe(t, zitiContext)
 	require.NoError(t, err)
 	defer response.Body.Close()
 
@@ -71,4 +77,47 @@ func TestZitiMeEndpointAuthenticated(t *testing.T) {
 	require.NoError(t, json.NewDecoder(response.Body).Decode(&payload))
 	require.NotEmpty(t, strings.TrimSpace(payload.IdentityID))
 	require.NotEmpty(t, strings.TrimSpace(payload.IdentityType))
+}
+
+// dialGatewayMe dials the Gateway's Ziti service until it answers or the
+// deadline passes. Only dial failures are retried — once the overlay routes the
+// request, whatever the Gateway says about it is the test's answer.
+func dialGatewayMe(t *testing.T, zitiContext ziti.Context) (*http.Response, error) {
+	t.Helper()
+
+	client := sdk.NewHttpClient(zitiContext, nil)
+	deadline := time.Now().Add(zitiBindTimeout)
+
+	for attempt := 1; ; attempt++ {
+		requestCtx, requestCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, zitiGatewayBaseURL+"/me", nil)
+		if err != nil {
+			requestCancel()
+			return nil, err
+		}
+
+		response, err := client.Do(request)
+		if err == nil {
+			// The body outlives this function, so the context must too.
+			t.Cleanup(requestCancel)
+			return response, nil
+		}
+		requestCancel()
+
+		if !isZitiDialFailure(err) || time.Now().After(deadline) {
+			return nil, err
+		}
+		t.Logf("gateway service not dialable yet (attempt %d): %v", attempt, err)
+		time.Sleep(zitiBindPollInterval)
+	}
+}
+
+// isZitiDialFailure reports whether the overlay refused to route the request at
+// all, which is what "the Gateway has not finished binding" looks like from the
+// dialing side.
+func isZitiDialFailure(err error) bool {
+	message := err.Error()
+	return strings.Contains(message, "unable to dial service") ||
+		strings.Contains(message, "has no terminators") ||
+		strings.Contains(message, "identity not found by id")
 }
