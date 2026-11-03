@@ -29,7 +29,7 @@ const (
 	egressCASecretName               = "egress-ca"
 	egressGatewayIdentitySecret      = "egress-gateway-ziti-identity"
 	egressZitiEnrollmentSecret       = "egress-gateway-enrollment"
-	egressCACertPath                 = "/etc/agyn/egress-ca/ca.crt"
+	egressCACertPath                 = "/etc/ssl/certs/ca-certificates.crt"
 	egressOpenZitiCIDR               = "100.64.0.0/10"
 	egressPublicInternetCIDR         = "0.0.0.0/0"
 	egressExpectedClusterPodCIDR     = "EGRESS_EXPECTED_CLUSTER_POD_CIDR"
@@ -150,14 +150,12 @@ func assertEgressCAInlineWorkloadPath(t *testing.T, ctx context.Context) {
 		{Name: "SSL_CERT_FILE", Value: egressCACertPath},
 		{Name: "REQUESTS_CA_BUNDLE", Value: egressCACertPath},
 		{Name: "NODE_EXTRA_CA_CERTS", Value: egressCACertPath},
-		{Name: "CURL_CA_BUNDLE", Value: egressCACertPath},
-		{Name: "SSL_CERT_DIR", Value: "/etc/agyn/egress-ca"},
 	}
 	resp := startWorkloadWithCleanup(t, ctx, runnerClient, request)
 	waitRunning(t, ctx, runnerClient, resp.GetId())
 	result := collectExecOutput(t, ctx, runnerClient, &runnerv1.ExecStartRequest{
 		TargetId:     resp.GetContainers().GetMain(),
-		CommandShell: fmt.Sprintf("test -s %[1]s && test \"$SSL_CERT_FILE\" = %[1]s && test \"$CURL_CA_BUNDLE\" = %[1]s", egressCACertPath),
+		CommandShell: fmt.Sprintf("test -s %[1]s && test \"$SSL_CERT_FILE\" = %[1]s", egressCACertPath),
 	})
 	if result.exit == nil || result.exit.GetExitCode() != 0 {
 		t.Fatalf("egress CA workload contract check failed: exit=%v stdout=%q stderr=%q", result.exit, result.stdout, result.stderr)

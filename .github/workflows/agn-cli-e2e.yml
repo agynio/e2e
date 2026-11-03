@@ -7,7 +7,7 @@ on:
 
 jobs:
   e2e-agn-cli:
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-x8
     timeout-minutes: 60
     permissions:
       contents: read
@@ -83,6 +83,11 @@ jobs:
 
       - name: Provision cluster
         uses: ./.github/actions/provision-vm
+        with:
+          # 6 of the runner's 8 cores and 24 of its 32GiB; the rest is qemu's
+          # IO threads and the host tooling.
+          cpus: "6"
+          memory: 24GiB
 
       - name: Run go-agn-cli suite
         uses: ./.github/actions/run-tests

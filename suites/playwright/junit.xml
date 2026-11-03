@@ -1,0 +1,18 @@
+<testsuites id="" name="" tests="3" failures="0" skipped="3" errors="0" time="0.35653099999999993">
+<testsuite name="agents.spec.ts" timestamp="2026-08-19T09:04:44.464Z" hostname="chromium" tests="2" failures="0" skipped="2" time="0" errors="0">
+<testcase name="agents › shows agent configuration and edit dialog" classname="agents.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="agents › shows agent create form" classname="agents.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="organization-egress-rules.spec.ts" timestamp="2026-08-19T09:04:44.464Z" hostname="chromium" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="organization-egress-rules › manages egress rules and agent attachments" classname="organization-egress-rules.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>

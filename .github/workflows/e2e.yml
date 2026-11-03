@@ -20,7 +20,7 @@ jobs:
   # it they reach for a public registry that does not serve these providers.
   e2e:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: linux-amd64-x8
     timeout-minutes: 60
     permissions:
       contents: read
@@ -94,6 +94,11 @@ jobs:
 
       - name: Provision cluster
         uses: ./.github/actions/provision-vm
+        with:
+          # 6 of the runner's 8 cores and 24 of its 32GiB; the rest is qemu's
+          # IO threads and the host tooling.
+          cpus: "6"
+          memory: 24GiB
 
       - name: Run suites
         uses: ./.github/actions/run-tests
