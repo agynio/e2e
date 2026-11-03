@@ -179,6 +179,14 @@ runs:
         mkdir -p "$(dirname "${kubeconfig}")"
         agyn local kubeconfig --path "${kubeconfig}" || exit 0
         export KUBECONFIG="${kubeconfig}"
+        # An empty namespace and an unreachable cluster print the same nothing
+        # once stderr is gone, so ask whether the cluster answers at all first
+        # and keep stderr on everything below it.
+        echo "::group::cluster"
+        kubectl cluster-info
+        kubectl get nodes
+        kubectl get ns
+        echo "::endgroup::"
         stalled="$(kubectl get pods -n agyn-platform --no-headers 2>/dev/null |
           awk '$3 != "Completed" {split($2, ready, "/"); if (ready[1] != ready[2] || $3 != "Running") print $1}')"
         echo "::group::pods that are not ready"
@@ -198,10 +206,13 @@ runs:
           echo "::endgroup::"
         done
         echo "::group::workloads"
-        kubectl get deploy,statefulset,job -n agyn-platform 2>/dev/null
+        kubectl get deploy,statefulset,job -n agyn-platform
+        echo "::endgroup::"
+        echo "::group::the organization the readiness wait blocks on"
+        kubectl -n agyn-platform get organization.platform.agyn.io system -o yaml
         echo "::endgroup::"
         echo "::group::recent events"
-        kubectl get events -n agyn-platform --sort-by=.lastTimestamp 2>/dev/null | tail -40
+        kubectl get events -n agyn-platform --sort-by=.lastTimestamp | tail -40
         echo "::endgroup::"
 
     - name: Export the kubeconfig
